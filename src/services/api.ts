@@ -1,18 +1,25 @@
 import type { Question } from '../types';
 
 const API_KEY = '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';
-const API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
-const MODEL = 'meta/llama-3.1-8b-instruct';
+
+function getApiUrl(): string {
+  if (import.meta.env.DEV) {
+    return '/api/nvidia/chat/completions';
+  }
+  return 'https://integrate.api.nvidia.com/v1/chat/completions';
+}
 
 async function callAI(prompt: string): Promise<string> {
-  const response = await fetch(API_URL, {
+  const url = getApiUrl();
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: 'meta/llama-3.1-8b-instruct',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 4096,
@@ -21,7 +28,7 @@ async function callAI(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`AI API error: ${err}`);
+    throw new Error(`AI API error (${response.status}): ${err}`);
   }
 
   const data = await response.json();
@@ -31,22 +38,56 @@ async function callAI(prompt: string): Promise<string> {
 function parseQuestions(raw: string): Question[] {
   try {
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('No JSON array found');
+    if (!jsonMatch) throw new Error('No JSON array found in AI response');
+
     const parsed = JSON.parse(jsonMatch[0]);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('Empty or invalid array');
+    }
+
     return parsed.map((q: any, i: number) => ({
       id: `ai-${Date.now()}-${i}`,
-      question: q.question || `Question ${i + 1}`,
-      type: (q.type as Question['type']) || 'MCQ',
-      options: q.options || undefined,
-      correctAnswer: q.correctAnswer || q.correct_answer || '',
-      explanation: q.explanation || '',
-      difficulty: (q.difficulty as Question['difficulty']) || 'medium',
+      question: q.question || q.Q || `Question ${i + 1}`,
+      type: normalizeType(q.type || q.QuestionType || 'MCQ'),
+      options: normalizeOptions(q.options || q.choices || null, q.type || 'MCQ'),
+      correctAnswer: q.correctAnswer || q.correct_answer || q.answer || '',
+      explanation: q.explanation || q.rationale || '',
+      difficulty: normalizeDifficulty(q.difficulty || 'medium'),
       subject: q.subject || '',
       topic: q.topic || '',
     }));
-  } catch {
+  } catch (err: any) {
+    console.error('Parse error:', err.message);
     throw new Error('Failed to parse AI response. Please try again.');
   }
+}
+
+function normalizeType(type: string): Question['type'] {
+  const t = String(type).toLowerCase();
+  if (t.includes('mcq') || t.includes('multiple') || t.includes('choice')) return 'MCQ';
+  if (t.includes('true') || t.includes('false')) return 'TrueFalse';
+  if (t.includes('theory') || t.includes('open') || t.includes('explain')) return 'Theory';
+  if (t.includes('fill') || t.includes('blank')) return 'FillBlank';
+  return 'MCQ';
+}
+
+function normalizeDifficulty(d: string): Question['difficulty'] {
+  const dl = String(d).toLowerCase();
+  if (dl.includes('easy') || dl.includes('simple')) return 'easy';
+  if (dl.includes('hard') || dl.includes('difficult')) return 'hard';
+  return 'medium';
+}
+
+function normalizeOptions(options: any, type: string): string[] | undefined {
+  if (type === 'TrueFalse' || type === 'trueFalse') return ['True', 'False'];
+  if (!options || !Array.isArray(options)) return undefined;
+  return options.map((o: any) => {
+    if (typeof o === 'string') return o;
+    if (o.text) return o.text;
+    if (o.label) return o.label;
+    return String(o);
+  });
 }
 
 export async function generateQuestions(params: {
@@ -57,35 +98,25 @@ export async function generateQuestions(params: {
   count: number;
 }): Promise<{ questions: Question[] }> {
   const typeMap: Record<string, string> = {
-    MCQ: 'multiple choice with 4 options (A, B, C, D)',
-    Theory: 'open-ended theory questions requiring written explanations',
+    MCQ: 'multiple choice with 4 options',
+    Theory: 'open-ended theory questions',
     Fill: 'fill-in-the-blank questions',
     True: 'true or false questions',
     Matching: 'multiple choice with 4 options',
-    Mixed: 'a mix of multiple choice, theory, and true/false questions',
+    Mixed: 'a mix of MCQ, theory, and true/false',
   };
 
   const questionFormat = typeMap[params.questionType] || typeMap['MCQ'];
 
-  const prompt = `You are an expert exam question writer for ${params.sector} at the ${params.level} education level.
-
-Generate exactly ${params.count} exam questions about "${params.topic}".
-
+  const prompt = `Generate exactly ${params.count} exam questions about "${params.topic}" for ${params.sector} at ${params.level} level.
 Format: ${questionFormat}
 
-Return ONLY a valid JSON array (no markdown, no explanation outside the array). Each object must have exactly these fields:
-- "question": the question text
-- "type": one of "MCQ", "Theory", "TrueFalse", "FillBlank"
-- "options": array of 4 strings for MCQ (e.g. ["A. ...", "B. ...", "C. ...", "D. ..."]), or ["True", "False"] for TrueFalse, or null/omit for Theory/FillBlank
-- "correctAnswer": the correct answer string (for MCQ use the full correct option text like "A. answer text")
-- "explanation": a clear explanation of why the answer is correct
-- "difficulty": one of "easy", "medium", "hard"
-- "subject": "${params.sector}"
-- "topic": "${params.topic}"
+Return ONLY a JSON array. Each object:
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}"}
 
-Make the questions challenging, accurate, and educational. Ensure the correctAnswer matches one of the options exactly for MCQ questions.
-
-Return ONLY the JSON array, nothing else.`;
+For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
+For Theory: options can be omitted, correctAnswer is a model answer.
+No markdown. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);
   const questions = parseQuestions(raw);

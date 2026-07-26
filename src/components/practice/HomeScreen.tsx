@@ -33,8 +33,9 @@ export default function HomeScreen() {
       navigate('/quiz', {
         state: { questions: result.questions, topic, sector, level, questionType },
       });
-    } catch {
-      setError('Failed to generate questions. Please try again.');
+    } catch (err: any) {
+      console.error('Question generation error:', err);
+      setError(err.message || 'Failed to generate questions. Please try again.');
     } finally {
       setLoading(false);
     }
