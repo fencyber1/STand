@@ -13,6 +13,7 @@ interface QuizState {
   level: string;
   questionType: string;
   timeLimit: number;
+  instantFeedback?: boolean;
 }
 
 interface Result {
@@ -33,7 +34,7 @@ export default function QuizScreen() {
     return null;
   }
 
-  const { questions, topic, timeLimit = 0 } = state;
+  const { questions, topic, timeLimit = 0, instantFeedback = false } = state;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const [textAnswer, setTextAnswer] = useState('');
@@ -122,6 +123,11 @@ export default function QuizScreen() {
   const handleMCQSelect = (option: string) => {
     if (showResult) return;
     setSelectedAnswer(option);
+    if (instantFeedback && (current.type === 'MCQ' || current.type === 'TrueFalse')) {
+      setTimeout(() => {
+        handleSubmit();
+      }, 300);
+    }
   };
 
   const handleBookmark = () => {

@@ -103,6 +103,7 @@ export async function generateQuestions(params: {
   level: string;
   questionType: string;
   count: number;
+  difficulty?: string;
 }): Promise<{ questions: Question[] }> {
   const typeMap: Record<string, string> = {
     MCQ: 'multiple choice with 4 options',
@@ -114,9 +115,12 @@ export async function generateQuestions(params: {
   };
 
   const questionFormat = typeMap[params.questionType] || typeMap['MCQ'];
+  const difficultyLine = params.difficulty && params.difficulty !== 'all'
+    ? `\nAll questions must be difficulty level: ${params.difficulty}.`
+    : '';
 
   const prompt = `Generate exactly ${params.count} exam questions about "${params.topic}" for ${params.sector} at ${params.level} level.
-Format: ${questionFormat}
+Format: ${questionFormat}${difficultyLine}
 
 Return ONLY a JSON array. Each object:
 {"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"1-3 word search term for an image that illustrates this concept"}

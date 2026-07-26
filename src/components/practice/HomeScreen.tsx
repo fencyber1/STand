@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Timer, Shuffle } from 'lucide-react';
+import { Loader2, Timer, Shuffle, Zap, BarChart3 } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
 
@@ -35,6 +35,8 @@ export default function HomeScreen() {
   const [timerS, setTimerS] = useState(0);
   const [useTimer, setUseTimer] = useState(true);
   const [shuffle, setShuffle] = useState(false);
+  const [difficulty, setDifficulty] = useState('all');
+  const [instantFeedback, setInstantFeedback] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -64,13 +66,14 @@ export default function HomeScreen() {
         level,
         questionType: questionType.split(' ')[0],
         count,
+        difficulty,
       });
       let questions = result.questions;
       if (shuffle) {
         questions = [...questions].sort(() => Math.random() - 0.5);
       }
       navigate('/quiz', {
-        state: { questions, topic, sector, level, questionType, timeLimit },
+        state: { questions, topic, sector, level, questionType, timeLimit, instantFeedback },
       });
     } catch (err: any) {
       console.error('Question generation error:', err);
@@ -232,6 +235,44 @@ export default function HomeScreen() {
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${shuffle ? 'translate-x-5' : ''}`} />
           </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Zap size={14} /> Instant Feedback
+          </label>
+          <button
+            onClick={() => setInstantFeedback(!instantFeedback)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${instantFeedback ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${instantFeedback ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <BarChart3 size={14} /> Difficulty
+          </label>
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: 'All Levels', color: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' },
+              { value: 'easy', label: 'Easy', color: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
+              { value: 'medium', label: 'Medium', color: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' },
+              { value: 'hard', label: 'Hard', color: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' },
+            ].map((d) => (
+              <button
+                key={d.value}
+                onClick={() => setDifficulty(d.value)}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border-2 transition ${
+                  difficulty === d.value
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    : `border-transparent ${d.color} hover:opacity-80`
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <button

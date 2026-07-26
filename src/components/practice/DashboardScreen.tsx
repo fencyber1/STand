@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trophy, Target, Clock, TrendingUp, Play } from 'lucide-react';
+import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import BorderGlow from '../ui/BorderGlow';
@@ -15,7 +15,22 @@ export default function DashboardScreen() {
     const totalQ = history.reduce((s, h) => s + (h.totalQuestions || 0), 0);
     const totalCorrect = history.reduce((s, h) => s + (h.correctAnswers || 0), 0);
     const avgScore = total > 0 ? history.reduce((s, h) => s + (h.score || 0), 0) / total : 0;
-    return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(1) };
+
+    const streak = (() => {
+      let count = 0;
+      const today = new Date();
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const hasSession = history.some((h) => h.date.split('T')[0] === dateStr);
+        if (hasSession) count++;
+        else break;
+      }
+      return count;
+    })();
+
+    return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(1), streak };
   }, [history]);
 
   const chartData = useMemo(() => {
@@ -41,8 +56,9 @@ export default function DashboardScreen() {
         <p className="text-gray-500 dark:text-gray-400">Track your exam practice progress</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
+          { label: 'Streak', value: `${stats.streak}d`, icon: Flame, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30', glow: '0 80 60', colors: ['#ef4444', '#f87171', '#dc2626'] },
           { label: 'Total Sessions', value: stats.total, icon: Target, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', glow: '220 80 60', colors: ['#3b82f6', '#60a5fa', '#2563eb'] },
           { label: 'Questions Done', value: stats.totalQ, icon: Trophy, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', glow: '142 70 60', colors: ['#22c55e', '#4ade80', '#16a34a'] },
           { label: 'Correct Answers', value: stats.totalCorrect, icon: TrendingUp, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/30', glow: '270 70 65', colors: ['#a855f7', '#c084fc', '#7c3aed'] },
