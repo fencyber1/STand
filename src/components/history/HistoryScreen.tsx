@@ -25,11 +25,11 @@ export default function HistoryScreen() {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">History</h1>
-          <p className="text-gray-500">Your practice sessions</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">History</h1>
+          <p className="text-gray-500 dark:text-gray-400">Your practice sessions</p>
         </div>
         {history.length > 0 && (
-          <button onClick={handleClear} className="text-red-500 hover:text-red-700 p-2">
+          <button onClick={handleClear} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2">
             <Trash2 size={18} />
           </button>
         )}
@@ -47,7 +47,7 @@ export default function HistoryScreen() {
             className={`px-3 py-1.5 text-sm rounded-lg font-medium transition ${
               filter === key
                 ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             {label}
@@ -57,23 +57,23 @@ export default function HistoryScreen() {
 
       {filtered.length === 0 ? (
         <div className="text-center py-16">
-          <Filter size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">No practice sessions yet</p>
-          <p className="text-sm text-gray-400">Start practicing to see your history here</p>
+          <Filter size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">No practice sessions yet</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Start practicing to see your history here</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filtered.map((session) => (
             <div
               key={session.id}
-              className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between"
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-800 truncate">{session.topic}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{session.topic}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {session.sector} &middot; {session.level}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   {new Date(session.date).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
@@ -84,13 +84,13 @@ export default function HistoryScreen() {
               <div className="text-right ml-4">
                 <p
                   className={`text-xl font-bold ${
-                    (session.score || 0) >= 70 ? 'text-green-600' : (session.score || 0) >= 50 ? 'text-orange-600' : 'text-red-600'
+                    (session.score || 0) >= 70 ? 'text-green-600 dark:text-green-400' : (session.score || 0) >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
                   }`}
                 >
                   {session.score != null ? `${session.score}%` : 'N/A'}
                 </p>
                 {session.totalQuestions && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     {session.correctAnswers}/{session.totalQuestions}
                   </p>
                 )}

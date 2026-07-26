@@ -55,38 +55,38 @@ export default function ResultsScreen() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
-        <div className="inline-flex p-4 bg-primary-50 rounded-full mb-3">
-          <Trophy size={32} className="text-primary-600" />
+        <div className="inline-flex p-4 bg-primary-50 dark:bg-primary-900/30 rounded-full mb-3">
+          <Trophy size={32} className="text-primary-600 dark:text-primary-400" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800">Results</h1>
-        <p className="text-gray-500">{topic}</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Results</h1>
+        <p className="text-gray-500 dark:text-gray-400">{topic}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-          <p className={`text-3xl font-bold ${percentage >= 70 ? 'text-green-600' : percentage >= 50 ? 'text-orange-600' : 'text-red-600'}`}>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
+          <p className={`text-3xl font-bold ${percentage >= 70 ? 'text-green-600 dark:text-green-400' : percentage >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
             {percentage}%
           </p>
-          <p className="text-sm text-gray-500 mt-1">Score</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Score</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-          <p className="text-3xl font-bold text-primary-600">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
+          <p className="text-3xl font-bold text-primary-600 dark:text-primary-400">
             {correctCount}/{totalCount}
           </p>
-          <p className="text-sm text-gray-500 mt-1">Correct</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Correct</p>
         </div>
         {avgTheoryScore > 0 && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-            <p className="text-3xl font-bold text-purple-600">{Math.round(avgTheoryScore)}</p>
-            <p className="text-sm text-gray-500 mt-1">Avg Theory</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
+            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{Math.round(avgTheoryScore)}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Avg Theory</p>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="font-semibold text-gray-800 mb-2">Performance Summary</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Performance Summary</h3>
         <p className={`text-sm ${
-          percentage >= 80 ? 'text-green-600' : percentage >= 60 ? 'text-orange-600' : 'text-red-600'
+          percentage >= 80 ? 'text-green-600 dark:text-green-400' : percentage >= 60 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
         }`}>
           {percentage >= 80
             ? 'Excellent work! You have a strong understanding of this topic.'
@@ -96,24 +96,24 @@ export default function ResultsScreen() {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="font-semibold text-gray-800 mb-4">Question Details</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Question Details</h3>
         <div className="space-y-4">
           {results.map((r, i) => (
-            <div key={r.questionId} className="p-3 bg-gray-50 rounded-lg">
+            <div key={r.questionId} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
                 {r.correct === true ? (
-                  <CheckCircle size={16} className="text-green-600" />
+                  <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
                 ) : r.correct === false ? (
-                  <XCircle size={16} className="text-red-600" />
+                  <XCircle size={16} className="text-red-600 dark:text-red-400" />
                 ) : (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium">
+                  <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded font-medium">
                     Score: {r.score}
                   </span>
                 )}
-                <span className="text-sm font-medium text-gray-700">Question {i + 1}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Question {i + 1}</span>
               </div>
-              <p className="text-sm text-gray-600">{r.explanation}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{r.explanation}</p>
             </div>
           ))}
         </div>
@@ -129,7 +129,7 @@ export default function ResultsScreen() {
         </Link>
         <button
           onClick={() => navigate(-1)}
-          className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition flex items-center justify-center gap-2"
+          className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
         >
           <RotateCcw size={18} />
           Try Again

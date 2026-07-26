@@ -43,32 +43,32 @@ export default function HomeScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Practice Setup</h1>
-        <p className="text-gray-500">Configure your practice session</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Practice Setup</h1>
+        <p className="text-gray-500 dark:text-gray-400">Configure your practice session</p>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>
       )}
 
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic</label>
           <input
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="e.g. Photosynthesis, Python loops, The Human Heart"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Course Sector</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Sector</label>
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition bg-white"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           >
             {SECTORS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -77,11 +77,11 @@ export default function HomeScreen() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Education Level</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Education Level</label>
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition bg-white"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           >
             {LEVELS.map((l) => (
               <option key={l} value={l}>{l}</option>
@@ -90,11 +90,11 @@ export default function HomeScreen() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Question Type</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Question Type</label>
           <select
             value={questionType}
             onChange={(e) => setQuestionType(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition bg-white"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           >
             {QUESTION_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
@@ -103,11 +103,11 @@ export default function HomeScreen() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Number of Questions</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
           <select
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition bg-white"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
           >
             {COUNT_OPTIONS.map((c) => (
               <option key={c} value={c}>{c} questions</option>

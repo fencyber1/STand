@@ -9,8 +9,11 @@ import {
   LogOut,
   Menu,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { storage } from '../../services/storage';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,6 +26,7 @@ const navItems = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     storage.removeToken();
@@ -30,7 +34,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -39,17 +43,17 @@ export default function Layout() {
       )}
 
       <aside
-        className={`fixed z-40 inset-y-0 left-0 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h1 className="text-xl font-bold text-primary-600">STand</h1>
-            <p className="text-xs text-gray-500">AI Exam Practice</p>
+            <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">STand</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">AI Exam Practice</p>
           </div>
           <button
-            className="lg:hidden text-gray-500 hover:text-gray-700"
+            className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             onClick={() => setSidebarOpen(false)}
           >
             <X size={20} />
@@ -66,8 +70,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
                 }`
               }
             >
@@ -77,10 +81,10 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             <LogOut size={18} />
             Logout
@@ -89,14 +93,21 @@ export default function Layout() {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex items-center h-16 px-4 bg-white border-b border-gray-200 lg:px-6">
+        <header className="flex items-center h-16 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 lg:px-6 transition-colors">
           <button
-            className="lg:hidden text-gray-500 hover:text-gray-700 mr-3"
+            className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-3"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu size={22} />
           </button>
-          <h2 className="text-lg font-semibold text-gray-800">STand Exam Practice</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex-1">STand Exam Practice</h2>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">

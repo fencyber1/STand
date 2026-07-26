@@ -29,7 +29,7 @@ export default function QuizScreen() {
     return null;
   }
 
-  const { questions, topic, sector, level } = state;
+  const { questions, topic } = state;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const [textAnswer, setTextAnswer] = useState('');
@@ -89,7 +89,7 @@ export default function QuizScreen() {
       const correctCount = allResults.filter((r) => r.correct === true).length;
       const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
       navigate('/results', {
-        state: { topic, sector, level, results: allResults, correctCount, totalCount: questions.length, totalScore },
+        state: { topic, sector: state.sector, level: state.level, results: allResults, correctCount, totalCount: questions.length, totalScore },
       });
     } else {
       setCurrentIndex((i) => i + 1);
@@ -107,40 +107,40 @@ export default function QuizScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-4">
-        <button onClick={() => navigate('/practice')} className="text-gray-500 hover:text-gray-700 text-sm mb-2 flex items-center gap-1">
+        <button onClick={() => navigate('/practice')} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Practice
         </button>
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-semibold text-gray-800 truncate">{topic}</h2>
-          <span className="text-sm text-gray-500 whitespace-nowrap ml-2">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{topic}</h2>
+          <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
             {currentIndex + 1} / {questions.length}
           </span>
         </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
         <div className="mb-4">
           <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
-            current.type === 'MCQ' ? 'bg-blue-100 text-blue-700' :
-            current.type === 'Theory' ? 'bg-purple-100 text-purple-700' :
-            current.type === 'TrueFalse' ? 'bg-green-100 text-green-700' :
-            'bg-orange-100 text-orange-700'
+            current.type === 'MCQ' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+            current.type === 'Theory' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
+            current.type === 'TrueFalse' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' :
+            'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
           }`}>
             {current.type}
           </span>
           <span className={`ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded ${
-            current.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-            current.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-red-100 text-red-700'
+            current.difficulty === 'easy' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' :
+            current.difficulty === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' :
+            'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
           }`}>
             {current.difficulty}
           </span>
         </div>
 
-        <p className="text-gray-800 text-lg mb-6 leading-relaxed">{current.question}</p>
+        <p className="text-gray-800 dark:text-gray-100 text-lg mb-6 leading-relaxed">{current.question}</p>
 
         {current.type === 'MCQ' && current.options && (
           <div className="space-y-3 mb-6">
@@ -151,12 +151,12 @@ export default function QuizScreen() {
                 disabled={showResult}
                 className={`w-full text-left p-4 rounded-lg border-2 transition ${
                   showResult && opt === current.correctAnswer
-                    ? 'border-green-500 bg-green-50 text-green-800'
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                     : showResult && selectedAnswer === opt && opt !== current.correctAnswer
-                    ? 'border-red-500 bg-red-50 text-red-800'
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                     : selectedAnswer === opt
-                    ? 'border-primary-500 bg-primary-50 text-primary-800'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 <span className="font-medium">{String.fromCharCode(65 + i)}.</span> {opt}
@@ -174,12 +174,12 @@ export default function QuizScreen() {
                 disabled={showResult}
                 className={`flex-1 p-4 rounded-lg border-2 text-center font-medium transition ${
                   showResult && opt === current.correctAnswer
-                    ? 'border-green-500 bg-green-50 text-green-800'
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                     : showResult && selectedAnswer === opt && opt !== current.correctAnswer
-                    ? 'border-red-500 bg-red-50 text-red-800'
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                     : selectedAnswer === opt
-                    ? 'border-primary-500 bg-primary-50 text-primary-800'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 {opt}
@@ -195,22 +195,22 @@ export default function QuizScreen() {
               onChange={(e) => setTextAnswer(e.target.value)}
               disabled={showResult}
               placeholder={current.type === 'Theory' ? 'Type your answer here...' : 'Enter your answer...'}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition resize-none h-32"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition resize-none h-32"
             />
           </div>
         )}
 
         {showResult && (
-          <div className="mb-6 p-4 bg-blue-50 border-l-4 border-primary-500 rounded-lg">
-            <p className="text-sm font-semibold text-primary-700 mb-1">Explanation</p>
-            <p className="text-gray-700 text-sm leading-relaxed">{current.explanation}</p>
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-primary-500 rounded-lg">
+            <p className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-1">Explanation</p>
+            <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{current.explanation}</p>
             {current.type === 'Theory' && results[results.length - 1]?.score != null && (
-              <p className="mt-2 font-semibold text-primary-700">
+              <p className="mt-2 font-semibold text-primary-700 dark:text-primary-300">
                 Score: {results[results.length - 1].score}/100
               </p>
             )}
             {current.correctAnswer && current.type !== 'Theory' && (
-              <p className="mt-2 text-sm text-green-700 font-medium">
+              <p className="mt-2 text-sm text-green-700 dark:text-green-400 font-medium">
                 Correct Answer: {Array.isArray(current.correctAnswer) ? current.correctAnswer.join(', ') : current.correctAnswer}
               </p>
             )}
@@ -221,9 +221,7 @@ export default function QuizScreen() {
           {!showResult ? (
             <button
               onClick={handleSubmit}
-              disabled={
-                (current.type === 'MCQ' || current.type === 'TrueFalse') && !selectedAnswer
-              }
+              disabled={(current.type === 'MCQ' || current.type === 'TrueFalse') && !selectedAnswer}
               className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />
