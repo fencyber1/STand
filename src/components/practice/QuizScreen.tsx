@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX } from 'lucide-react';
 import type { Question } from '../../types';
 import { getDeepExplanation } from '../../services/api';
 import { storage } from '../../services/storage';
@@ -48,6 +48,7 @@ export default function QuizScreen() {
 
   const current = questions[currentIndex];
   const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
+  const [speaking, setSpeaking] = useState(false);
   const isLast = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
@@ -101,6 +102,8 @@ export default function QuizScreen() {
 
   const handleNext = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
     if (isLast) {
       const allResults = [...results];
       if (!showResult) return;
@@ -133,6 +136,22 @@ export default function QuizScreen() {
   const handleBookmark = () => {
     const added = storage.toggleBookmark(current);
     setBookmarked(added);
+  };
+
+  const handleSpeak = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const text = current.question;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
   };
 
   const handleDeepExplanation = async () => {
@@ -219,7 +238,7 @@ export default function QuizScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-4">
-        <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); navigate('/practice'); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
+        <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); window.speechSynthesis.cancel(); navigate('/practice'); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Practice
         </button>
         <div className="flex items-center justify-between mb-1">
@@ -271,7 +290,16 @@ export default function QuizScreen() {
           </span>
         </div>
 
-        <p className="text-gray-800 dark:text-gray-100 text-lg mb-6 leading-relaxed">{current.question}</p>
+        <div className="flex items-start gap-2 mb-6">
+          <p className="text-gray-800 dark:text-gray-100 text-lg leading-relaxed flex-1">{current.question}</p>
+          <button
+            onClick={handleSpeak}
+            className="shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            title={speaking ? 'Stop reading' : 'Read question aloud'}
+          >
+            {speaking ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+        </div>
 
         {showResult && (
           <div className="flex justify-end -mt-4 mb-2">

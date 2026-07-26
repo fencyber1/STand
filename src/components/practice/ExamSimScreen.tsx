@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Timer, AlertTriangle } from 'lucide-react';
+import { Timer, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import type { Question } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
 
@@ -35,6 +35,7 @@ export default function ExamSimScreen() {
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const current = questions[currentIndex];
   const currentAnswer = answers[currentIndex]?.answer;
@@ -87,8 +88,25 @@ export default function ExamSimScreen() {
     });
   };
 
+  const handleSpeak = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(current.question);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  };
+
   const handleSubmitExam = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
 
     const results = questions.map((q, i) => {
       const userAnswer = answers[i]?.answer || '';
@@ -123,12 +141,16 @@ export default function ExamSimScreen() {
 
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
       setCurrentIndex((i) => i + 1);
     }
   };
 
   const handlePrev = () => {
     if (currentIndex > 0) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
       setCurrentIndex((i) => i - 1);
     }
   };
@@ -200,7 +222,16 @@ export default function ExamSimScreen() {
           colors={['#6366f1', '#8b5cf6', '#3b82f6']}
         >
           <div className="p-6 dark:bg-gray-800">
-            <p className="text-gray-800 dark:text-gray-100 text-lg mb-6 leading-relaxed">{current.question}</p>
+            <div className="flex items-start gap-2 mb-6">
+              <p className="text-gray-800 dark:text-gray-100 text-lg leading-relaxed flex-1">{current.question}</p>
+              <button
+                onClick={handleSpeak}
+                className="shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                title={speaking ? 'Stop reading' : 'Read question aloud'}
+              >
+                {speaking ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </button>
+            </div>
 
             {current.type === 'MCQ' && current.options && (
               <div className="space-y-3 mb-6">
