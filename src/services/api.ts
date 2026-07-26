@@ -2,19 +2,13 @@ import type { Question } from '../types';
 
 const API_KEY = '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';
 
-function getApiUrl(): string {
-  if (import.meta.env.DEV) {
-    return 'http://localhost:3001/api/generate';
-  }
-  return '/api/generate';
-}
-
 async function callAI(prompt: string): Promise<string> {
-  const url = getApiUrl();
-
-  const response = await fetch(url, {
+  const response = await fetch('/api/nvidia/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`,
+    },
     body: JSON.stringify({
       model: 'meta/llama-3.1-8b-instruct',
       messages: [{ role: 'user', content: prompt }],
