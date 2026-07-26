@@ -49,17 +49,21 @@ function parseQuestions(raw: string): Question[] {
       throw new Error('Empty or invalid array');
     }
 
-    return parsed.map((q: any, i: number) => ({
-      id: `ai-${Date.now()}-${i}`,
-      question: q.question || q.Q || `Question ${i + 1}`,
-      type: normalizeType(q.type || q.QuestionType || 'MCQ'),
-      options: normalizeOptions(q.options || q.choices || null, q.type || 'MCQ'),
-      correctAnswer: q.correctAnswer || q.correct_answer || q.answer || '',
-      explanation: q.explanation || q.rationale || '',
-      difficulty: normalizeDifficulty(q.difficulty || 'medium'),
-      subject: q.subject || '',
-      topic: q.topic || '',
-    }));
+    return parsed.map((q: any, i: number) => {
+      const imageQuery = q.imageQuery || q.image_query || q.imageUrl || '';
+      return {
+        id: `ai-${Date.now()}-${i}`,
+        question: q.question || q.Q || `Question ${i + 1}`,
+        type: normalizeType(q.type || q.QuestionType || 'MCQ'),
+        options: normalizeOptions(q.options || q.choices || null, q.type || 'MCQ'),
+        correctAnswer: q.correctAnswer || q.correct_answer || q.answer || '',
+        explanation: q.explanation || q.rationale || '',
+        difficulty: normalizeDifficulty(q.difficulty || 'medium'),
+        subject: q.subject || '',
+        topic: q.topic || '',
+        imageQuery,
+      };
+    });
   } catch (err: any) {
     console.error('Parse error:', err.message);
     throw new Error('Failed to parse AI response. Please try again.');
@@ -115,10 +119,11 @@ export async function generateQuestions(params: {
 Format: ${questionFormat}
 
 Return ONLY a JSON array. Each object:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}"}
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"1-3 word search term for an image that illustrates this concept"}
 
 For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
 For Theory: options can be omitted, correctAnswer is a model answer.
+The imageQuery should be a short search phrase (1-3 words) relevant to the concept being tested, suitable for finding an educational illustration. E.g. "abstract noun", "water cycle diagram", "Python loop".
 No markdown. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);

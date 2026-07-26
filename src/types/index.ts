@@ -18,6 +18,7 @@ export interface Question {
   difficulty: 'easy' | 'medium' | 'hard';
   subject: string;
   topic: string;
+  imageQuery?: string;
   image?: string;
   audio?: string;
 }

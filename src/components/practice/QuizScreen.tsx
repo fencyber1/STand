@@ -220,6 +220,14 @@ export default function QuizScreen() {
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-primary-500 rounded-lg">
             <p className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-1">Explanation</p>
             <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{current.explanation}</p>
+            {current.imageQuery && (
+              <img
+                src={`https://loremflickr.com/400/250/${encodeURIComponent(current.imageQuery)}`}
+                alt={current.imageQuery}
+                className="mt-3 rounded-lg w-full max-w-sm object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            )}
             {current.type === 'Theory' && results[results.length - 1]?.score != null && (
               <p className="mt-2 font-semibold text-primary-700 dark:text-primary-300">
                 Score: {results[results.length - 1].score}/100
