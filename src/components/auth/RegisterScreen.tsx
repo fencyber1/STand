@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Loader2, Moon, Sun } from 'lucide-react';
+import BorderGlow from '../ui/BorderGlow';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -62,7 +63,14 @@ export default function RegisterScreen() {
           <p className="text-gray-500 dark:text-gray-400 mt-1">AI Exam Practice Platform</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 transition-colors">
+        <BorderGlow
+          backgroundColor={theme === 'dark' ? '#1f2937' : '#ffffff'}
+          borderRadius={16}
+          glowColor={theme === 'dark' ? '220 80 70' : '220 80 60'}
+          glowIntensity={0.8}
+          colors={['#6366f1', '#8b5cf6', '#3b82f6']}
+        >
+          <div className="p-8">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">Create Account</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">Join STand to start practicing</p>
 
@@ -137,7 +145,8 @@ export default function RegisterScreen() {
               Sign In
             </Link>
           </p>
-        </div>
+          </div>
+        </BorderGlow>
       </div>
     </div>
   );

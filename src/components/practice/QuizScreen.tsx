@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import type { Question } from '../../types';
+import BorderGlow from '../ui/BorderGlow';
 
 interface QuizState {
   questions: Question[];
@@ -121,7 +122,16 @@ export default function QuizScreen() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+      <BorderGlow
+        backgroundColor="#1f2937"
+        borderRadius={12}
+        glowColor="220 80 70"
+        glowRadius={30}
+        glowIntensity={0.7}
+        edgeSensitivity={35}
+        colors={['#6366f1', '#8b5cf6', '#3b82f6']}
+      >
+        <div className="p-6 dark:bg-gray-800">
         <div className="mb-4">
           <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
             current.type === 'MCQ' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
@@ -237,7 +247,8 @@ export default function QuizScreen() {
             </button>
           )}
         </div>
-      </div>
+        </div>
+      </BorderGlow>
     </div>
   );
 }
