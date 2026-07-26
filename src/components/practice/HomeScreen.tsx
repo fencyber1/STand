@@ -4,14 +4,25 @@ import { Loader2, Timer } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
 
-const TIMER_OPTIONS = [
-  { label: 'No Limit', value: 0 },
-  { label: '5 min', value: 300 },
-  { label: '10 min', value: 600 },
-  { label: '15 min', value: 900 },
-  { label: '20 min', value: 1200 },
-  { label: '30 min', value: 1800 },
+const TIMER_PRESETS = [
+  { label: '5m', value: 300 },
+  { label: '10m', value: 600 },
+  { label: '15m', value: 900 },
+  { label: '30m', value: 1800 },
+  { label: '1h', value: 3600 },
+  { label: '2h', value: 7200 },
 ];
+
+function secondsToHms(total: number) {
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return { h, m, s };
+}
+
+function hmsToSeconds(h: number, m: number, s: number) {
+  return h * 3600 + m * 60 + s;
+}
 
 export default function HomeScreen() {
   const [topic, setTopic] = useState('');
@@ -19,10 +30,23 @@ export default function HomeScreen() {
   const [level, setLevel] = useState(LEVELS[0]);
   const [questionType, setQuestionType] = useState(QUESTION_TYPES[0]);
   const [count, setCount] = useState(COUNT_OPTIONS[2]);
-  const [timeLimit, setTimeLimit] = useState(0);
+  const [timerH, setTimerH] = useState(0);
+  const [timerM, setTimerM] = useState(10);
+  const [timerS, setTimerS] = useState(0);
+  const [useTimer, setUseTimer] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  const timeLimit = useTimer ? hmsToSeconds(timerH, timerM, timerS) : 0;
+
+  const applyPreset = (seconds: number) => {
+    const { h, m, s } = secondsToHms(seconds);
+    setTimerH(h);
+    setTimerM(m);
+    setTimerS(s);
+    setUseTimer(true);
+  };
 
   const handleGenerate = async () => {
     setError('');
@@ -130,21 +154,67 @@ export default function HomeScreen() {
           <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             <Timer size={14} /> Time Limit
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {TIMER_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setTimeLimit(opt.value)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border-2 transition ${
-                  timeLimit === opt.value
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              onClick={() => setUseTimer(!useTimer)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${useTimer ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useTimer ? 'translate-x-5' : ''}`} />
+            </button>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{useTimer ? 'On' : 'Off (No Limit)'}</span>
           </div>
+          {useTimer && (
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={timerH}
+                    onChange={(e) => setTimerH(Math.min(23, Math.max(0, Number(e.target.value))))}
+                    className="w-16 px-2 py-2 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition text-sm font-mono"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">h</span>
+                </div>
+                <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={timerM}
+                    onChange={(e) => setTimerM(Math.min(59, Math.max(0, Number(e.target.value))))}
+                    className="w-16 px-2 py-2 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition text-sm font-mono"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">m</span>
+                </div>
+                <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={timerS}
+                    onChange={(e) => setTimerS(Math.min(59, Math.max(0, Number(e.target.value))))}
+                    className="w-16 px-2 py-2 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition text-sm font-mono"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">s</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {TIMER_PRESETS.map((p) => (
+                  <button
+                    key={p.value}
+                    onClick={() => applyPreset(p.value)}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <button
