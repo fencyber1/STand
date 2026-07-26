@@ -4,6 +4,8 @@ import {
   LayoutDashboard,
   GraduationCap,
   Clock,
+  Bookmark,
+  TrendingUp,
   CalendarDays,
   User,
   LogOut,
@@ -19,6 +21,8 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/practice', label: 'Practice', icon: GraduationCap },
   { to: '/history', label: 'History', icon: Clock },
+  { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
+  { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ];

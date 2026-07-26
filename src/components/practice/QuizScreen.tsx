@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
 import type { Question } from '../../types';
 import { getDeepExplanation } from '../../services/api';
+import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 
 interface QuizState {
@@ -43,6 +44,7 @@ export default function QuizScreen() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [deepExplanation, setDeepExplanation] = useState('');
   const [showDeep, setShowDeep] = useState(false);
+  const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
 
   const current = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
@@ -104,7 +106,7 @@ export default function QuizScreen() {
       const correctCount = allResults.filter((r) => r.correct === true).length;
       const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
       navigate('/results', {
-        state: { topic, sector: state.sector, level: state.level, results: allResults, correctCount, totalCount: questions.length, totalScore },
+        state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore },
       });
     } else {
       setCurrentIndex((i) => i + 1);
@@ -113,12 +115,18 @@ export default function QuizScreen() {
       setShowResult(false);
       setDeepExplanation('');
       setShowDeep(false);
+      setBookmarked(storage.isBookmarked(questions[currentIndex + 1]?.id || ''));
     }
   }, [isLast, results, showResult, navigate, topic, state, questions.length]);
 
   const handleMCQSelect = (option: string) => {
     if (showResult) return;
     setSelectedAnswer(option);
+  };
+
+  const handleBookmark = () => {
+    const added = storage.toggleBookmark(current);
+    setBookmarked(added);
   };
 
   const handleDeepExplanation = async () => {
@@ -149,9 +157,9 @@ export default function QuizScreen() {
     const correctCount = allResults.filter((r) => r.correct === true).length;
     const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
     navigate('/results', {
-      state: { topic, sector: state.sector, level: state.level, results: allResults, correctCount, totalCount: questions.length, totalScore },
+      state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore },
     });
-  }, [results, navigate, topic, state, questions.length]);
+  }, [results, navigate, topic, state, questions]);
 
   useEffect(() => {
     if (timeLeft <= 0 || timeLimit <= 0 || showResult || results.length >= questions.length) return;
@@ -189,7 +197,7 @@ export default function QuizScreen() {
       const correctCount = finalResults.filter((r) => r.correct === true).length;
       const totalScore = finalResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
       navigate('/results', {
-        state: { topic, sector: state.sector, level: state.level, results: finalResults, correctCount, totalCount: questions.length, totalScore },
+        state: { topic, sector: state.sector, level: state.level, questions, results: finalResults, correctCount, totalCount: questions.length, totalScore },
       });
     }
   }, [timeLeft, timeLimit, showResult, results, questions, navigate, topic, state]);
@@ -258,6 +266,28 @@ export default function QuizScreen() {
         </div>
 
         <p className="text-gray-800 dark:text-gray-100 text-lg mb-6 leading-relaxed">{current.question}</p>
+
+        {showResult && (
+          <div className="flex justify-end -mt-4 mb-2">
+            <button
+              onClick={handleBookmark}
+              className="flex items-center gap-1 text-sm font-medium transition-colors"
+              title={bookmarked ? 'Remove bookmark' : 'Bookmark this question'}
+            >
+              {bookmarked ? (
+                <>
+                  <BookmarkCheck size={18} className="text-yellow-500" />
+                  <span className="text-yellow-600 dark:text-yellow-400">Bookmarked</span>
+                </>
+              ) : (
+                <>
+                  <Bookmark size={18} className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400" />
+                  <span className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400">Bookmark</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {current.type === 'MCQ' && current.options && (
           <div className="space-y-3 mb-6">

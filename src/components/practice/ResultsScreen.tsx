@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Trophy, CheckCircle, XCircle, Home, RotateCcw } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useEffect } from 'react';
 
@@ -7,6 +7,18 @@ interface ResultsState {
   topic: string;
   sector: string;
   level: string;
+  questions: Array<{
+    id: string;
+    question: string;
+    type: string;
+    options?: string[];
+    correctAnswer: string | string[];
+    explanation: string;
+    difficulty: string;
+    subject: string;
+    topic: string;
+    imageQuery?: string;
+  }>;
   results: Array<{
     questionId: string;
     userAnswer: string | string[];
@@ -51,6 +63,23 @@ export default function ResultsScreen() {
   const avgTheoryScore = results
     .filter((r) => r.score != null)
     .reduce((s, r, _, arr) => s + (r.score || 0) / (arr.length || 1), 0);
+
+  const wrongResults = results.filter((r) => r.correct === false);
+  const wrongQuestions = state.questions?.filter((q) => wrongResults.some((r) => r.questionId === q.id)) || [];
+
+  const handleReviewWrong = () => {
+    if (wrongQuestions.length === 0) return;
+    navigate('/quiz', {
+      state: {
+        questions: wrongQuestions,
+        topic: `${topic} (Review)`,
+        sector: state.sector,
+        level: state.level,
+        questionType: 'Review',
+        timeLimit: 0,
+      },
+    });
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -127,6 +156,15 @@ export default function ResultsScreen() {
           <Home size={18} />
           New Topic
         </Link>
+        {wrongQuestions.length > 0 && (
+          <button
+            onClick={handleReviewWrong}
+            className="flex-1 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition flex items-center justify-center gap-2"
+          >
+            <RotateCw size={18} />
+            Review Wrong ({wrongQuestions.length})
+          </button>
+        )}
         <button
           onClick={() => navigate(-1)}
           className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"

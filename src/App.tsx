@@ -10,6 +10,8 @@ import ResultsScreen from './components/practice/ResultsScreen';
 import HistoryScreen from './components/history/HistoryScreen';
 import StudyPlansScreen from './components/study/StudyPlansScreen';
 import ProfileScreen from './components/profile/ProfileScreen';
+import BookmarksScreen from './components/practice/BookmarksScreen';
+import ProgressScreen from './components/practice/ProgressScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = storage.getToken();
@@ -35,6 +37,8 @@ export default function App() {
         <Route path="quiz" element={<QuizScreen />} />
         <Route path="results" element={<ResultsScreen />} />
         <Route path="history" element={<HistoryScreen />} />
+        <Route path="bookmarks" element={<BookmarksScreen />} />
+        <Route path="progress" element={<ProgressScreen />} />
         <Route path="study-plans" element={<StudyPlansScreen />} />
         <Route path="profile" element={<ProfileScreen />} />
       </Route>

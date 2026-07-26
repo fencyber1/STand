@@ -1,8 +1,9 @@
-import type { SessionData } from '../types';
+import type { SessionData, Question } from '../types';
 
 const HISTORY_KEY = 'stand_history';
 const USER_TOKEN_KEY = 'stand_user_token';
 const STUDY_PLANS_KEY = 'stand_study_plans';
+const BOOKMARKS_KEY = 'stand_bookmarks';
 
 export const storage = {
   getToken(): string | null {
@@ -59,5 +60,32 @@ export const storage = {
   deleteStudyPlan(id: string): void {
     const plans = this.getStudyPlans().filter((p) => p.id !== id);
     localStorage.setItem(STUDY_PLANS_KEY, JSON.stringify(plans));
+  },
+
+  getBookmarks(): Question[] {
+    try {
+      const raw = localStorage.getItem(BOOKMARKS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  toggleBookmark(question: Question): boolean {
+    const bookmarks = this.getBookmarks();
+    const index = bookmarks.findIndex((b) => b.id === question.id);
+    if (index >= 0) {
+      bookmarks.splice(index, 1);
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+      return false;
+    } else {
+      bookmarks.push(question);
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+      return true;
+    }
+  },
+
+  isBookmarked(questionId: string): boolean {
+    return this.getBookmarks().some((b) => b.id === questionId);
   },
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Timer } from 'lucide-react';
+import { Loader2, Timer, Shuffle } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
 
@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const [timerM, setTimerM] = useState(10);
   const [timerS, setTimerS] = useState(0);
   const [useTimer, setUseTimer] = useState(true);
+  const [shuffle, setShuffle] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -64,8 +65,12 @@ export default function HomeScreen() {
         questionType: questionType.split(' ')[0],
         count,
       });
+      let questions = result.questions;
+      if (shuffle) {
+        questions = [...questions].sort(() => Math.random() - 0.5);
+      }
       navigate('/quiz', {
-        state: { questions: result.questions, topic, sector, level, questionType, timeLimit },
+        state: { questions, topic, sector, level, questionType, timeLimit },
       });
     } catch (err: any) {
       console.error('Question generation error:', err);
@@ -215,6 +220,18 @@ export default function HomeScreen() {
               </div>
             </>
           )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Shuffle size={14} /> Shuffle Questions
+          </label>
+          <button
+            onClick={() => setShuffle(!shuffle)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${shuffle ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${shuffle ? 'translate-x-5' : ''}`} />
+          </button>
         </div>
 
         <button
