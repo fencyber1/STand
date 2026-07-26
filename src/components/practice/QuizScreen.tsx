@@ -43,9 +43,13 @@ export default function QuizScreen() {
 
   const handleSubmit = () => {
     let result: Result;
+    const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+    const toStr = (v: string | string[] | null): string => Array.isArray(v) ? (v[0] || '') : (v || '');
 
     if (current.type === 'MCQ') {
-      const isCorrect = selectedAnswer === current.correctAnswer;
+      const correctStr = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
+      const userAns = Array.isArray(selectedAnswer) ? selectedAnswer[0] : (selectedAnswer || '');
+      const isCorrect = stripPrefix(userAns) === stripPrefix(correctStr);
       result = {
         questionId: current.id,
         userAnswer: selectedAnswer || '',
@@ -62,7 +66,9 @@ export default function QuizScreen() {
         score,
       };
     } else if (current.type === 'TrueFalse') {
-      const isCorrect = selectedAnswer === current.correctAnswer;
+      const correctStr = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
+      const userAns = Array.isArray(selectedAnswer) ? selectedAnswer[0] : (selectedAnswer || '');
+      const isCorrect = stripPrefix(userAns) === stripPrefix(correctStr);
       result = {
         questionId: current.id,
         userAnswer: selectedAnswer || '',
