@@ -121,7 +121,7 @@ export default function HomeScreen() {
           className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
         >
           {loading && <Loader2 size={18} className="animate-spin" />}
-          {loading ? 'Generating Questions...' : 'Generate Questions'}
+          {loading ? 'AI is generating questions...' : 'Generate Questions'}
         </button>
       </div>
     </div>
