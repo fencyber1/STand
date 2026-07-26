@@ -6,6 +6,7 @@ import {
   Clock,
   Bookmark,
   TrendingUp,
+  Shield,
   CalendarDays,
   User,
   LogOut,
@@ -20,6 +21,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/practice', label: 'Practice', icon: GraduationCap },
+  { to: '/exam-setup', label: 'Exam Sim', icon: Shield },
   { to: '/history', label: 'History', icon: Clock },
   { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
