@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import type { Question } from '../../types';
+import { getDeepExplanation } from '../../services/api';
 import BorderGlow from '../ui/BorderGlow';
 
 interface QuizState {
@@ -39,6 +40,9 @@ export default function QuizScreen() {
   const [results, setResults] = useState<Result[]>([]);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [deepLoading, setDeepLoading] = useState(false);
+  const [deepExplanation, setDeepExplanation] = useState('');
+  const [showDeep, setShowDeep] = useState(false);
 
   const current = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
@@ -107,12 +111,37 @@ export default function QuizScreen() {
       setSelectedAnswer(null);
       setTextAnswer('');
       setShowResult(false);
+      setDeepExplanation('');
+      setShowDeep(false);
     }
   }, [isLast, results, showResult, navigate, topic, state, questions.length]);
 
   const handleMCQSelect = (option: string) => {
     if (showResult) return;
     setSelectedAnswer(option);
+  };
+
+  const handleDeepExplanation = async () => {
+    if (deepExplanation) {
+      setShowDeep(!showDeep);
+      return;
+    }
+    setDeepLoading(true);
+    try {
+      const text = await getDeepExplanation({
+        question: current.question,
+        correctAnswer: Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer,
+        explanation: current.explanation,
+        subject: current.subject,
+      });
+      setDeepExplanation(text);
+      setShowDeep(true);
+    } catch (err) {
+      setDeepExplanation('Failed to load deeper explanation. Please try again.');
+      setShowDeep(true);
+    } finally {
+      setDeepLoading(false);
+    }
   };
 
   const goToResults = useCallback(() => {
@@ -309,6 +338,26 @@ export default function QuizScreen() {
               <p className="mt-2 text-sm text-green-700 dark:text-green-400 font-medium">
                 Correct Answer: {Array.isArray(current.correctAnswer) ? current.correctAnswer.join(', ') : current.correctAnswer}
               </p>
+            )}
+            <button
+              onClick={handleDeepExplanation}
+              disabled={deepLoading}
+              className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition"
+            >
+              {deepLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : showDeep ? (
+                <ChevronUp size={14} />
+              ) : (
+                <ChevronDown size={14} />
+              )}
+              {deepLoading ? 'Loading deeper explanation...' : showDeep ? 'Hide Deep Explanation' : 'Deep Explanation'}
+            </button>
+            {showDeep && deepExplanation && (
+              <div className="mt-3 pt-3 border-t border-primary-200 dark:border-primary-800">
+                <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-1">Deep Explanation</p>
+                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{deepExplanation}</p>
+              </div>
             )}
           </div>
         )}

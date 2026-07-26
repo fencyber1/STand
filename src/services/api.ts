@@ -135,3 +135,27 @@ No markdown. No text outside the JSON array.`;
 
   return { questions };
 }
+
+export async function getDeepExplanation(params: {
+  question: string;
+  correctAnswer: string;
+  explanation: string;
+  subject: string;
+}): Promise<string> {
+  const prompt = `You are a helpful tutor. A student got this exam question wrong and needs a deeper explanation.
+
+Question: ${params.question}
+Correct Answer: ${params.correctAnswer}
+Brief explanation: ${params.explanation}
+Subject: ${params.subject}
+
+Provide a detailed, easy-to-understand explanation (2-4 paragraphs) that:
+1. Explains WHY the correct answer is right
+2. Explains why common wrong answers are wrong
+3. Gives real-world examples or analogies
+4. Mentions related concepts the student should also know
+
+Write in plain text, no markdown formatting.`;
+
+  return await callAI(prompt);
+}
