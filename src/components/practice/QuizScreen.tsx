@@ -44,9 +44,9 @@ export default function QuizScreen() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [deepExplanation, setDeepExplanation] = useState('');
   const [showDeep, setShowDeep] = useState(false);
-  const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
 
   const current = questions[currentIndex];
+  const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
   const isLast = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
