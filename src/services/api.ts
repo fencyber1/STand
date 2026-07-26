@@ -4,9 +4,9 @@ const API_KEY = 'nvapi-FIJgMOKQNsyw39hkhoY7B25fFi1FYVHv_hl8UkweA_AzLppbdZOQI-ikI
 
 function getApiUrl(): string {
   if (import.meta.env.DEV) {
-    return '/api/nvidia/chat/completions';
+    return 'http://localhost:3001/api/generate';
   }
-  return 'https://integrate.api.nvidia.com/v1/chat/completions';
+  return '/api/generate';
 }
 
 async function callAI(prompt: string): Promise<string> {
@@ -14,10 +14,7 @@ async function callAI(prompt: string): Promise<string> {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'meta/llama-3.1-8b-instruct',
       messages: [{ role: 'user', content: prompt }],
