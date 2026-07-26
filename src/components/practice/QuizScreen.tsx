@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer } from 'lucide-react';
 import type { Question } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
 
@@ -10,6 +10,7 @@ interface QuizState {
   sector: string;
   level: string;
   questionType: string;
+  timeLimit: number;
 }
 
 interface Result {
@@ -30,18 +31,20 @@ export default function QuizScreen() {
     return null;
   }
 
-  const { questions, topic } = state;
+  const { questions, topic, timeLimit = 0 } = state;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const [textAnswer, setTextAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const current = questions[currentIndex];
   const isLast = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     let result: Result;
     const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
     const toStr = (v: string | string[] | null): string => Array.isArray(v) ? (v[0] || '') : (v || '');
@@ -87,9 +90,10 @@ export default function QuizScreen() {
 
     setResults((prev) => [...prev, result]);
     setShowResult(true);
-  };
+  }, [current, selectedAnswer, textAnswer]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
     if (isLast) {
       const allResults = [...results];
       if (!showResult) return;
@@ -104,24 +108,90 @@ export default function QuizScreen() {
       setTextAnswer('');
       setShowResult(false);
     }
-  };
+  }, [isLast, results, showResult, navigate, topic, state, questions.length]);
 
   const handleMCQSelect = (option: string) => {
     if (showResult) return;
     setSelectedAnswer(option);
   };
 
+  const goToResults = useCallback(() => {
+    const allResults = [...results];
+    const correctCount = allResults.filter((r) => r.correct === true).length;
+    const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
+    navigate('/results', {
+      state: { topic, sector: state.sector, level: state.level, results: allResults, correctCount, totalCount: questions.length, totalScore },
+    });
+  }, [results, navigate, topic, state, questions.length]);
+
+  useEffect(() => {
+    if (timeLeft <= 0 || timeLimit <= 0 || showResult || results.length >= questions.length) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [timeLimit, showResult, results.length, questions.length]);
+
+  useEffect(() => {
+    if (timeLimit > 0 && timeLeft === 0 && !showResult) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      const finalResults = [...results];
+      if (finalResults.length < questions.length) {
+        const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+        for (let i = results.length; i < questions.length; i++) {
+          finalResults.push({
+            questionId: questions[i].id,
+            userAnswer: '',
+            correct: false,
+            explanation: questions[i].explanation,
+          });
+        }
+      }
+      const correctCount = finalResults.filter((r) => r.correct === true).length;
+      const totalScore = finalResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
+      navigate('/results', {
+        state: { topic, sector: state.sector, level: state.level, results: finalResults, correctCount, totalCount: questions.length, totalScore },
+      });
+    }
+  }, [timeLeft, timeLimit, showResult, results, questions, navigate, topic, state]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-4">
-        <button onClick={() => navigate('/practice')} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
+        <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); navigate('/practice'); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
           <ArrowLeft size={14} /> Back to Practice
         </button>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{topic}</h2>
-          <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
-            {currentIndex + 1} / {questions.length}
-          </span>
+          <div className="flex items-center gap-3 ml-2">
+            {timeLimit > 0 && (
+              <span className={`flex items-center gap-1 text-sm font-mono font-semibold whitespace-nowrap ${
+                timeLeft <= 30 ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                <Timer size={14} />
+                {formatTime(timeLeft)}
+              </span>
+            )}
+            <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {currentIndex + 1} / {questions.length}
+            </span>
+          </div>
         </div>
         <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progress}%` }} />

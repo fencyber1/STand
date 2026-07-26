@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Timer } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
+
+const TIMER_OPTIONS = [
+  { label: 'No Limit', value: 0 },
+  { label: '5 min', value: 300 },
+  { label: '10 min', value: 600 },
+  { label: '15 min', value: 900 },
+  { label: '20 min', value: 1200 },
+  { label: '30 min', value: 1800 },
+];
 
 export default function HomeScreen() {
   const [topic, setTopic] = useState('');
@@ -10,6 +19,7 @@ export default function HomeScreen() {
   const [level, setLevel] = useState(LEVELS[0]);
   const [questionType, setQuestionType] = useState(QUESTION_TYPES[0]);
   const [count, setCount] = useState(COUNT_OPTIONS[2]);
+  const [timeLimit, setTimeLimit] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -31,7 +41,7 @@ export default function HomeScreen() {
         count,
       });
       navigate('/quiz', {
-        state: { questions: result.questions, topic, sector, level, questionType },
+        state: { questions: result.questions, topic, sector, level, questionType, timeLimit },
       });
     } catch (err: any) {
       console.error('Question generation error:', err);
@@ -114,6 +124,27 @@ export default function HomeScreen() {
               <option key={c} value={c}>{c} questions</option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <Timer size={14} /> Time Limit
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {TIMER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setTimeLimit(opt.value)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium border-2 transition ${
+                  timeLimit === opt.value
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <button
