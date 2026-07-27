@@ -1,4 +1,4 @@
-const API_KEY = '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';
+const API_KEY = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY || '';
 const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 export default async function handler(req: any, res: any) {

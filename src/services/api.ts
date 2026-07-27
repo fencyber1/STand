@@ -1,6 +1,6 @@
 import type { Question } from '../types';
 
-const API_KEY = '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';
+const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
 
 function getApiUrl(): string {
   if (import.meta.env.DEV) {
