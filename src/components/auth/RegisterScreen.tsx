@@ -4,6 +4,7 @@ import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Loader2, Moon, Sun } from 'lucide-react';
 import BorderGlow from '../ui/BorderGlow';
+import Logo from '../landing/Logo';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -36,7 +37,8 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 800));
+      storage.setUser({ fullName, email });
       storage.setToken('mock-token-' + Date.now());
       navigate('/');
     } catch {
@@ -58,9 +60,9 @@ export default function RegisterScreen() {
       </div>
 
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-600 dark:text-primary-400">STand</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">AI Exam Practice Platform</p>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Logo size={160} />
+          <p className="text-gray-500 dark:text-gray-400 mt-2">AI Exam Practice Platform</p>
         </div>
 
         <BorderGlow

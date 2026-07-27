@@ -8,6 +8,7 @@ export default function ProfileScreen() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const history = useMemo(() => storage.getHistory(), []);
+  const user = useMemo(() => storage.getUser(), []);
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -21,6 +22,7 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
       storage.removeToken();
+      storage.removeUser();
       navigate('/login');
     }
   };
@@ -31,8 +33,8 @@ export default function ProfileScreen() {
         <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-100 dark:bg-primary-900/40 rounded-full mb-3">
           <User size={36} className="text-primary-600 dark:text-primary-400" />
         </div>
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Student</h1>
-        <p className="text-gray-500 dark:text-gray-400">student@example.com</p>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{user?.fullName || 'Student'}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{user?.email || 'student@example.com'}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

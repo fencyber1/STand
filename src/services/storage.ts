@@ -2,6 +2,7 @@ import type { SessionData, Question } from '../types';
 
 const HISTORY_KEY = 'stand_history';
 const USER_TOKEN_KEY = 'stand_user_token';
+const USER_KEY = 'stand_user';
 const STUDY_PLANS_KEY = 'stand_study_plans';
 const BOOKMARKS_KEY = 'stand_bookmarks';
 
@@ -16,6 +17,23 @@ export const storage = {
 
   removeToken(): void {
     localStorage.removeItem(USER_TOKEN_KEY);
+  },
+
+  getUser(): { fullName: string; email: string } | null {
+    try {
+      const raw = localStorage.getItem(USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  setUser(user: { fullName: string; email: string }): void {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
+
+  removeUser(): void {
+    localStorage.removeItem(USER_KEY);
   },
 
   getHistory(): SessionData[] {
