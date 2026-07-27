@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
+import Logo from '../landing/Logo';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -56,9 +57,9 @@ export default function Layout() {
         }`}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">STand</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">AI Exam Practice</p>
+          <div className="text-primary-600 dark:text-primary-400">
+            <Logo size={120} />
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 -mt-1">AI Exam Practice</p>
           </div>
           <button
             className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
