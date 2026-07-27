@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X } from 'lucide-react';
 import type { Question } from '../../types';
 import { getDeepExplanation } from '../../services/api';
 import { storage } from '../../services/storage';
@@ -287,8 +287,6 @@ export default function QuizScreen() {
     const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
     setCurrentFact(fact);
     setShowFact(true);
-    const timer = setTimeout(() => setShowFact(false), 3000);
-    return () => clearTimeout(timer);
   }, [showResult, isLast]);
 
   const formatTime = (seconds: number) => {
@@ -545,13 +543,19 @@ export default function QuizScreen() {
       </BorderGlow>
 
       {showFact && currentFact && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 max-w-sm animate-bounce">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 max-w-sm">
           <div className="flex items-start gap-2">
             <Lightbulb size={18} className="text-yellow-500 shrink-0 mt-0.5" />
-            <div>
+            <div className="flex-1">
               <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 mb-1">Did you know?</p>
               <p className="text-sm text-gray-700 dark:text-gray-300">{currentFact}</p>
             </div>
+            <button
+              onClick={() => setShowFact(false)}
+              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X size={14} />
+            </button>
           </div>
         </div>
       )}
