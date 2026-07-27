@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useEffect } from 'react';
 
@@ -130,6 +130,30 @@ export default function ResultsScreen() {
     }
   };
 
+  const handleExportAnki = () => {
+    const lines = state.questions.map((q, i) => {
+      const front = q.question.replace(/"/g, '""');
+      let back = '';
+      if (q.type === 'MCQ' && q.options) {
+        back = q.options.join('<br>');
+        back += `<br><br><strong>Answer:</strong> ${Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer}`;
+      } else {
+        back = `<strong>Answer:</strong> ${Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer}`;
+      }
+      back += `<br><br><em>${q.explanation.replace(/"/g, '""')}</em>`;
+      return `"${front}","${back.replace(/"/g, '""')}","${q.subject}","${q.topic}"`;
+    });
+
+    const csv = 'Front,Back,Subject,Topic\n' + lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `stand-flashcards-${topic.replace(/\s+/g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
@@ -219,7 +243,14 @@ export default function ResultsScreen() {
           className="flex-1 py-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition flex items-center justify-center gap-2"
         >
           <Download size={18} />
-          Export PDF
+          PDF
+        </button>
+        <button
+          onClick={handleExportAnki}
+          className="flex-1 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition flex items-center justify-center gap-2"
+        >
+          <CreditCard size={18} />
+          Anki
         </button>
         <button
           onClick={() => navigate(-1)}

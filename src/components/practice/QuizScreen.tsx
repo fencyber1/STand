@@ -1,10 +1,40 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb } from 'lucide-react';
 import type { Question } from '../../types';
 import { getDeepExplanation } from '../../services/api';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
+import CalculatorPanel from './CalculatorPanel';
+import CheatSheet from './CheatSheet';
+
+const FUN_FACTS = [
+  'Octopuses have three hearts and blue blood.',
+  'Honey never spoils — edible after 3000 years.',
+  'Bananas are berries, but strawberries aren\'t.',
+  'A group of flamingos is called a "flamboyance."',
+  'The human body has about 37.2 trillion cells.',
+  'Light takes 8 minutes to travel from the Sun to Earth.',
+  'There are more stars in the universe than grains of sand on Earth.',
+  'Water can boil and freeze at the same time (triple point).',
+  'A neutron star is so dense a teaspoon weighs 6 billion tons.',
+  'DNA in all your cells would stretch to Pluto and back.',
+  'The Amazon rainforest produces 20% of the world\'s oxygen.',
+  'Venus spins backwards compared to most planets.',
+  'Your brain uses 20% of your body\'s total energy.',
+  'Glass is actually a liquid that flows very slowly.',
+  'The Moon has moonquakes just like Earth has earthquakes.',
+  'Cows have best friends and get stressed when separated.',
+  'Sound travels 4x faster in water than in air.',
+  'The Great Wall of China is visible from space with the naked eye.',
+  'A day on Venus is longer than a year on Venus.',
+  'Your bones are stronger than steel per unit weight.',
+  'Butterflies taste with their feet.',
+  'The shortest war in history lasted 38 minutes.',
+  'Hot water freezes faster than cold water (Mpemba effect).',
+  'There are more possible chess games than atoms in the observable universe.',
+  'The human eye can distinguish about 10 million different colors.',
+];
 
 interface QuizState {
   questions: Question[];
@@ -14,6 +44,7 @@ interface QuizState {
   questionType: string;
   timeLimit: number;
   instantFeedback?: boolean;
+  speedRound?: boolean;
 }
 
 interface Result {
@@ -34,7 +65,7 @@ export default function QuizScreen() {
     return null;
   }
 
-  const { questions, topic, timeLimit = 0, instantFeedback = false } = state;
+  const { questions, topic, timeLimit = 0, instantFeedback = false, speedRound = false } = state;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const [textAnswer, setTextAnswer] = useState('');
@@ -49,6 +80,12 @@ export default function QuizScreen() {
   const current = questions[currentIndex];
   const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
   const [speaking, setSpeaking] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
+  const [currentFact, setCurrentFact] = useState('');
+  const [showFact, setShowFact] = useState(false);
+  const [speedTimeLeft, setSpeedTimeLeft] = useState(30);
+  const speedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isLast = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
@@ -227,6 +264,33 @@ export default function QuizScreen() {
     }
   }, [timeLeft, timeLimit, showResult, results, questions, navigate, topic, state]);
 
+  useEffect(() => {
+    if (!speedRound || showResult) return;
+    setSpeedTimeLeft(30);
+    speedTimerRef.current = setInterval(() => {
+      setSpeedTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (speedTimerRef.current) clearInterval(speedTimerRef.current);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (speedTimerRef.current) clearInterval(speedTimerRef.current);
+    };
+  }, [currentIndex, speedRound, showResult]);
+
+  useEffect(() => {
+    if (!showResult || isLast) return;
+    const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
+    setCurrentFact(fact);
+    setShowFact(true);
+    const timer = setTimeout(() => setShowFact(false), 3000);
+    return () => clearTimeout(timer);
+  }, [showResult, isLast]);
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -260,6 +324,37 @@ export default function QuizScreen() {
         <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>
+        {speedRound && !showResult && (
+          <div className="mt-2 flex items-center justify-center">
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold font-mono ${
+              speedTimeLeft <= 10 ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 animate-pulse' :
+              speedTimeLeft <= 20 ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' :
+              'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'
+            }`}>
+              <Zap size={14} />
+              Speed Round: {speedTimeLeft}s
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => setShowCalculator(!showCalculator)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+            showCalculator ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+          }`}
+        >
+          <Calculator size={14} /> Calculator
+        </button>
+        <button
+          onClick={() => setShowCheatSheet(!showCheatSheet)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+            showCheatSheet ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+          }`}
+        >
+          <BookOpen size={14} /> Cheat Sheet
+        </button>
       </div>
 
       <BorderGlow
@@ -448,6 +543,21 @@ export default function QuizScreen() {
         </div>
         </div>
       </BorderGlow>
+
+      {showFact && currentFact && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 max-w-sm animate-bounce">
+          <div className="flex items-start gap-2">
+            <Lightbulb size={18} className="text-yellow-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 mb-1">Did you know?</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{currentFact}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCalculator && <CalculatorPanel onClose={() => setShowCalculator(false)} />}
+      {showCheatSheet && <CheatSheet subject={current.subject} topic={current.topic} onClose={() => setShowCheatSheet(false)} />}
     </div>
   );
 }

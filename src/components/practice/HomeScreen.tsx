@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Timer, Shuffle, Zap, BarChart3 } from 'lucide-react';
+import { Loader2, Timer, Shuffle, Zap, BarChart3, Rocket } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
 
@@ -37,6 +37,7 @@ export default function HomeScreen() {
   const [shuffle, setShuffle] = useState(false);
   const [difficulty, setDifficulty] = useState('all');
   const [instantFeedback, setInstantFeedback] = useState(false);
+  const [speedRound, setSpeedRound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -73,7 +74,7 @@ export default function HomeScreen() {
         questions = [...questions].sort(() => Math.random() - 0.5);
       }
       navigate('/quiz', {
-        state: { questions, topic, sector, level, questionType, timeLimit, instantFeedback },
+        state: { questions, topic, sector, level, questionType, timeLimit, instantFeedback, speedRound },
       });
     } catch (err: any) {
       console.error('Question generation error:', err);
@@ -246,6 +247,18 @@ export default function HomeScreen() {
             className={`relative w-11 h-6 rounded-full transition-colors ${instantFeedback ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${instantFeedback ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Rocket size={14} /> Speed Round (30s/question)
+          </label>
+          <button
+            onClick={() => setSpeedRound(!speedRound)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${speedRound ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${speedRound ? 'translate-x-5' : ''}`} />
           </button>
         </div>
 
