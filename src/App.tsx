@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { storage } from './services/storage';
 import Layout from './components/layout/Layout';
+import LandingScreen from './components/landing/LandingScreen';
 import LoginScreen from './components/auth/LoginScreen';
 import RegisterScreen from './components/auth/RegisterScreen';
 import DashboardScreen from './components/practice/DashboardScreen';
@@ -23,30 +24,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const isLoggedIn = !!storage.getToken();
+
   return (
     <Routes>
-      <Route path="/login" element={<LoginScreen />} />
-      <Route path="/register" element={<RegisterScreen />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<DashboardScreen />} />
-        <Route path="practice" element={<HomeScreen />} />
-        <Route path="quiz" element={<QuizScreen />} />
-        <Route path="exam-setup" element={<ExamSetupScreen />} />
-        <Route path="exam" element={<ExamSimScreen />} />
-        <Route path="results" element={<ResultsScreen />} />
-        <Route path="history" element={<HistoryScreen />} />
-        <Route path="bookmarks" element={<BookmarksScreen />} />
-        <Route path="progress" element={<ProgressScreen />} />
-        <Route path="search" element={<SearchScreen />} />
-        <Route path="study-plans" element={<StudyPlansScreen />} />
-        <Route path="profile" element={<ProfileScreen />} />
+      <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <LoginScreen />} />
+      <Route path="/register" element={isLoggedIn ? <Navigate to="/" replace /> : <RegisterScreen />} />
+      <Route path="/" element={isLoggedIn ? <ProtectedRoute><Layout /></ProtectedRoute> : <LandingScreen />}>
+        {isLoggedIn && (
+          <>
+            <Route index element={<DashboardScreen />} />
+            <Route path="practice" element={<HomeScreen />} />
+            <Route path="quiz" element={<QuizScreen />} />
+            <Route path="exam-setup" element={<ExamSetupScreen />} />
+            <Route path="exam" element={<ExamSimScreen />} />
+            <Route path="results" element={<ResultsScreen />} />
+            <Route path="history" element={<HistoryScreen />} />
+            <Route path="bookmarks" element={<BookmarksScreen />} />
+            <Route path="progress" element={<ProgressScreen />} />
+            <Route path="search" element={<SearchScreen />} />
+            <Route path="study-plans" element={<StudyPlansScreen />} />
+            <Route path="profile" element={<ProfileScreen />} />
+          </>
+        )}
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
