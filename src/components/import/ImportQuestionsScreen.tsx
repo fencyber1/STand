@@ -5,8 +5,6 @@ import type { Question } from '../../types';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 
-const IMPORTED_KEY = 'stand_imported_questions';
-
 function parseCSV(text: string): Question[] {
   const lines = text.split('\n').filter((l) => l.trim());
   if (lines.length < 2) return [];
@@ -131,9 +129,9 @@ export default function ImportQuestionsScreen() {
   const handleSave = () => {
     if (questions.length === 0) return;
     const updated = questions.map((q) => ({ ...q, subject, topic }));
-    const existing = getImported();
+    const existing = storage.getImportedQuestions();
     const merged = [...existing, ...updated];
-    localStorage.setItem(IMPORTED_KEY, JSON.stringify(merged));
+    storage.saveImportedQuestions(merged);
     setSuccess(`${updated.length} questions saved! You can now use them in Practice.`);
     setTimeout(() => navigate('/practice'), 1500);
   };
@@ -260,13 +258,4 @@ export default function ImportQuestionsScreen() {
       </div>
     </div>
   );
-}
-
-function getImported(): Question[] {
-  try {
-    const raw = localStorage.getItem(IMPORTED_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
 }

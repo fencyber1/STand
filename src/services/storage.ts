@@ -1,16 +1,37 @@
 import type { SessionData, Question, QuestionTiming, StoredAchievement, QuestionNote } from '../types';
 
-const HISTORY_KEY = 'stand_history';
 const USER_TOKEN_KEY = 'stand_user_token';
 const USER_KEY = 'stand_user';
 const USERS_KEY = 'stand_users';
-const STUDY_PLANS_KEY = 'stand_study_plans';
-const BOOKMARKS_KEY = 'stand_bookmarks';
-const QUESTION_TIMINGS_KEY = 'stand_question_timings';
-const ACHIEVEMENTS_KEY = 'stand_achievements';
-const QUESTION_NOTES_KEY = 'stand_question_notes';
+
+let _userId: string | null = null;
+
+function k(base: string): string {
+  return _userId ? `${base}_${_userId}` : base;
+}
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(k(key));
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(key: string, value: any): void {
+  localStorage.setItem(k(key), JSON.stringify(value));
+}
 
 export const storage = {
+  setActiveUserId(id: string | null): void {
+    _userId = id;
+  },
+
+  getActiveUserId(): string | null {
+    return _userId;
+  },
+
   getToken(): string | null {
     return localStorage.getItem(USER_TOKEN_KEY);
   },
@@ -23,7 +44,7 @@ export const storage = {
     localStorage.removeItem(USER_TOKEN_KEY);
   },
 
-  getUser(): { fullName: string; email: string } | null {
+  getUser(): { fullName: string; email: string; photoURL?: string | null } | null {
     try {
       const raw = localStorage.getItem(USER_KEY);
       return raw ? JSON.parse(raw) : null;
@@ -32,7 +53,7 @@ export const storage = {
     }
   },
 
-  setUser(user: { fullName: string; email: string }): void {
+  setUser(user: { fullName: string; email: string; photoURL?: string | null }): void {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
 
@@ -41,71 +62,51 @@ export const storage = {
   },
 
   getUsers(): Array<{ fullName: string; email: string; passwordHash: string; createdAt: string }> {
-    try {
-      const raw = localStorage.getItem(USERS_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return readJson(USERS_KEY, []);
   },
 
   saveUser(user: { fullName: string; email: string; passwordHash: string; createdAt: string }): void {
     const users = this.getUsers();
     users.push(user);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    writeJson(USERS_KEY, users);
   },
 
   getHistory(): SessionData[] {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return readJson<SessionData[]>('stand_history', []);
   },
 
   saveSession(session: SessionData): void {
     const history = this.getHistory();
     history.push(session);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    writeJson('stand_history', history);
   },
 
   clearHistory(): void {
-    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(k('stand_history'));
   },
 
   getStudyPlans(): any[] {
-    try {
-      const raw = localStorage.getItem(STUDY_PLANS_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return readJson('stand_study_plans', []);
   },
 
   saveStudyPlan(plan: any): void {
     const plans = this.getStudyPlans();
-    const existing = plans.findIndex((p) => p.id === plan.id);
+    const existing = plans.findIndex((p: any) => p.id === plan.id);
     if (existing >= 0) {
       plans[existing] = plan;
     } else {
       plans.push(plan);
     }
-    localStorage.setItem(STUDY_PLANS_KEY, JSON.stringify(plans));
+    writeJson('stand_study_plans', plans);
   },
 
   deleteStudyPlan(id: string): void {
-    const plans = this.getStudyPlans().filter((p) => p.id !== id);
-    localStorage.setItem(STUDY_PLANS_KEY, JSON.stringify(plans));
+    const plans = this.getStudyPlans().filter((p: any) => p.id !== id);
+    writeJson('stand_study_plans', plans);
   },
 
   getBookmarks(): Question[] {
-    try {
-      const raw = localStorage.getItem(BOOKMARKS_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return readJson<Question[]>('stand_bookmarks', []);
   },
 
   toggleBookmark(question: Question): boolean {
@@ -113,11 +114,11 @@ export const storage = {
     const index = bookmarks.findIndex((b) => b.id === question.id);
     if (index >= 0) {
       bookmarks.splice(index, 1);
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+      writeJson('stand_bookmarks', bookmarks);
       return false;
     } else {
       bookmarks.push(question);
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+      writeJson('stand_bookmarks', bookmarks);
       return true;
     }
   },
@@ -127,12 +128,7 @@ export const storage = {
   },
 
   getQuestionTimings(): QuestionTiming[] {
-    try {
-      const raw = localStorage.getItem(QUESTION_TIMINGS_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return readJson<QuestionTiming[]>('stand_question_timings', []);
   },
 
   saveQuestionTimings(timings: QuestionTiming[]): void {
@@ -146,23 +142,18 @@ export const storage = {
         merged.push(t);
       }
     }
-    localStorage.setItem(QUESTION_TIMINGS_KEY, JSON.stringify(merged));
+    writeJson('stand_question_timings', merged);
   },
 
   getAchievements(): StoredAchievement[] {
-    try {
-      const raw = localStorage.getItem(ACHIEVEMENTS_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return readJson<StoredAchievement[]>('stand_achievements', []);
   },
 
   unlockAchievement(id: string): boolean {
     const achievements = this.getAchievements();
     if (achievements.some((a) => a.id === id)) return false;
     achievements.push({ id, unlockedAt: new Date().toISOString() });
-    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(achievements));
+    writeJson('stand_achievements', achievements);
     return true;
   },
 
@@ -171,36 +162,29 @@ export const storage = {
   },
 
   getQuestionNote(questionId: string): string {
-    try {
-      const raw = localStorage.getItem(QUESTION_NOTES_KEY);
-      const notes: Record<string, string> = raw ? JSON.parse(raw) : {};
-      return notes[questionId] || '';
-    } catch {
-      return '';
-    }
+    const notes = readJson<Record<string, string>>('stand_question_notes', {});
+    return notes[questionId] || '';
   },
 
   setQuestionNote(questionId: string, note: string): void {
-    try {
-      const raw = localStorage.getItem(QUESTION_NOTES_KEY);
-      const notes: Record<string, string> = raw ? JSON.parse(raw) : {};
-      if (note.trim()) {
-        notes[questionId] = note;
-      } else {
-        delete notes[questionId];
-      }
-      localStorage.setItem(QUESTION_NOTES_KEY, JSON.stringify(notes));
-    } catch {
-      // ignore
+    const notes = readJson<Record<string, string>>('stand_question_notes', {});
+    if (note.trim()) {
+      notes[questionId] = note;
+    } else {
+      delete notes[questionId];
     }
+    writeJson('stand_question_notes', notes);
   },
 
   getAllQuestionNotes(): Record<string, string> {
-    try {
-      const raw = localStorage.getItem(QUESTION_NOTES_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
+    return readJson<Record<string, string>>('stand_question_notes', {});
+  },
+
+  getImportedQuestions(): Question[] {
+    return readJson<Question[]>('stand_imported_questions', []);
+  },
+
+  saveImportedQuestions(questions: Question[]): void {
+    writeJson('stand_imported_questions', questions);
   },
 };

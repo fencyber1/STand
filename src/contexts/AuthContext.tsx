@@ -54,12 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         const mapped = mapUser(firebaseUser);
         setUser(mapped);
+        storage.setActiveUserId(firebaseUser.uid);
         storage.setUser(mapped);
         if (!storage.getToken()) {
           storage.setToken('firebase-' + firebaseUser.uid);
         }
       } else {
         setUser(null);
+        storage.setActiveUserId(null);
         storage.removeToken();
         storage.removeUser();
       }
