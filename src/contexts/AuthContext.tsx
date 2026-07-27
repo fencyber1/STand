@@ -1,91 +1,120 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  updateProfile,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import { auth, googleProvider } from '../services/firebase';
 import { storage } from '../services/storage';
 
 interface AuthUser {
   fullName: string;
   email: string;
+  photoURL: string | null;
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
   user: AuthUser | null;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  register: (fullName: string, email: string, password: string) => { success: boolean; error?: string };
-  logout: () => void;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  register: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   user: null,
-  login: () => ({ success: false }),
-  register: () => ({ success: false }),
-  logout: () => {},
+  loading: true,
+  login: async () => ({ success: false }),
+  loginWithGoogle: async () => ({ success: false }),
+  register: async () => ({ success: false }),
+  logout: async () => {},
 });
 
-function hashPassword(password: string): string {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return 'h_' + Math.abs(hash).toString(36);
+function mapUser(u: FirebaseUser): AuthUser {
+  return {
+    fullName: u.displayName || u.email?.split('@')[0] || 'Student',
+    email: u.email || '',
+    photoURL: u.photoURL,
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!storage.getToken());
-  const [user, setUser] = useState<AuthUser | null>(() => storage.getUser());
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = useCallback((email: string, password: string): { success: boolean; error?: string } => {
-    const users = storage.getUsers();
-    const found = users.find((u) => u.email === email);
-
-    if (!found) {
-      return { success: false, error: 'No account found with this email. Please register first.' };
-    }
-
-    if (found.passwordHash !== hashPassword(password)) {
-      return { success: false, error: 'Incorrect password. Please try again.' };
-    }
-
-    storage.setToken('mock-token-' + Date.now());
-    storage.setUser({ fullName: found.fullName, email: found.email });
-    setUser({ fullName: found.fullName, email: found.email });
-    setIsLoggedIn(true);
-    return { success: true };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const mapped = mapUser(firebaseUser);
+        setUser(mapped);
+        storage.setUser(mapped);
+        if (!storage.getToken()) {
+          storage.setToken('firebase-' + firebaseUser.uid);
+        }
+      } else {
+        setUser(null);
+        storage.removeToken();
+        storage.removeUser();
+      }
+      setLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
-  const register = useCallback((fullName: string, email: string, password: string): { success: boolean; error?: string } => {
-    const users = storage.getUsers();
-
-    if (users.some((u) => u.email === email)) {
-      return { success: false, error: 'An account with this email already exists.' };
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { success: true };
+    } catch (e: any) {
+      const msg = e.code === 'auth/user-not-found' ? 'No account found with this email.'
+        : e.code === 'auth/wrong-password' ? 'Incorrect password.'
+        : e.code === 'auth/invalid-email' ? 'Invalid email address.'
+        : e.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.'
+        : 'Failed to login. Please try again.';
+      return { success: false, error: msg };
     }
-
-    const newUser = {
-      fullName,
-      email,
-      passwordHash: hashPassword(password),
-      createdAt: new Date().toISOString(),
-    };
-
-    storage.saveUser(newUser);
-    storage.setToken('mock-token-' + Date.now());
-    storage.setUser({ fullName, email });
-    setUser({ fullName, email });
-    setIsLoggedIn(true);
-    return { success: true };
   }, []);
 
-  const logout = useCallback(() => {
-    storage.removeToken();
-    storage.removeUser();
-    setUser(null);
-    setIsLoggedIn(false);
+  const loginWithGoogle = useCallback(async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      return { success: true };
+    } catch (e: any) {
+      const msg = e.code === 'auth/popup-closed-by-user' ? 'Sign-in cancelled.'
+        : e.code === 'auth/popup-blocked' ? 'Popup blocked. Allow popups for this site.'
+        : 'Failed to sign in with Google.';
+      return { success: false, error: msg };
+    }
+  }, []);
+
+  const register = useCallback(async (fullName: string, email: string, password: string) => {
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: fullName });
+      setUser(mapUser(auth.currentUser!));
+      return { success: true };
+    } catch (e: any) {
+      const msg = e.code === 'auth/email-already-in-use' ? 'An account with this email already exists.'
+        : e.code === 'auth/weak-password' ? 'Password must be at least 6 characters.'
+        : e.code === 'auth/invalid-email' ? 'Invalid email address.'
+        : 'Failed to register. Please try again.';
+      return { success: false, error: msg };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    await signOut(auth);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, login, register, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, loading, login, loginWithGoogle, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

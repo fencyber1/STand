@@ -30,11 +30,19 @@ export default function ProfileScreen() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-100 dark:bg-primary-900/40 rounded-full mb-3">
-          <User size={36} className="text-primary-600 dark:text-primary-400" />
-        </div>
+        {user?.photoURL ? (
+          <img
+            src={user.photoURL}
+            alt={user.fullName}
+            className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-primary-200 dark:border-primary-800"
+          />
+        ) : (
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-100 dark:bg-primary-900/40 rounded-full mb-3">
+            <User size={36} className="text-primary-600 dark:text-primary-400" />
+          </div>
+        )}
         <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{user?.fullName || 'Student'}</h1>
-        <p className="text-gray-500 dark:text-gray-400">{user?.email || 'student@example.com'}</p>
+        <p className="text-gray-500 dark:text-gray-400">{user?.email || ''}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

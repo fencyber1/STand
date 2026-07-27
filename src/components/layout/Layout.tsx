@@ -119,7 +119,12 @@ export default function Layout() {
           </button>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex-1">STand Exam Practice</h2>
           {user && (
-            <span className="text-sm text-gray-500 dark:text-gray-400 mr-3 hidden sm:inline">{user.fullName}</span>
+            <div className="flex items-center gap-2 mr-3 hidden sm:flex">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full object-cover" />
+              ) : null}
+              <span className="text-sm text-gray-500 dark:text-gray-400">{user.fullName}</span>
+            </div>
           )}
           <button
             onClick={toggleTheme}
