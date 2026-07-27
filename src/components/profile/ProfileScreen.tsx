@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import EditProfileModal from './EditProfileModal';
 import { User, BookOpen, Trophy, Clock, LogOut, Moon, Sun } from 'lucide-react';
 
 export default function ProfileScreen() {
@@ -10,6 +11,11 @@ export default function ProfileScreen() {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const history = useMemo(() => storage.getHistory(), []);
+  const [editOpen, setEditOpen] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(0);
+
+  const displayPhoto = storage.getProfilePhoto() || user?.photoURL || null;
+  const displayName = storage.getDisplayName() || user?.fullName || 'Student';
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -29,11 +35,14 @@ export default function ProfileScreen() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <EditProfileModal open={editOpen} onClose={() => setPhotoVersion((v) => v + 1)} />
+
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
-        {user?.photoURL ? (
+        {displayPhoto ? (
           <img
-            src={user.photoURL}
-            alt={user.fullName}
+            key={photoVersion}
+            src={displayPhoto}
+            alt={displayName}
             className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-primary-200 dark:border-primary-800"
           />
         ) : (
@@ -41,7 +50,7 @@ export default function ProfileScreen() {
             <User size={36} className="text-primary-600 dark:text-primary-400" />
           </div>
         )}
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{user?.fullName || 'Student'}</h1>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{displayName}</h1>
         <p className="text-gray-500 dark:text-gray-400">{user?.email || ''}</p>
       </div>
 
@@ -74,7 +83,7 @@ export default function ProfileScreen() {
           </div>
         </button>
         {[
-          { label: 'Edit Profile', action: () => {} },
+          { label: 'Edit Profile', action: () => setEditOpen(true) },
           { label: 'Notification Settings', action: () => {} },
           { label: 'Help & Support', action: () => {} },
         ].map(({ label, action }, i) => (

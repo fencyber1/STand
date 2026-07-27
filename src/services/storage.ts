@@ -187,4 +187,32 @@ export const storage = {
   saveImportedQuestions(questions: Question[]): void {
     writeJson('stand_imported_questions', questions);
   },
+
+  getProfilePhoto(): string | null {
+    try {
+      return localStorage.getItem(k('stand_profile_photo'));
+    } catch {
+      return null;
+    }
+  },
+
+  setProfilePhoto(dataUrl: string | null): void {
+    if (dataUrl) {
+      localStorage.setItem(k('stand_profile_photo'), dataUrl);
+    } else {
+      localStorage.removeItem(k('stand_profile_photo'));
+    }
+  },
+
+  getDisplayName(): string | null {
+    try {
+      return localStorage.getItem(k('stand_display_name'));
+    } catch {
+      return null;
+    }
+  },
+
+  setDisplayName(name: string): void {
+    localStorage.setItem(k('stand_display_name'), name);
+  },
 };

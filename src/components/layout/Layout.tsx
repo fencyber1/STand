@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   GraduationCap,
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { storage } from '../../services/storage';
 import Logo from '../landing/Logo';
 
 const navItems = [
@@ -42,9 +43,19 @@ const navItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(0);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
+
+  const displayPhoto = storage.getProfilePhoto() || user?.photoURL || null;
+  const displayName = storage.getDisplayName() || user?.fullName || 'Student';
+
+  useEffect(() => {
+    const handler = () => setPhotoVersion((v) => v + 1);
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -120,10 +131,10 @@ export default function Layout() {
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex-1">STand Exam Practice</h2>
           {user && (
             <div className="flex items-center gap-2 mr-3 hidden sm:flex">
-              {user.photoURL ? (
-                <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full object-cover" />
+              {displayPhoto ? (
+                <img key={photoVersion} src={displayPhoto} alt="" className="w-6 h-6 rounded-full object-cover" />
               ) : null}
-              <span className="text-sm text-gray-500 dark:text-gray-400">{user.fullName}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{displayName}</span>
             </div>
           )}
           <button
