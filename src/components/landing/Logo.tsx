@@ -6,46 +6,49 @@ interface Props {
 export default function Logo({ size = 200, className = '' }: Props) {
   return (
     <svg
-      viewBox="0 0 400 120"
+      viewBox="0 0 320 110"
       width={size}
-      height={size * 0.3}
+      height={size * (110 / 320)}
       className={className}
       xmlns="http://www.w3.org/2000/svg"
     >
+      {/* ST */}
       <text
-        x="10"
-        y="85"
-        fontFamily="Arial, sans-serif"
+        x="0"
+        y="82"
+        fontFamily="Arial, Helvetica, sans-serif"
         fontWeight="800"
-        fontSize="72"
+        fontSize="74"
         fill="currentColor"
-      >
-        ST
-      </text>
+        letterSpacing="-2"
+      >ST</text>
 
-      <g transform="translate(138, 20)">
-        <path
-          d="M8 80 L8 10 L0 25 L8 10 L16 25 Z"
-          fill="currentColor"
-          transform="translate(0, 0)"
-        />
-        <path
-          d="M8 80 L8 10 L0 25 L8 10 L16 25 Z"
-          fill="currentColor"
-          transform="translate(20, 0)"
-        />
+      {/* Arrow 1 */}
+      <g transform="translate(112, 5)">
+        {/* Shaft */}
+        <rect x="4" y="30" width="10" height="55" rx="1" fill="currentColor" />
+        {/* Head */}
+        <polygon points="9,0 -1,28 19,28" fill="currentColor" />
       </g>
 
+      {/* Arrow 2 */}
+      <g transform="translate(132, 5)">
+        {/* Shaft */}
+        <rect x="4" y="30" width="10" height="55" rx="1" fill="currentColor" />
+        {/* Head */}
+        <polygon points="9,0 -1,28 19,28" fill="currentColor" />
+      </g>
+
+      {/* and */}
       <text
-        x="192"
-        y="85"
-        fontFamily="Arial, sans-serif"
+        x="158"
+        y="82"
+        fontFamily="Arial, Helvetica, sans-serif"
         fontWeight="800"
-        fontSize="72"
+        fontSize="74"
         fill="currentColor"
-      >
-        and
-      </text>
+        letterSpacing="-2"
+      >and</text>
     </svg>
   );
 }
