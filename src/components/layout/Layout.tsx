@@ -19,6 +19,8 @@ import {
   Upload,
   Target,
   ArrowRightLeft,
+  Users,
+  Swords,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -37,6 +39,8 @@ const navItems = [
   { to: '/weak-areas', label: 'Weak Areas', icon: Target },
   { to: '/compare', label: 'Compare', icon: ArrowRightLeft },
   { to: '/import', label: 'Import', icon: Upload },
+  { to: '/groups', label: 'Study Groups', icon: Users },
+  { to: '/multiplayer', label: 'Multiplayer', icon: Swords },
   { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ];

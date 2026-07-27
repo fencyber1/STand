@@ -20,6 +20,9 @@ import AchievementsScreen from './components/achievements/AchievementsScreen';
 import ImportQuestionsScreen from './components/import/ImportQuestionsScreen';
 import WeakAreasScreen from './components/practice/WeakAreasScreen';
 import SessionCompareScreen from './components/practice/SessionCompareScreen';
+import StudyGroupsScreen from './components/groups/StudyGroupsScreen';
+import MultiplayerLobbyScreen from './components/multiplayer/MultiplayerLobbyScreen';
+import MultiplayerGameScreen from './components/multiplayer/MultiplayerGameScreen';
 
 function ProtectedLayout() {
   const { isLoggedIn } = useAuth();
@@ -63,6 +66,9 @@ export default function App() {
           <Route path="weak-areas" element={<WeakAreasScreen />} />
           <Route path="compare" element={<SessionCompareScreen />} />
           <Route path="study-plans" element={<StudyPlansScreen />} />
+          <Route path="groups" element={<StudyGroupsScreen />} />
+          <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
+          <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
           <Route path="profile" element={<ProfileScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
