@@ -1,4 +1,4 @@
-const API_KEY = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY || '';
+const API_KEY = process.env.NVIDIA_API_KEY || '';
 const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 export default async function handler(req: any, res: any) {
@@ -12,6 +12,10 @@ export default async function handler(req: any, res: any) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'NVIDIA_API_KEY is not set. Add it in Vercel dashboard → Settings → Environment Variables.' });
   }
 
   try {
@@ -29,7 +33,15 @@ export default async function handler(req: any, res: any) {
       }),
     });
 
-    const data = await response.json();
+    const text = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return res.status(502).json({ error: `NVIDIA API returned non-JSON: ${text.slice(0, 300)}` });
+    }
+
     return res.status(response.status).json(data);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

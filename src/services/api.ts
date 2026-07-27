@@ -29,12 +29,23 @@ async function callAI(prompt: string): Promise<string> {
     }),
   });
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`AI API error (${response.status}): ${err}`);
+  const text = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`AI API returned invalid response: ${text.slice(0, 200)}`);
   }
 
-  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`AI API error (${response.status}): ${data.error || JSON.stringify(data)}`);
+  }
+
+  if (!data.choices || !data.choices[0]) {
+    throw new Error(`AI API returned no choices: ${JSON.stringify(data).slice(0, 200)}`);
+  }
+
   return data.choices[0].message.content;
 }
 
