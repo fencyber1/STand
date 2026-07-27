@@ -21,6 +21,18 @@ function generateCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+function sanitizeForFirestore(obj: any): any {
+  if (obj === undefined) return null;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeForFirestore).filter((v) => v !== undefined);
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    clean[k] = sanitizeForFirestore(v);
+  }
+  return clean;
+}
+
 export interface GroupMember {
   uid: string;
   name: string;
@@ -77,13 +89,13 @@ export async function createGroup(name: string, creator: { uid: string; name: st
     joinedAt: new Date().toISOString(),
     stats: { sessions: 0, avgScore: 0, streak: 0 },
   };
-  await setDoc(ref, {
+  await setDoc(ref, sanitizeForFirestore({
     name,
     code,
     createdBy: creator.uid,
     members: [member],
     createdAt: serverTimestamp(),
-  });
+  }));
   return code;
 }
 
@@ -162,7 +174,7 @@ export async function createQuizRoom(
     score: 0,
     finished: false,
   };
-  await setDoc(ref, {
+  await setDoc(ref, sanitizeForFirestore({
     code,
     createdBy: creator.uid,
     hostName: creator.name,
@@ -175,7 +187,7 @@ export async function createQuizRoom(
     createdAt: serverTimestamp(),
     startedAt: null,
     finishedAt: null,
-  });
+  }));
   return code;
 }
 
@@ -208,7 +220,7 @@ export async function joinQuizRoom(
   };
 
   await updateDoc(doc(db, 'quizRooms', roomDoc.id), {
-    players: arrayUnion(newPlayer),
+    players: arrayUnion(sanitizeForFirestore(newPlayer)),
   });
 
   return { success: true, roomId: roomDoc.id };
@@ -238,7 +250,7 @@ export async function submitAnswer(
       score: newAnswers.filter((a) => a.correct).length,
     };
   });
-  await updateDoc(doc(db, 'quizRooms', roomId), { players: updated });
+  await updateDoc(doc(db, 'quizRooms', roomId), sanitizeForFirestore({ players: updated }));
 }
 
 export async function finishPlayer(roomId: string, uid: string, players: QuizPlayer[]): Promise<void> {
@@ -249,7 +261,7 @@ export async function finishPlayer(roomId: string, uid: string, players: QuizPla
     update.status = 'finished';
     update.finishedAt = serverTimestamp();
   }
-  await updateDoc(doc(db, 'quizRooms', roomId), update);
+  await updateDoc(doc(db, 'quizRooms', roomId), sanitizeForFirestore(update));
 }
 
 export function subscribeToQuizRoom(roomId: string, callback: (room: QuizRoom | null) => void): () => void {
