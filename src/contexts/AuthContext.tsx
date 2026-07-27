@@ -75,11 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       return { success: true };
     } catch (e: any) {
+      console.error('Login error:', e.code, e.message);
       const msg = e.code === 'auth/user-not-found' ? 'No account found with this email.'
         : e.code === 'auth/wrong-password' ? 'Incorrect password.'
+        : e.code === 'auth/invalid-credential' ? 'Invalid email or password.'
         : e.code === 'auth/invalid-email' ? 'Invalid email address.'
         : e.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.'
-        : 'Failed to login. Please try again.';
+        : e.code === 'auth/configuration-not-found' ? 'Email sign-in not configured. Enable it in Firebase Console → Authentication → Sign-in method.'
+        : `Failed to login (${e.code}). Check browser console for details.`;
       return { success: false, error: msg };
     }
   }, []);
@@ -107,10 +110,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(mapUser(auth.currentUser!));
       return { success: true };
     } catch (e: any) {
+      console.error('Register error:', e.code, e.message);
       const msg = e.code === 'auth/email-already-in-use' ? 'An account with this email already exists.'
         : e.code === 'auth/weak-password' ? 'Password must be at least 6 characters.'
         : e.code === 'auth/invalid-email' ? 'Invalid email address.'
-        : 'Failed to register. Please try again.';
+        : e.code === 'auth/configuration-not-found' ? 'Email sign-in not configured. Enable it in Firebase Console → Authentication → Sign-in method.'
+        : `Failed to register (${e.code}). Check browser console for details.`;
       return { success: false, error: msg };
     }
   }, []);
