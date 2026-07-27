@@ -465,47 +465,59 @@ export default function QuizScreen() {
 
         {current.type === 'MCQ' && current.options && (
           <div className="space-y-3 mb-6">
-            {current.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => handleMCQSelect(opt)}
-                disabled={showResult}
-                className={`w-full text-left p-4 rounded-lg border-2 transition ${
-                  showResult && opt === current.correctAnswer
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                    : showResult && selectedAnswer === opt && opt !== current.correctAnswer
-                    ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                    : selectedAnswer === opt
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <span className="font-medium">{String.fromCharCode(65 + i)}.</span> {opt}
-              </button>
-            ))}
+            {current.options.map((opt, i) => {
+              const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+              const correctVal = stripPrefix(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
+              const isCorrectOpt = stripPrefix(opt) === correctVal;
+              const isSelectedWrong = showResult && selectedAnswer === opt && !isCorrectOpt;
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleMCQSelect(opt)}
+                  disabled={showResult}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition ${
+                    showResult && isCorrectOpt
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                      : isSelectedWrong
+                      ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                      : selectedAnswer === opt
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  <span className="font-medium">{String.fromCharCode(65 + i)}.</span> {opt}
+                </button>
+              );
+            })}
           </div>
         )}
 
         {current.type === 'TrueFalse' && (
           <div className="flex gap-4 mb-6">
-            {['True', 'False'].map((opt) => (
-              <button
-                key={opt}
-                onClick={() => handleMCQSelect(opt)}
-                disabled={showResult}
-                className={`flex-1 p-4 rounded-lg border-2 text-center font-medium transition ${
-                  showResult && opt === current.correctAnswer
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                    : showResult && selectedAnswer === opt && opt !== current.correctAnswer
-                    ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                    : selectedAnswer === opt
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+            {['True', 'False'].map((opt) => {
+              const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+              const correctVal = stripPrefix(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
+              const isCorrectOpt = stripPrefix(opt) === correctVal;
+              const isSelectedWrong = showResult && selectedAnswer === opt && !isCorrectOpt;
+              return (
+                <button
+                  key={opt}
+                  onClick={() => handleMCQSelect(opt)}
+                  disabled={showResult}
+                  className={`flex-1 p-4 rounded-lg border-2 text-center font-medium transition ${
+                    showResult && isCorrectOpt
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                      : isSelectedWrong
+                      ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                      : selectedAnswer === opt
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -540,7 +552,7 @@ export default function QuizScreen() {
             )}
             {current.correctAnswer && current.type !== 'Theory' && (
               <p className="mt-2 text-sm text-green-700 dark:text-green-400 font-medium">
-                Correct Answer: {Array.isArray(current.correctAnswer) ? current.correctAnswer.join(', ') : current.correctAnswer}
+                Correct Answer: {(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}
               </p>
             )}
             <button

@@ -168,7 +168,7 @@ export default function ResultsScreen() {
           <div class="q-title">${r.correct ? '✓' : '✗'} Question ${i + 1}</div>
           <div class="q-detail">${q?.question || ''}</div>
           <div class="q-detail">Your answer: ${Array.isArray(r.userAnswer) ? r.userAnswer.join(', ') : r.userAnswer || '(none)'}</div>
-          ${!r.correct ? `<div class="q-detail">Correct: ${Array.isArray(q?.correctAnswer) ? q?.correctAnswer.join(', ') : q?.correctAnswer}</div>` : ''}
+          ${!r.correct ? `<div class="q-detail">Correct: ${(Array.isArray(q?.correctAnswer) ? q?.correctAnswer[0] : q?.correctAnswer || '').replace(/^[A-Za-z][.\s]+/, '').trim()}</div>` : ''}
           <div class="q-detail" style="margin-top:4px;color:#666;">${r.explanation}</div>
         </div>`;
       }).join('')}
@@ -189,9 +189,9 @@ export default function ResultsScreen() {
       let back = '';
       if (q.type === 'MCQ' && q.options) {
         back = q.options.join('<br>');
-        back += `<br><br><strong>Answer:</strong> ${Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer}`;
+        back += `<br><br><strong>Answer:</strong> ${(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}`;
       } else {
-        back = `<strong>Answer:</strong> ${Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer}`;
+        back = `<strong>Answer:</strong> ${(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}`;
       }
       back += `<br><br><em>${q.explanation.replace(/"/g, '""')}</em>`;
       return `"${front}","${back.replace(/"/g, '""')}","${q.subject}","${q.topic}"`;

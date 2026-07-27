@@ -135,8 +135,8 @@ export default function ExamSimScreen() {
 
       if (q.type === 'MCQ' || q.type === 'TrueFalse') {
         const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
-        const correctStr = String(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer);
-        correct = stripPrefix(userAnswer) === stripPrefix(correctStr);
+        const correctStr = stripPrefix(String(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer));
+        correct = stripPrefix(userAnswer) === correctStr;
       } else if (q.type === 'Theory') {
         correct = userAnswer.length > 10;
       } else {

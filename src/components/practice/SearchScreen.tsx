@@ -110,7 +110,7 @@ export default function SearchScreen() {
                         })}
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400"><strong>Answer:</strong> {Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400"><strong>Answer:</strong> {(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"><strong>Explanation:</strong> {q.explanation}</p>
                   </div>
                 )}
