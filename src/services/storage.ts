@@ -3,6 +3,7 @@ import type { SessionData, Question, QuestionTiming, StoredAchievement, Question
 const HISTORY_KEY = 'stand_history';
 const USER_TOKEN_KEY = 'stand_user_token';
 const USER_KEY = 'stand_user';
+const USERS_KEY = 'stand_users';
 const STUDY_PLANS_KEY = 'stand_study_plans';
 const BOOKMARKS_KEY = 'stand_bookmarks';
 const QUESTION_TIMINGS_KEY = 'stand_question_timings';
@@ -37,6 +38,21 @@ export const storage = {
 
   removeUser(): void {
     localStorage.removeItem(USER_KEY);
+  },
+
+  getUsers(): Array<{ fullName: string; email: string; passwordHash: string; createdAt: string }> {
+    try {
+      const raw = localStorage.getItem(USERS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveUser(user: { fullName: string; email: string; passwordHash: string; createdAt: string }): void {
+    const users = this.getUsers();
+    users.push(user);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
   },
 
   getHistory(): SessionData[] {

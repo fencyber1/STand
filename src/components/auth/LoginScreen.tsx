@@ -1,18 +1,21 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { storage } from '../../services/storage';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Loader2, Moon, Sun } from 'lucide-react';
+import { Loader2, Moon, Sun, Eye, EyeOff } from 'lucide-react';
 import BorderGlow from '../ui/BorderGlow';
 import Logo from '../landing/Logo';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const { login, isLoggedIn } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  if (isLoggedIn) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,20 +27,12 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    try {
-      await new Promise((r) => setTimeout(r, 800));
-      const user = storage.getUser();
-      if (!user || user.email !== email) {
-        setError('No account found with this email. Please register first.');
-        setLoading(false);
-        return;
-      }
-      storage.setToken('mock-token-' + Date.now());
-      navigate('/');
-    } catch {
-      setError('Failed to login. Please try again.');
-    } finally {
-      setLoading(false);
+    await new Promise((r) => setTimeout(r, 500));
+    const result = login(email, password);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.error || 'Failed to login.');
     }
   };
 
@@ -85,6 +80,7 @@ export default function LoginScreen() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
+                autoFocus
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
               />
             </div>
@@ -93,13 +89,22 @@ export default function LoginScreen() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <button

@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { storage } from './services/storage';
+import { useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import LandingScreen from './components/landing/LandingScreen';
 import LoginScreen from './components/auth/LoginScreen';
@@ -22,13 +22,13 @@ import WeakAreasScreen from './components/practice/WeakAreasScreen';
 import SessionCompareScreen from './components/practice/SessionCompareScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = storage.getToken();
-  if (!token) return <Navigate to="/login" replace />;
+  const { isLoggedIn } = useAuth();
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 export default function App() {
-  const isLoggedIn = !!storage.getToken();
+  const { isLoggedIn } = useAuth();
 
   return (
     <Routes>

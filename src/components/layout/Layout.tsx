@@ -20,8 +20,8 @@ import {
   Target,
   ArrowRightLeft,
 } from 'lucide-react';
-import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../landing/Logo';
 
 const navItems = [
@@ -44,9 +44,10 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    storage.removeToken();
+    logout();
     navigate('/login');
   };
 
@@ -117,6 +118,9 @@ export default function Layout() {
             <Menu size={22} />
           </button>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex-1">STand Exam Practice</h2>
+          {user && (
+            <span className="text-sm text-gray-500 dark:text-gray-400 mr-3 hidden sm:inline">{user.fullName}</span>
+          )}
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

@@ -2,13 +2,14 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { User, BookOpen, Trophy, Clock, LogOut, Moon, Sun } from 'lucide-react';
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const history = useMemo(() => storage.getHistory(), []);
-  const user = useMemo(() => storage.getUser(), []);
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -21,8 +22,7 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      storage.removeToken();
-      storage.removeUser();
+      logout();
       navigate('/login');
     }
   };
