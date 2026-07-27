@@ -17,6 +17,9 @@ import ExamSetupScreen from './components/practice/ExamSetupScreen';
 import ExamSimScreen from './components/practice/ExamSimScreen';
 import SearchScreen from './components/practice/SearchScreen';
 import AchievementsScreen from './components/achievements/AchievementsScreen';
+import ImportQuestionsScreen from './components/import/ImportQuestionsScreen';
+import WeakAreasScreen from './components/practice/WeakAreasScreen';
+import SessionCompareScreen from './components/practice/SessionCompareScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = storage.getToken();
@@ -45,6 +48,9 @@ export default function App() {
             <Route path="progress" element={<ProgressScreen />} />
             <Route path="search" element={<SearchScreen />} />
             <Route path="achievements" element={<AchievementsScreen />} />
+            <Route path="import" element={<ImportQuestionsScreen />} />
+            <Route path="weak-areas" element={<WeakAreasScreen />} />
+            <Route path="compare" element={<SessionCompareScreen />} />
             <Route path="study-plans" element={<StudyPlansScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
           </>

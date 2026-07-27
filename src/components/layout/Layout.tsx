@@ -16,6 +16,9 @@ import {
   Sun,
   Moon,
   Award,
+  Upload,
+  Target,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -30,6 +33,9 @@ const navItems = [
   { to: '/search', label: 'Search', icon: Search },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/achievements', label: 'Achievements', icon: Award },
+  { to: '/weak-areas', label: 'Weak Areas', icon: Target },
+  { to: '/compare', label: 'Compare', icon: ArrowRightLeft },
+  { to: '/import', label: 'Import', icon: Upload },
   { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ];
