@@ -51,7 +51,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors overflow-hidden">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -60,14 +60,13 @@ export default function Layout() {
       )}
 
       <aside
-        className={`fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <div className="text-primary-600 dark:text-primary-400">
-            <Logo size={120} />
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 -mt-1">AI Exam Practice</p>
+            <Logo size={100} />
           </div>
           <button
             className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -77,7 +76,7 @@ export default function Layout() {
           </button>
         </div>
 
-        <nav className="p-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -85,32 +84,32 @@ export default function Layout() {
               end={to === '/'}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
                 }`
               }
             >
-              <Icon size={18} />
-              {label}
+              <Icon size={16} />
+              <span className="truncate">{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="shrink-0 p-3 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             Logout
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex items-center h-16 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 lg:px-6 transition-colors">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="flex items-center h-14 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 lg:px-6 transition-colors shrink-0">
           <button
             className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-3"
             onClick={() => setSidebarOpen(true)}
