@@ -21,10 +21,10 @@ import ImportQuestionsScreen from './components/import/ImportQuestionsScreen';
 import WeakAreasScreen from './components/practice/WeakAreasScreen';
 import SessionCompareScreen from './components/practice/SessionCompareScreen';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedLayout() {
   const { isLoggedIn } = useAuth();
   if (!isLoggedIn) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  return <Layout />;
 }
 
 export default function App() {
@@ -34,29 +34,32 @@ export default function App() {
     <Routes>
       <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <LoginScreen />} />
       <Route path="/register" element={isLoggedIn ? <Navigate to="/" replace /> : <RegisterScreen />} />
-      <Route path="/" element={isLoggedIn ? <ProtectedRoute><Layout /></ProtectedRoute> : <LandingScreen />}>
-        {isLoggedIn && (
-          <>
-            <Route index element={<DashboardScreen />} />
-            <Route path="practice" element={<HomeScreen />} />
-            <Route path="quiz" element={<QuizScreen />} />
-            <Route path="exam-setup" element={<ExamSetupScreen />} />
-            <Route path="exam" element={<ExamSimScreen />} />
-            <Route path="results" element={<ResultsScreen />} />
-            <Route path="history" element={<HistoryScreen />} />
-            <Route path="bookmarks" element={<BookmarksScreen />} />
-            <Route path="progress" element={<ProgressScreen />} />
-            <Route path="search" element={<SearchScreen />} />
-            <Route path="achievements" element={<AchievementsScreen />} />
-            <Route path="import" element={<ImportQuestionsScreen />} />
-            <Route path="weak-areas" element={<WeakAreasScreen />} />
-            <Route path="compare" element={<SessionCompareScreen />} />
-            <Route path="study-plans" element={<StudyPlansScreen />} />
-            <Route path="profile" element={<ProfileScreen />} />
-          </>
-        )}
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+
+      {isLoggedIn ? (
+        <Route path="/" element={<ProtectedLayout />}>
+          <Route index element={<DashboardScreen />} />
+          <Route path="practice" element={<HomeScreen />} />
+          <Route path="quiz" element={<QuizScreen />} />
+          <Route path="exam-setup" element={<ExamSetupScreen />} />
+          <Route path="exam" element={<ExamSimScreen />} />
+          <Route path="results" element={<ResultsScreen />} />
+          <Route path="history" element={<HistoryScreen />} />
+          <Route path="bookmarks" element={<BookmarksScreen />} />
+          <Route path="progress" element={<ProgressScreen />} />
+          <Route path="search" element={<SearchScreen />} />
+          <Route path="achievements" element={<AchievementsScreen />} />
+          <Route path="import" element={<ImportQuestionsScreen />} />
+          <Route path="weak-areas" element={<WeakAreasScreen />} />
+          <Route path="compare" element={<SessionCompareScreen />} />
+          <Route path="study-plans" element={<StudyPlansScreen />} />
+          <Route path="profile" element={<ProfileScreen />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      ) : (
+        <Route path="/" element={<LandingScreen />}>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      )}
     </Routes>
   );
 }
