@@ -155,3 +155,38 @@ export type RouteParams = {
   totalCount?: number;
   totalScore?: number;
 };
+
+export interface QuestionTiming {
+  questionId: string;
+  timeSpent: number;
+}
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  condition: (stats: AchievementStats) => boolean;
+}
+
+export interface AchievementStats {
+  totalSessions: number;
+  totalQuestions: number;
+  totalCorrect: number;
+  streak: number;
+  perfectScores: number;
+  subjects: number;
+  timeSpent: number;
+  fastestAnswer: number | null;
+}
+
+export interface StoredAchievement {
+  id: string;
+  unlockedAt: string;
+}
+
+export interface QuestionNote {
+  questionId: string;
+  note: string;
+  updatedAt: string;
+}

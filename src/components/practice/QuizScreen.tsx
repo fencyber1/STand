@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X } from 'lucide-react';
-import type { Question } from '../../types';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote } from 'lucide-react';
+import type { Question, QuestionTiming } from '../../types';
 import { getDeepExplanation } from '../../services/api';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
@@ -89,10 +89,31 @@ export default function QuizScreen() {
   const isLast = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
+  const questionStartRef = useRef<number>(Date.now());
+  const questionTimingsRef = useRef<QuestionTiming[]>([]);
+  const [note, setNote] = useState(() => storage.getQuestionNote(current.id));
+  const [showNote, setShowNote] = useState(false);
+
+  useEffect(() => {
+    questionStartRef.current = Date.now();
+    setNote(storage.getQuestionNote(current.id));
+    setShowNote(false);
+  }, [currentIndex]);
+
+  const recordTiming = useCallback(() => {
+    const elapsed = (Date.now() - questionStartRef.current) / 1000;
+    const existing = questionTimingsRef.current.findIndex((t) => t.questionId === current.id);
+    if (existing >= 0) {
+      questionTimingsRef.current[existing].timeSpent = elapsed;
+    } else {
+      questionTimingsRef.current.push({ questionId: current.id, timeSpent: elapsed });
+    }
+  }, [current.id]);
+
   const handleSubmit = useCallback(() => {
+    recordTiming();
     let result: Result;
     const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
-    const toStr = (v: string | string[] | null): string => Array.isArray(v) ? (v[0] || '') : (v || '');
 
     if (current.type === 'MCQ') {
       const correctStr = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
@@ -135,7 +156,7 @@ export default function QuizScreen() {
 
     setResults((prev) => [...prev, result]);
     setShowResult(true);
-  }, [current, selectedAnswer, textAnswer]);
+  }, [current, selectedAnswer, textAnswer, recordTiming]);
 
   const handleNext = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -146,8 +167,9 @@ export default function QuizScreen() {
       if (!showResult) return;
       const correctCount = allResults.filter((r) => r.correct === true).length;
       const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
+      storage.saveQuestionTimings(questionTimingsRef.current);
       navigate('/results', {
-        state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore },
+        state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
       });
     } else {
       setCurrentIndex((i) => i + 1);
@@ -181,8 +203,7 @@ export default function QuizScreen() {
       setSpeaking(false);
       return;
     }
-    const text = current.question;
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(current.question);
     utterance.rate = 0.9;
     utterance.pitch = 1;
     utterance.onend = () => setSpeaking(false);
@@ -206,7 +227,7 @@ export default function QuizScreen() {
       });
       setDeepExplanation(text);
       setShowDeep(true);
-    } catch (err) {
+    } catch {
       setDeepExplanation('Failed to load deeper explanation. Please try again.');
       setShowDeep(true);
     } finally {
@@ -215,13 +236,15 @@ export default function QuizScreen() {
   };
 
   const goToResults = useCallback(() => {
+    recordTiming();
     const allResults = [...results];
     const correctCount = allResults.filter((r) => r.correct === true).length;
     const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
+    storage.saveQuestionTimings(questionTimingsRef.current);
     navigate('/results', {
-      state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore },
+      state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
     });
-  }, [results, navigate, topic, state, questions]);
+  }, [results, navigate, topic, state, questions, recordTiming]);
 
   useEffect(() => {
     if (timeLeft <= 0 || timeLimit <= 0 || showResult || results.length >= questions.length) return;
@@ -244,9 +267,9 @@ export default function QuizScreen() {
   useEffect(() => {
     if (timeLimit > 0 && timeLeft === 0 && !showResult) {
       if (timerRef.current) clearInterval(timerRef.current);
+      recordTiming();
       const finalResults = [...results];
       if (finalResults.length < questions.length) {
-        const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
         for (let i = results.length; i < questions.length; i++) {
           finalResults.push({
             questionId: questions[i].id,
@@ -258,11 +281,12 @@ export default function QuizScreen() {
       }
       const correctCount = finalResults.filter((r) => r.correct === true).length;
       const totalScore = finalResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
+      storage.saveQuestionTimings(questionTimingsRef.current);
       navigate('/results', {
-        state: { topic, sector: state.sector, level: state.level, questions, results: finalResults, correctCount, totalCount: questions.length, totalScore },
+        state: { topic, sector: state.sector, level: state.level, questions, results: finalResults, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
       });
     }
-  }, [timeLeft, timeLimit, showResult, results, questions, navigate, topic, state]);
+  }, [timeLeft, timeLimit, showResult, results, questions, navigate, topic, state, recordTiming]);
 
   useEffect(() => {
     if (!speedRound || showResult) return;
@@ -353,7 +377,30 @@ export default function QuizScreen() {
         >
           <BookOpen size={14} /> Cheat Sheet
         </button>
+        <button
+          onClick={() => setShowNote(!showNote)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+            showNote ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+          }`}
+        >
+          <StickyNote size={14} /> Note
+        </button>
       </div>
+
+      {showNote && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <textarea
+            value={note}
+            onChange={(e) => {
+              setNote(e.target.value);
+              storage.setQuestionNote(current.id, e.target.value);
+            }}
+            placeholder="Add a note about this question..."
+            className="w-full px-3 py-2 text-sm border border-yellow-200 dark:border-yellow-700 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-yellow-400 outline-none resize-none h-20"
+          />
+          <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">Note saved automatically</p>
+        </div>
+      )}
 
       <BorderGlow
         backgroundColor="#1f2937"

@@ -15,6 +15,7 @@ import {
   X,
   Sun,
   Moon,
+  Award,
 } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -28,6 +29,7 @@ const navItems = [
   { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
   { to: '/search', label: 'Search', icon: Search },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/achievements', label: 'Achievements', icon: Award },
   { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ];

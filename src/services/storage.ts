@@ -1,10 +1,13 @@
-import type { SessionData, Question } from '../types';
+import type { SessionData, Question, QuestionTiming, StoredAchievement, QuestionNote } from '../types';
 
 const HISTORY_KEY = 'stand_history';
 const USER_TOKEN_KEY = 'stand_user_token';
 const USER_KEY = 'stand_user';
 const STUDY_PLANS_KEY = 'stand_study_plans';
 const BOOKMARKS_KEY = 'stand_bookmarks';
+const QUESTION_TIMINGS_KEY = 'stand_question_timings';
+const ACHIEVEMENTS_KEY = 'stand_achievements';
+const QUESTION_NOTES_KEY = 'stand_question_notes';
 
 export const storage = {
   getToken(): string | null {
@@ -105,5 +108,83 @@ export const storage = {
 
   isBookmarked(questionId: string): boolean {
     return this.getBookmarks().some((b) => b.id === questionId);
+  },
+
+  getQuestionTimings(): QuestionTiming[] {
+    try {
+      const raw = localStorage.getItem(QUESTION_TIMINGS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveQuestionTimings(timings: QuestionTiming[]): void {
+    const existing = this.getQuestionTimings();
+    const merged = [...existing];
+    for (const t of timings) {
+      const idx = merged.findIndex((e) => e.questionId === t.questionId);
+      if (idx >= 0) {
+        merged[idx] = t;
+      } else {
+        merged.push(t);
+      }
+    }
+    localStorage.setItem(QUESTION_TIMINGS_KEY, JSON.stringify(merged));
+  },
+
+  getAchievements(): StoredAchievement[] {
+    try {
+      const raw = localStorage.getItem(ACHIEVEMENTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  unlockAchievement(id: string): boolean {
+    const achievements = this.getAchievements();
+    if (achievements.some((a) => a.id === id)) return false;
+    achievements.push({ id, unlockedAt: new Date().toISOString() });
+    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(achievements));
+    return true;
+  },
+
+  isAchievementUnlocked(id: string): boolean {
+    return this.getAchievements().some((a) => a.id === id);
+  },
+
+  getQuestionNote(questionId: string): string {
+    try {
+      const raw = localStorage.getItem(QUESTION_NOTES_KEY);
+      const notes: Record<string, string> = raw ? JSON.parse(raw) : {};
+      return notes[questionId] || '';
+    } catch {
+      return '';
+    }
+  },
+
+  setQuestionNote(questionId: string, note: string): void {
+    try {
+      const raw = localStorage.getItem(QUESTION_NOTES_KEY);
+      const notes: Record<string, string> = raw ? JSON.parse(raw) : {};
+      if (note.trim()) {
+        notes[questionId] = note;
+      } else {
+        delete notes[questionId];
+      }
+      localStorage.setItem(QUESTION_NOTES_KEY, JSON.stringify(notes));
+    } catch {
+      // ignore
+    }
+  },
+
+  getAllQuestionNotes(): Record<string, string> {
+    try {
+      const raw = localStorage.getItem(QUESTION_NOTES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
   },
 };

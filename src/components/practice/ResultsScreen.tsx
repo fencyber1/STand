@@ -1,7 +1,9 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard, Clock, Zap } from 'lucide-react';
 import { storage } from '../../services/storage';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { ACHIEVEMENTS } from '../../constants/achievements';
+import type { QuestionTiming, AchievementStats } from '../../types';
 
 interface ResultsState {
   topic: string;
@@ -29,6 +31,7 @@ interface ResultsState {
   correctCount: number;
   totalCount: number;
   totalScore: number;
+  questionTimings?: QuestionTiming[];
 }
 
 export default function ResultsScreen() {
@@ -50,8 +53,58 @@ export default function ResultsScreen() {
         totalQuestions: state.totalCount,
         correctAnswers: state.correctCount,
       });
+
+      const history = storage.getHistory();
+      const totalSessions = history.length;
+      const totalQuestions = history.reduce((s, h) => s + (h.totalQuestions || 0), 0);
+      const totalCorrect = history.reduce((s, h) => s + (h.correctAnswers || 0), 0);
+      const subjects = new Set(history.map((h) => h.sector)).size;
+      const perfectScores = history.filter((h) => h.score === 100).length;
+
+      let streak = 0;
+      const dates = [...new Set(history.map((h) => new Date(h.date).toDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      const today = new Date().toDateString();
+      for (let i = 0; i < dates.length; i++) {
+        const expected = new Date();
+        expected.setDate(expected.getDate() - i);
+        if (dates[i] === expected.toDateString()) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+
+      const allTimings = storage.getQuestionTimings();
+      const fastestAnswer = allTimings.length > 0 ? Math.min(...allTimings.map((t) => t.timeSpent)) : null;
+
+      const stats: AchievementStats = {
+        totalSessions,
+        totalQuestions,
+        totalCorrect,
+        streak,
+        perfectScores,
+        subjects,
+        timeSpent: totalSessions * 300,
+        fastestAnswer,
+      };
+
+      for (const ach of ACHIEVEMENTS) {
+        if (ach.condition(stats)) {
+          storage.unlockAchievement(ach.id);
+        }
+      }
     }
   }, []);
+
+  const timingStats = useMemo(() => {
+    if (!state?.questionTimings?.length) return null;
+    const timings = state.questionTimings;
+    const sorted = [...timings].sort((a, b) => a.timeSpent - b.timeSpent);
+    const fastest = sorted[0];
+    const slowest = sorted[sorted.length - 1];
+    const avg = timings.reduce((s, t) => s + t.timeSpent, 0) / timings.length;
+    return { fastest, slowest, avg };
+  }, [state?.questionTimings]);
 
   if (!state) {
     navigate('/practice');
@@ -131,7 +184,7 @@ export default function ResultsScreen() {
   };
 
   const handleExportAnki = () => {
-    const lines = state.questions.map((q, i) => {
+    const lines = state.questions.map((q) => {
       const front = q.question.replace(/"/g, '""');
       let back = '';
       if (q.type === 'MCQ' && q.options) {
@@ -153,6 +206,16 @@ export default function ResultsScreen() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const formatSeconds = (s: number) => {
+    if (s < 60) return `${s.toFixed(1)}s`;
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}m ${sec}s`;
+  };
+
+  const fastestQuestion = timingStats?.fastest ? state.questions?.find((q) => q.id === timingStats.fastest.questionId) : null;
+  const slowestQuestion = timingStats?.slowest ? state.questions?.find((q) => q.id === timingStats.slowest.questionId) : null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -185,6 +248,45 @@ export default function ResultsScreen() {
         )}
       </div>
 
+      {timingStats && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Clock size={18} className="text-blue-500" />
+            Time Analysis
+          </h3>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="text-center">
+              <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatSeconds(timingStats.avg)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Avg / Question</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatSeconds(timingStats.fastest.timeSpent)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Fastest</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-red-600 dark:text-red-400">{formatSeconds(timingStats.slowest.timeSpent)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Slowest</p>
+            </div>
+          </div>
+          {fastestQuestion && (
+            <div className="flex items-start gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg mb-2">
+              <Zap size={14} className="text-green-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-green-700 dark:text-green-300">
+                <strong>Fastest:</strong> {fastestQuestion.question.slice(0, 80)}...
+              </p>
+            </div>
+          )}
+          {slowestQuestion && (
+            <div className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <Clock size={14} className="text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700 dark:text-red-300">
+                <strong>Slowest:</strong> {slowestQuestion.question.slice(0, 80)}...
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
         <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Performance Summary</h3>
         <p className={`text-sm ${
@@ -201,23 +303,29 @@ export default function ResultsScreen() {
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
         <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Question Details</h3>
         <div className="space-y-4">
-          {results.map((r, i) => (
-            <div key={r.questionId} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                {r.correct === true ? (
-                  <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
-                ) : r.correct === false ? (
-                  <XCircle size={16} className="text-red-600 dark:text-red-400" />
-                ) : (
-                  <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded font-medium">
-                    Score: {r.score}
-                  </span>
-                )}
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Question {i + 1}</span>
+          {results.map((r, i) => {
+            const timing = timingStats ? state.questionTimings?.find((t) => t.questionId === r.questionId) : null;
+            return (
+              <div key={r.questionId} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  {r.correct === true ? (
+                    <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
+                  ) : r.correct === false ? (
+                    <XCircle size={16} className="text-red-600 dark:text-red-400" />
+                  ) : (
+                    <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded font-medium">
+                      Score: {r.score}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Question {i + 1}</span>
+                  {timing && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{formatSeconds(timing.timeSpent)}</span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{r.explanation}</p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{r.explanation}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Trash2, ArrowLeft } from 'lucide-react';
+import { Bookmark, Trash2, ArrowLeft, StickyNote } from 'lucide-react';
 import { storage } from '../../services/storage';
 import type { Question } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
@@ -8,7 +8,10 @@ import BorderGlow from '../ui/BorderGlow';
 export default function BookmarksScreen() {
   const [bookmarks, setBookmarks] = useState<Question[]>(() => storage.getBookmarks());
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const allNotes = useMemo(() => storage.getAllQuestionNotes(), [bookmarks]);
 
   const handleRemove = (id: string) => {
     const question = bookmarks.find((b) => b.id === id);
@@ -75,6 +78,9 @@ export default function BookmarksScreen() {
                         {q.type}
                       </span>
                       <span className="text-xs text-gray-400 dark:text-gray-500">{q.subject}</span>
+                      {allNotes[q.id] && (
+                        <StickyNote size={12} className="text-yellow-500" />
+                      )}
                     </div>
                     <p
                       className="text-gray-800 dark:text-gray-100 text-sm leading-relaxed cursor-pointer"
@@ -98,6 +104,44 @@ export default function BookmarksScreen() {
                         )}
                         <p className="text-xs text-gray-500 dark:text-gray-400"><strong>Answer:</strong> {Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"><strong>Explanation:</strong> {q.explanation}</p>
+
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-2 mb-2">
+                            <StickyNote size={12} className="text-yellow-500" />
+                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Your Note</span>
+                          </div>
+                          {editingNote === q.id ? (
+                            <div>
+                              <textarea
+                                defaultValue={allNotes[q.id] || ''}
+                                onBlur={(e) => {
+                                  storage.setQuestionNote(q.id, e.target.value);
+                                  setEditingNote(null);
+                                }}
+                                autoFocus
+                                className="w-full px-3 py-2 text-xs border border-yellow-200 dark:border-yellow-700 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-yellow-400 outline-none resize-none h-20"
+                                placeholder="Add a note..."
+                              />
+                              <button
+                                onClick={() => setEditingNote(null)}
+                                className="mt-1 text-xs text-primary-600 dark:text-primary-400 font-medium"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          ) : (
+                            <p
+                              onClick={() => setEditingNote(q.id)}
+                              className={`text-xs cursor-pointer rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
+                                allNotes[q.id]
+                                  ? 'text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20'
+                                  : 'text-gray-400 dark:text-gray-500 italic'
+                              }`}
+                            >
+                              {allNotes[q.id] || 'Click to add a note...'}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

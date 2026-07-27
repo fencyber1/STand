@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Timer, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
-import type { Question } from '../../types';
+import type { Question, QuestionTiming } from '../../types';
+import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 
 interface ExamState {
@@ -37,10 +38,29 @@ export default function ExamSimScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [speaking, setSpeaking] = useState(false);
 
+  const questionStartRef = useRef<number>(Date.now());
+  const questionTimingsRef = useRef<QuestionTiming[]>([]);
+
   const current = questions[currentIndex];
   const currentAnswer = answers[currentIndex]?.answer;
   const answeredCount = answers.filter((a) => a.answer !== null).length;
   const progress = ((currentIndex + 1) / questions.length) * 100;
+
+  useEffect(() => {
+    questionStartRef.current = Date.now();
+  }, [currentIndex]);
+
+  const recordTiming = useCallback(() => {
+    const elapsed = (Date.now() - questionStartRef.current) / 1000;
+    const qId = questions[currentIndex]?.id;
+    if (!qId) return;
+    const existing = questionTimingsRef.current.findIndex((t) => t.questionId === qId);
+    if (existing >= 0) {
+      questionTimingsRef.current[existing].timeSpent = elapsed;
+    } else {
+      questionTimingsRef.current.push({ questionId: qId, timeSpent: elapsed });
+    }
+  }, [currentIndex, questions]);
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -107,6 +127,7 @@ export default function ExamSimScreen() {
     if (timerRef.current) clearInterval(timerRef.current);
     window.speechSynthesis.cancel();
     setSpeaking(false);
+    recordTiming();
 
     const results = questions.map((q, i) => {
       const userAnswer = answers[i]?.answer || '';
@@ -134,13 +155,16 @@ export default function ExamSimScreen() {
     const correctCount = results.filter((r) => r.correct).length;
     const totalScore = results.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
 
+    storage.saveQuestionTimings(questionTimingsRef.current);
+
     navigate('/results', {
-      state: { topic, sector, level, questions, results, correctCount, totalCount: questions.length, totalScore },
+      state: { topic, sector, level, questions, results, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
     });
-  }, [questions, answers, topic, sector, level, navigate]);
+  }, [questions, answers, topic, sector, level, navigate, recordTiming]);
 
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
+      recordTiming();
       window.speechSynthesis.cancel();
       setSpeaking(false);
       setCurrentIndex((i) => i + 1);
@@ -149,6 +173,7 @@ export default function ExamSimScreen() {
 
   const handlePrev = () => {
     if (currentIndex > 0) {
+      recordTiming();
       window.speechSynthesis.cancel();
       setSpeaking(false);
       setCurrentIndex((i) => i - 1);
@@ -313,7 +338,7 @@ export default function ExamSimScreen() {
             return (
               <button
                 key={q.id}
-                onClick={() => setCurrentIndex(i)}
+                onClick={() => { recordTiming(); setCurrentIndex(i); }}
                 className={`w-full aspect-square rounded-lg text-xs font-bold transition ${
                   i === currentIndex
                     ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900'
