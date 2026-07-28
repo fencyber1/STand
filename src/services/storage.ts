@@ -264,4 +264,21 @@ export const storage = {
     localStorage.setItem(k('stand_display_name'), name);
     notifyChange();
   },
+
+  clearAllUserData(): void {
+    const keys = [
+      'stand_history',
+      'stand_bookmarks',
+      'stand_study_plans',
+      'stand_question_timings',
+      'stand_achievements',
+      'stand_question_notes',
+      'stand_imported_questions',
+      'stand_profile_photo',
+      'stand_display_name',
+    ];
+    for (const base of keys) {
+      localStorage.removeItem(k(base));
+    }
+  },
 };

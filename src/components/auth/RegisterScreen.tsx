@@ -52,14 +52,9 @@ export default function RegisterScreen() {
     }
   };
 
-  const handleGoogleRegister = async () => {
+  const handleGoogleRegister = () => {
     setError('');
-    setLoading(true);
-    const result = await loginWithGoogle();
-    setLoading(false);
-    if (!result.success) {
-      setError(result.error || 'Failed to sign in with Google.');
-    }
+    loginWithGoogle();
   };
 
   return (
