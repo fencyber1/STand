@@ -289,21 +289,35 @@ export default function DocumentQuizScreen() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
-                <div className="flex gap-2">
-                  {[3, 5, 7, 10].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setQuestionCount(n)}
-                      className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
-                        questionCount === n
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={questionCount}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      if (!isNaN(v) && v >= 1 && v <= 50) setQuestionCount(v);
+                    }}
+                    className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-center font-semibold focus:ring-2 focus:ring-primary-500 outline-none"
+                  />
+                  <div className="flex-1 flex gap-1.5">
+                    {[3, 5, 7, 10, 15, 20].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setQuestionCount(n)}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${
+                          questionCount === n
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                <p className="text-xs text-gray-400 mt-1">Enter any number from 1 to 50</p>
               </div>
 
               <div>
