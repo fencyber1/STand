@@ -4,7 +4,7 @@ import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import EditProfileModal from './EditProfileModal';
-import { User, BookOpen, Trophy, Clock, LogOut, Moon, Sun } from 'lucide-react';
+import { User, BookOpen, Trophy, Clock, LogOut, Moon, Sun, Briefcase, MapPin, Heart, Mail } from 'lucide-react';
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
@@ -16,6 +16,11 @@ export default function ProfileScreen() {
 
   const displayPhoto = storage.getProfilePhoto() || user?.photoURL || null;
   const displayName = storage.getDisplayName() || user?.fullName || 'Student';
+  const bio = storage.getBio();
+  const surname = storage.getSurname();
+  const role = storage.getRole();
+  const hobby = storage.getHobby();
+  const country = storage.getCountry();
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -51,7 +56,31 @@ export default function ProfileScreen() {
           </div>
         )}
         <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{displayName}</h1>
-        <p className="text-gray-500 dark:text-gray-400">{user?.email || ''}</p>
+        {surname && <p className="text-sm text-primary-500 dark:text-primary-400 mt-0.5">@{surname}</p>}
+        {bio && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-xs mx-auto">{bio}</p>}
+
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+          {role && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
+              <Briefcase size={13} /> {role}
+            </div>
+          )}
+          {country && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
+              <MapPin size={13} /> {country}
+            </div>
+          )}
+          {hobby && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
+              <Heart size={13} /> {hobby}
+            </div>
+          )}
+          {user?.email && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
+              <Mail size={13} /> {user.email}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -202,6 +202,10 @@ export interface UserProfile {
   lastSeen: string;
   typingIn: string | null;
   bio: string;
+  surname: string;
+  role: string;
+  hobby: string;
+  country: string;
 }
 
 export interface FriendRequest {

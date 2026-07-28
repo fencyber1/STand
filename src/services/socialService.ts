@@ -71,7 +71,7 @@ export function subscribeToPresence(uids: string[], cb: (presences: Record<strin
 
 // ── User Profiles ──
 
-export async function upsertUserProfile(profile: { uid: string; displayName: string; photoURL: string | null; status?: string; bio?: string }): Promise<void> {
+export async function upsertUserProfile(profile: { uid: string; displayName: string; photoURL: string | null; status?: string; bio?: string; surname?: string; role?: string; hobby?: string; country?: string }): Promise<void> {
   const ref = doc(db, 'userProfiles', profile.uid);
   const existing = await getDoc(ref);
   const data: any = {
@@ -79,6 +79,10 @@ export async function upsertUserProfile(profile: { uid: string; displayName: str
     photoURL: profile.photoURL,
     status: profile.status || 'Available',
     bio: profile.bio || '',
+    surname: profile.surname || '',
+    role: profile.role || '',
+    hobby: profile.hobby || '',
+    country: profile.country || '',
     lastSeen: ts(),
   };
   if (!existing.exists()) {
@@ -102,6 +106,10 @@ export function subscribeToUserProfile(uid: string, cb: (profile: UserProfile | 
       lastSeen: d.lastSeen || '',
       typingIn: d.typingIn || null,
       bio: d.bio || '',
+      surname: d.surname || '',
+      role: d.role || '',
+      hobby: d.hobby || '',
+      country: d.country || '',
     });
   });
 }
@@ -484,12 +492,12 @@ export async function editGroupMessage(messageId: string, newText: string): Prom
   await updateDoc(doc(db, 'groupMessages', messageId), sanitize({ text: newText, edited: true }));
 }
 
-export async function getUserProfile(uid: string): Promise<{ uid: string; displayName: string; photoURL: string | null; email: string } | null> {
+export async function getUserProfile(uid: string): Promise<{ uid: string; displayName: string; photoURL: string | null; email: string; bio: string; surname: string; role: string; hobby: string; country: string } | null> {
   try {
     const snap = await getDoc(doc(db, 'userProfiles', uid));
     if (!snap.exists()) return null;
     const d = snap.data();
-    return { uid: d.uid || uid, displayName: d.displayName || 'Unknown', photoURL: d.photoURL || null, email: d.email || '' };
+    return { uid: d.uid || uid, displayName: d.displayName || 'Unknown', photoURL: d.photoURL || null, email: d.email || '', bio: d.bio || '', surname: d.surname || '', role: d.role || '', hobby: d.hobby || '', country: d.country || '' };
   } catch { return null; }
 }
 

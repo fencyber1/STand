@@ -265,6 +265,21 @@ export const storage = {
     notifyChange();
   },
 
+  getBio(): string { return localStorage.getItem(k('stand_bio')) || ''; },
+  setBio(v: string): void { localStorage.setItem(k('stand_bio'), v); notifyChange(); },
+
+  getSurname(): string { return localStorage.getItem(k('stand_surname')) || ''; },
+  setSurname(v: string): void { localStorage.setItem(k('stand_surname'), v); notifyChange(); },
+
+  getRole(): string { return localStorage.getItem(k('stand_role')) || ''; },
+  setRole(v: string): void { localStorage.setItem(k('stand_role'), v); notifyChange(); },
+
+  getHobby(): string { return localStorage.getItem(k('stand_hobby')) || ''; },
+  setHobby(v: string): void { localStorage.setItem(k('stand_hobby'), v); notifyChange(); },
+
+  getCountry(): string { return localStorage.getItem(k('stand_country')) || ''; },
+  setCountry(v: string): void { localStorage.setItem(k('stand_country'), v); notifyChange(); },
+
   getChatThemeId(): string {
     return localStorage.getItem(k('stand_chat_theme')) || 'default';
   },
@@ -297,6 +312,11 @@ export const storage = {
       'stand_imported_questions',
       'stand_profile_photo',
       'stand_display_name',
+      'stand_bio',
+      'stand_surname',
+      'stand_role',
+      'stand_hobby',
+      'stand_country',
       'stand_chat_theme',
     ];
     for (const base of keys) {
