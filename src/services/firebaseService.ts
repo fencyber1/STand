@@ -135,8 +135,9 @@ export async function joinGroup(code: string, member: { uid: string; name: strin
     stats: { sessions: 0, avgScore: 0, streak: 0 },
   };
 
+  members.push(newMember);
   await updateDoc(doc(db, 'studyGroups', groupDoc.id), {
-    members: arrayUnion(newMember),
+    members,
   });
 
   // Add to linked chat group
@@ -145,7 +146,7 @@ export async function joinGroup(code: string, member: { uid: string; name: strin
     try {
       const { addGroupMember } = await import('./socialService');
       await addGroupMember(chatGroupId, { uid: member.uid, name: member.name, photo: member.photoURL });
-    } catch { }
+    } catch (e) { console.error('Failed to add to chat group:', e); }
   }
 
   return { success: true, groupId: groupDoc.id };
@@ -169,11 +170,12 @@ export function subscribeToGroup(groupId: string, callback: (group: StudyGroup |
 
 export async function leaveGroup(groupId: string, uid: string, member: GroupMember): Promise<void> {
   const snap = await getDoc(doc(db, 'studyGroups', groupId));
-  const chatGroupId = snap.exists() ? snap.data().chatGroupId : null;
+  if (!snap.exists()) return;
+  const data = snap.data();
+  const chatGroupId = data.chatGroupId || null;
+  const members = (data.members || []).filter((m: any) => m.uid !== uid);
 
-  await updateDoc(doc(db, 'studyGroups', groupId), {
-    members: arrayRemove(member),
-  });
+  await updateDoc(doc(db, 'studyGroups', groupId), { members });
 
   if (chatGroupId) {
     try {

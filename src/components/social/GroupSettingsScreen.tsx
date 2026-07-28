@@ -3,15 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   subscribeToUserGroups,
+  subscribeToFriends,
+  addGroupMember,
   updateGroupProfile,
   updateGroupSettings,
   setGroupMemberRole,
   removeGroupMember,
 } from '../../services/socialService';
-import type { ChatGroup } from '../../types';
+import type { ChatGroup, Friend } from '../../types';
 import {
   ArrowLeft, Camera, Save, Crown, Shield, UserMinus,
-  Users, Loader2, CheckCircle, AlertCircle, Lock, MessageCircle, X,
+  Users, Loader2, CheckCircle, AlertCircle, Lock, MessageCircle, X, UserPlus,
 } from 'lucide-react';
 
 export default function GroupSettingsScreen() {
@@ -22,6 +24,7 @@ export default function GroupSettingsScreen() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [group, setGroup] = useState<ChatGroup | null>(null);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -31,7 +34,8 @@ export default function GroupSettingsScreen() {
   const [groupDesc, setGroupDesc] = useState('');
   const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
   const [messagePerm, setMessagePerm] = useState<'all' | 'admins'>('all');
-  const [expanded, setExpanded] = useState<'profile' | 'permissions' | null>('profile');
+  const [expanded, setExpanded] = useState<'profile' | 'permissions' | 'addMember' | null>('profile');
+  const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
     if (!uid || !groupId) return;
@@ -49,9 +53,17 @@ export default function GroupSettingsScreen() {
     return unsub;
   }, [uid, groupId]);
 
+  useEffect(() => {
+    if (!uid) return;
+    const unsub = subscribeToFriends(uid, (list) => setFriends(list));
+    return unsub;
+  }, [uid]);
+
   const isOwner = group?.createdBy === uid;
   const myRole = group?.members.find((m) => m.uid === uid)?.role;
   const isAdmin = isOwner || myRole === 'admin';
+  const memberUids = group?.members.map((m) => m.uid) || [];
+  const nonMembers = friends.filter((f) => !memberUids.includes(f.uid));
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,6 +121,17 @@ export default function GroupSettingsScreen() {
     } catch { setError('Failed to remove member'); }
   };
 
+  const handleAddMember = async (friend: Friend) => {
+    if (!groupId || addingMember) return;
+    setAddingMember(true);
+    try {
+      await addGroupMember(groupId, { uid: friend.uid, name: friend.displayName, photo: friend.photoURL || null });
+      setSuccess(`Added ${friend.displayName}`);
+      setTimeout(() => setSuccess(''), 2000);
+    } catch { setError('Failed to add member'); }
+    setAddingMember(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-900">
@@ -151,12 +174,9 @@ export default function GroupSettingsScreen() {
 
         {/* Profile Card */}
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
-          {/* Banner */}
           <div className="h-24 bg-gradient-to-r from-purple-600/40 to-indigo-600/40 relative">
             {groupPhoto && <img src={groupPhoto} alt="" className="w-full h-full object-cover" />}
           </div>
-
-          {/* Avatar + Info */}
           <div className="px-5 pb-5">
             <div className="flex items-end gap-4 -mt-10 mb-4">
               <div className="relative">
@@ -180,12 +200,9 @@ export default function GroupSettingsScreen() {
                 <p className="text-xs text-white/40">{group.members.length} member{group.members.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
-
             {group.description && (
               <p className="text-sm text-white/60 mb-4 leading-relaxed">{group.description}</p>
             )}
-
-            {/* Edit Profile (collapsed) */}
             <button
               onClick={() => setExpanded(expanded === 'profile' ? null : 'profile')}
               className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-white/70 font-medium"
@@ -193,7 +210,6 @@ export default function GroupSettingsScreen() {
               <span>Edit Group Profile</span>
               <span className="text-white/30">{expanded === 'profile' ? '−' : '+'}</span>
             </button>
-
             {expanded === 'profile' && (
               <div className="mt-3 space-y-3">
                 <input
@@ -274,6 +290,41 @@ export default function GroupSettingsScreen() {
               );
             })}
           </div>
+
+          {/* Add Member */}
+          <button
+            onClick={() => setExpanded(expanded === 'addMember' ? null : 'addMember')}
+            className="w-full mt-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-primary-400 font-medium flex items-center justify-center gap-2"
+          >
+            <UserPlus size={14} /> Add Member
+          </button>
+          {expanded === 'addMember' && (
+            <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
+              {nonMembers.length === 0 ? (
+                <p className="text-xs text-white/30 text-center py-3">All friends are already in this group</p>
+              ) : (
+                nonMembers.map((f) => (
+                  <div key={f.uid} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition">
+                    {f.photoURL ? (
+                      <img src={f.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                        {f.displayName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="flex-1 text-sm text-white truncate">{f.displayName}</span>
+                    <button
+                      onClick={() => handleAddMember(f)}
+                      disabled={addingMember}
+                      className="px-3 py-1 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {/* Permissions */}
@@ -287,7 +338,6 @@ export default function GroupSettingsScreen() {
             </h3>
             <span className="text-white/30 text-xs">{expanded === 'permissions' ? '−' : '+'}</span>
           </button>
-
           {expanded === 'permissions' && (
             <div className="px-4 pb-4 space-y-2">
               <button
