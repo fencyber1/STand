@@ -3,7 +3,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   updateProfile,
   User as FirebaseUser,
@@ -143,15 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = useCallback(async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithRedirect(auth, googleProvider);
       return { success: true };
     } catch (e: any) {
       console.error('Google sign-in error:', e.code, e.message);
-      const msg = e.code === 'auth/popup-closed-by-user' ? 'Sign-in cancelled.'
-        : e.code === 'auth/popup-blocked' ? 'Popup blocked. Allow popups for this site.'
-        : e.code === 'auth/configuration-not-found' ? 'Google sign-in not configured in Firebase. Enable it in Console → Authentication → Sign-in method.'
+      const msg = e.code === 'auth/configuration-not-found' ? 'Google sign-in not configured. Enable it in Firebase Console.'
         : e.code === 'auth/operation-not-allowed' ? 'Google sign-in not enabled. Enable it in Firebase Console.'
-        : e.code === 'auth/unauthorized-domain' ? 'This domain is not authorized. Add it in Firebase Console → Authentication → Settings → Authorized domains.'
+        : e.code === 'auth/unauthorized-domain' ? 'This domain is not authorized. Add it in Firebase Console.'
         : `Failed to sign in with Google (${e.code}). Check console for details.`;
       return { success: false, error: msg };
     }
