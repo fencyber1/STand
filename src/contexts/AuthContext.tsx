@@ -11,6 +11,7 @@ import {
 import { auth, googleProvider } from '../services/firebase';
 import { storage } from '../services/storage';
 import { loadUserDataFromFirestore, saveUserDataToFirestore, scheduleSync } from '../services/firestoreSync';
+import { upsertUserProfile } from '../services/socialService';
 
 interface AuthUser {
   fullName: string;
@@ -98,6 +99,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         await loadAndMergeData(firebaseUser.uid);
+
+        upsertUserProfile({
+          uid: firebaseUser.uid,
+          displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
+          photoURL: firebaseUser.photoURL,
+          status: 'Available',
+        }).catch(() => {});
+
         setUser(mapped);
       } else {
         setUser(null);
