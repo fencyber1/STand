@@ -138,7 +138,20 @@ export default function ExamSimScreen() {
         const correctStr = stripPrefix(String(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer));
         correct = stripPrefix(userAnswer) === correctStr;
       } else if (q.type === 'Theory') {
-        correct = userAnswer.length > 10;
+        const normalize = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+        const userNorm = normalize(userAnswer);
+        const correctNorm = normalize(String(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer));
+        if (userNorm === correctNorm) {
+          correct = true;
+        } else if (userNorm.includes(correctNorm) || correctNorm.includes(userNorm)) {
+          correct = Math.min(userNorm.length, correctNorm.length) / Math.max(userNorm.length, correctNorm.length) >= 0.8;
+        } else {
+          const userWords = new Set(userNorm.split(/\s+/));
+          const correctWords = new Set(correctNorm.split(/\s+/));
+          let overlap = 0;
+          correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
+          correct = correctWords.size > 0 ? overlap / correctWords.size >= 0.8 : false;
+        }
       } else {
         correct = userAnswer.trim().toLowerCase() === String(q.correctAnswer).toLowerCase();
       }
@@ -148,7 +161,20 @@ export default function ExamSimScreen() {
         userAnswer,
         correct,
         explanation: q.explanation,
-        score: q.type === 'Theory' ? Math.min(100, Math.max(40, userAnswer.length * 2)) : undefined,
+        score: q.type === 'Theory' ? (() => {
+          const normalize = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+          const userNorm = normalize(userAnswer);
+          const correctNorm = normalize(String(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer));
+          if (userNorm === correctNorm) return 100;
+          if (userNorm.includes(correctNorm) || correctNorm.includes(userNorm)) {
+            return Math.round(60 + (Math.min(userNorm.length, correctNorm.length) / Math.max(userNorm.length, correctNorm.length)) * 40);
+          }
+          const userWords = new Set(userNorm.split(/\s+/));
+          const correctWords = new Set(correctNorm.split(/\s+/));
+          let overlap = 0;
+          correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
+          return Math.round(Math.min(100, Math.max(20, (correctWords.size > 0 ? overlap / correctWords.size : 0) * 100)));
+        })() : undefined,
       };
     });
 

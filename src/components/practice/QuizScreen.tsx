@@ -96,11 +96,31 @@ export default function QuizScreen() {
         explanation: current.explanation,
       };
     } else if (current.type === 'Theory') {
-      const score = Math.min(100, Math.max(40, textAnswer.length * 2));
+      const normalize = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+      const userNorm = normalize(textAnswer);
+      const correctNorm = normalize(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
+      let score: number;
+      let isCorrect: boolean;
+      if (userNorm === correctNorm) {
+        score = 100;
+        isCorrect = true;
+      } else if (userNorm.includes(correctNorm) || correctNorm.includes(userNorm)) {
+        const ratio = Math.min(userNorm.length, correctNorm.length) / Math.max(userNorm.length, correctNorm.length);
+        score = Math.round(60 + ratio * 40);
+        isCorrect = ratio >= 0.8;
+      } else {
+        const userWords = new Set(userNorm.split(/\s+/));
+        const correctWords = new Set(correctNorm.split(/\s+/));
+        let overlap = 0;
+        correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
+        const ratio = correctWords.size > 0 ? overlap / correctWords.size : 0;
+        score = Math.round(Math.min(100, Math.max(20, ratio * 100)));
+        isCorrect = ratio >= 0.8;
+      }
       result = {
         questionId: current.id,
         userAnswer: textAnswer,
-        correct: null,
+        correct: isCorrect,
         explanation: current.explanation,
         score,
       };
