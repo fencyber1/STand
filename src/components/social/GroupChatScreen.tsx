@@ -141,7 +141,7 @@ export default function GroupChatScreen() {
     return (
       <div className="min-h-screen relative" style={{ background: theme.gradient }}>
         {wallpaper && (
-          <div className="fixed inset-0 opacity-20">
+          <div className="fixed inset-0 opacity-20 pointer-events-none">
             <img src={wallpaper} alt="" className="w-full h-full object-cover" />
           </div>
         )}
