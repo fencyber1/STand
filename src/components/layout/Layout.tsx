@@ -22,6 +22,10 @@ import {
   Users,
   Swords,
   FileText,
+  UserPlus,
+  Rss,
+  MessageSquare,
+  MessageCircle,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -45,6 +49,10 @@ const navItems = [
   { to: '/multiplayer', label: 'Multiplayer', icon: Swords },
   { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
+  { to: '/feed', label: 'Feed', icon: Rss },
+  { to: '/friends', label: 'Friends', icon: UserPlus },
+  { to: '/chat', label: 'Chat', icon: MessageSquare },
+  { to: '/groups-chat', label: 'Group Chat', icon: MessageCircle },
 ];
 
 export default function Layout() {

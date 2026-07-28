@@ -24,6 +24,10 @@ import StudyGroupsScreen from './components/groups/StudyGroupsScreen';
 import MultiplayerLobbyScreen from './components/multiplayer/MultiplayerLobbyScreen';
 import MultiplayerGameScreen from './components/multiplayer/MultiplayerGameScreen';
 import DocumentQuizScreen from './components/practice/DocumentQuizScreen';
+import FriendsScreen from './components/social/FriendsScreen';
+import FeedScreen from './components/social/FeedScreen';
+import ChatScreen from './components/social/ChatScreen';
+import GroupChatScreen from './components/social/GroupChatScreen';
 
 function ProtectedLayout() {
   const { isLoggedIn } = useAuth();
@@ -72,6 +76,12 @@ export default function App() {
           <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
           <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
           <Route path="profile" element={<ProfileScreen />} />
+          <Route path="friends" element={<FriendsScreen />} />
+          <Route path="feed" element={<FeedScreen />} />
+          <Route path="chat" element={<ChatScreen />} />
+          <Route path="chat/:chatId" element={<ChatScreen />} />
+          <Route path="groups-chat" element={<GroupChatScreen />} />
+          <Route path="groups-chat/:groupId" element={<GroupChatScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       ) : (

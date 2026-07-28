@@ -190,3 +190,109 @@ export interface QuestionNote {
   note: string;
   updatedAt: string;
 }
+
+// ── Social Types ──
+
+export interface UserProfile {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  status: string;
+  online: boolean;
+  lastSeen: string;
+  typingIn: string | null;
+  bio: string;
+}
+
+export interface FriendRequest {
+  id: string;
+  from: string;
+  fromName: string;
+  fromPhoto: string | null;
+  to: string;
+  toName: string;
+  toPhoto: string | null;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+}
+
+export interface Friend {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  status: string;
+  online: boolean;
+  lastSeen: string;
+}
+
+export interface Post {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  authorPhoto: string | null;
+  content: string;
+  likes: string[];
+  commentCount: number;
+  createdAt: string;
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  authorUid: string;
+  authorName: string;
+  authorPhoto: string | null;
+  content: string;
+  createdAt: string;
+}
+
+export interface ChatRoom {
+  id: string;
+  members: string[];
+  memberNames: Record<string, string>;
+  memberPhotos: Record<string, string | null>;
+  lastMessage: string;
+  lastMessageBy: string;
+  lastMessageAt: string;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  senderUid: string;
+  senderName: string;
+  senderPhoto: string | null;
+  text: string;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface ChatGroup {
+  id: string;
+  name: string;
+  members: { uid: string; name: string; photoURL: string | null; role: 'admin' | 'member' }[];
+  createdBy: string;
+  lastMessage: string;
+  lastMessageBy: string;
+  lastMessageAt: string;
+  createdAt: string;
+}
+
+export interface GroupMessage {
+  id: string;
+  groupId: string;
+  senderUid: string;
+  senderName: string;
+  senderPhoto: string | null;
+  text: string;
+  createdAt: string;
+  readBy: string[];
+}
+
+export interface Presence {
+  uid: string;
+  online: boolean;
+  lastSeen: string;
+  typingIn: string | null;
+}
