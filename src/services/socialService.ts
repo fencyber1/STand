@@ -515,9 +515,12 @@ export async function createChatGroup(creator: { uid: string; name: string; phot
   const ref = doc(collection(db, 'chatGroups'));
   await setDoc(ref, sanitize({
     name: groupName,
+    photoURL: null,
+    description: '',
     members,
     memberUids,
     createdBy: creator.uid,
+    settings: { messagePermission: 'all' },
     lastMessage: '',
     lastMessageBy: '',
     lastMessageAt: ts(),
@@ -547,6 +550,25 @@ export async function removeGroupMember(groupId: string, uid: string): Promise<v
   await updateDoc(doc(db, 'chatGroups', groupId), { members, memberUids });
 }
 
+export async function updateGroupProfile(groupId: string, updates: { name?: string; photoURL?: string | null; description?: string }): Promise<void> {
+  await updateDoc(doc(db, 'chatGroups', groupId), sanitize(updates));
+}
+
+export async function updateGroupSettings(groupId: string, settings: { messagePermission?: 'all' | 'admins' }): Promise<void> {
+  const snap = await getDoc(doc(db, 'chatGroups', groupId));
+  if (!snap.exists()) return;
+  const current = snap.data().settings || { messagePermission: 'all' };
+  await updateDoc(doc(db, 'chatGroups', groupId), { settings: { ...current, ...settings } });
+}
+
+export async function setGroupMemberRole(groupId: string, memberUid: string, role: 'admin' | 'member'): Promise<void> {
+  const snap = await getDoc(doc(db, 'chatGroups', groupId));
+  if (!snap.exists()) return;
+  const data = snap.data();
+  const members = (data.members || []).map((m: any) => m.uid === memberUid ? { ...m, role } : m);
+  await updateDoc(doc(db, 'chatGroups', groupId), { members });
+}
+
 export function subscribeToUserGroups(uid: string, cb: (groups: ChatGroup[]) => void): () => void {
   const q = query(collection(db, 'chatGroups'), where('memberUids', 'array-contains', uid));
   return onSnapshot(q, (snap) => {
@@ -555,8 +577,12 @@ export function subscribeToUserGroups(uid: string, cb: (groups: ChatGroup[]) => 
       return {
         id: d.id,
         name: data.name,
+        photoURL: data.photoURL || null,
+        description: data.description || '',
         members: data.members || [],
+        memberUids: data.memberUids || [],
         createdBy: data.createdBy,
+        settings: data.settings || { messagePermission: 'all' },
         lastMessage: data.lastMessage || '',
         lastMessageBy: data.lastMessageBy || '',
         lastMessageAt: data.lastMessageAt || '',

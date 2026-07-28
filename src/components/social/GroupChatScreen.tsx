@@ -13,7 +13,7 @@ import {
   setTyping,
 } from '../../services/socialService';
 import type { ChatGroup, GroupMessage, Friend, Presence } from '../../types';
-import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette, Smile, Paperclip, Pencil } from 'lucide-react';
+import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette, Smile, Paperclip, Pencil, Settings, Lock } from 'lucide-react';
 import ChatThemePicker from './ChatThemePicker';
 import EmojiPicker from './EmojiPicker';
 import AttachmentMenu from './AttachmentMenu';
@@ -123,9 +123,12 @@ export default function GroupChatScreen() {
   }, [groupId, uid]);
 
   const currentGroup = groups.find((g) => g.id === groupId);
+  const myRole = currentGroup?.members.find((m) => m.uid === uid)?.role;
+  const isGroupAdmin = currentGroup?.createdBy === uid || myRole === 'admin';
+  const canSendMessages = !currentGroup || currentGroup.settings?.messagePermission !== 'admins' || isGroupAdmin;
 
   const doSend = useCallback(async (text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }) => {
-    if (!groupId || !uid || sending) return;
+    if (!groupId || !uid || sending || !canSendMessages) return;
     setSending(true);
     try {
       await sendGroupMessage(groupId, { uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, text, media);
@@ -262,7 +265,11 @@ export default function GroupChatScreen() {
             <div className="space-y-2">
               {groups.map((group) => (
                 <button key={group.id} onClick={() => navigate(`/groups-chat/${group.id}`)} className="w-full backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4 flex items-center gap-4 hover:bg-white/20 transition-all text-left">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-6 h-6" /></div>
+                  {group.photoURL ? (
+                    <img src={group.photoURL} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-lg" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-6 h-6" /></div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-bold ${theme.textColor} truncate`}>{group.name}</p>
                     <p className={`text-xs ${tc('text-gray-500', 'text-white/40')} mt-0.5`}>{group.members.length} members</p>
@@ -323,7 +330,11 @@ export default function GroupChatScreen() {
             <ArrowLeft className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
           </button>
           <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-5 h-5" /></div>
+            {currentGroup.photoURL ? (
+              <img src={currentGroup.photoURL} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-white/20 shadow-lg" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-5 h-5" /></div>
+            )}
             <div>
               <p className={`text-sm font-bold ${theme.textColor}`}>{currentGroup.name}</p>
               <p className={`text-[11px] ${tc('text-gray-400', 'text-white/50')}`}>{members.length} members</p>
@@ -331,6 +342,9 @@ export default function GroupChatScreen() {
           </div>
           <button onClick={() => setShowMembers(!showMembers)} className={`p-2 rounded-lg transition-colors ${showMembers ? 'bg-white/20' : 'hover:bg-white/10'}`}>
             <Users className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
+          </button>
+          <button onClick={() => navigate(`/groups-chat/${groupId}/settings`)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+            <Settings className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
           </button>
           <button onClick={() => setShowThemePicker(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
             <Palette className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
@@ -413,27 +427,33 @@ export default function GroupChatScreen() {
 
         {/* Input */}
         <div className={`${theme.inputBg} px-3 py-2 shrink-0 safe-area-bottom`}>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { setShowEmoji(!showEmoji); setShowAttach(false); }} className={`p-2 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-              <Smile className={`w-5 h-5 ${tc('text-gray-400', 'text-white/60')}`} />
-            </button>
-            <button onClick={() => { setShowAttach(!showAttach); setShowEmoji(false); }} className={`p-2 rounded-full transition-colors ${showAttach ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-              <Paperclip className={`w-5 h-5 ${tc('text-gray-400', 'text-white/60')}`} />
-            </button>
-            <input
-              ref={inputRef}
-              type="text"
-              value={newMessage}
-              onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-              placeholder="Type a message..."
-              className={`flex-1 ${theme.inputField} ${theme.textColor}`}
-              disabled={sending}
-            />
-            <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
-              {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-            </button>
-          </div>
+          {!canSendMessages ? (
+            <div className="flex items-center justify-center gap-2 py-2 text-white/40 text-sm">
+              <Lock className="w-4 h-4" /> Only admins can send messages
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => { setShowEmoji(!showEmoji); setShowAttach(false); }} className={`p-2 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>
+                <Smile className={`w-5 h-5 ${tc('text-gray-400', 'text-white/60')}`} />
+              </button>
+              <button onClick={() => { setShowAttach(!showAttach); setShowEmoji(false); }} className={`p-2 rounded-full transition-colors ${showAttach ? 'bg-white/20' : 'hover:bg-white/10'}`}>
+                <Paperclip className={`w-5 h-5 ${tc('text-gray-400', 'text-white/60')}`} />
+              </button>
+              <input
+                ref={inputRef}
+                type="text"
+                value={newMessage}
+                onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                placeholder="Type a message..."
+                className={`flex-1 ${theme.inputField} ${theme.textColor}`}
+                disabled={sending}
+              />
+              <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
+                {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

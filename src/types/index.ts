@@ -283,8 +283,14 @@ export interface ChatMessage {
 export interface ChatGroup {
   id: string;
   name: string;
+  photoURL: string | null;
+  description: string;
   members: { uid: string; name: string; photoURL: string | null; role: 'admin' | 'member' }[];
+  memberUids: string[];
   createdBy: string;
+  settings: {
+    messagePermission: 'all' | 'admins';
+  };
   lastMessage: string;
   lastMessageBy: string;
   lastMessageAt: string;
