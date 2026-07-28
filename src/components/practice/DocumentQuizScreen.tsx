@@ -238,37 +238,29 @@ export default function DocumentQuizScreen() {
       {/* Step: Preview */}
       {step === 'preview' && (
         <>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-primary-500" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{fileName}</span>
-                <span className="text-xs text-gray-400">{wordCount} words</span>
-                {saved && <span className="text-xs text-green-500 flex items-center gap-1"><CheckCircle size={10} /> Saved</span>}
-              </div>
-              <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-primary-500" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{fileName}</span>
+              <span className="text-xs text-gray-400">{wordCount} words</span>
+              {saved && <span className="text-xs text-green-500 flex items-center gap-1"><CheckCircle size={10} /> Saved</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              {!saved && (
                 <button
-                  onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); }}
-                  className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                  onClick={handleSaveDoc}
+                  className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1 font-medium"
                 >
-                  <X size={12} /> Change
+                  <Save size={12} /> Save
                 </button>
-              </div>
-            </div>
-            <div className="max-h-48 overflow-y-auto text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 whitespace-pre-wrap leading-relaxed">
-              {docText.slice(0, 3000)}{docText.length > 3000 && '\n\n... (truncated for preview)'}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            {!saved && (
+              )}
               <button
-                onClick={handleSaveDoc}
-                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
+                onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); }}
+                className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
               >
-                <Save size={16} /> Save Document
+                <X size={12} /> Change
               </button>
-            )}
+            </div>
           </div>
 
           <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#10b981', '#3b82f6', '#6366f1']}>
