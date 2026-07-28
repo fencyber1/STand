@@ -35,7 +35,7 @@ function formatCaption(text: string) {
   const parts = text.split(/(#\w+)/g);
   return parts.map((part, i) =>
     part.startsWith('#')
-      ? <span key={i} className="text-indigo-400 hover:underline cursor-pointer">{part}</span>
+      ? <span key={i} className="text-indigo-500 dark:text-indigo-400 hover:underline cursor-pointer">{part}</span>
       : <span key={i}>{part}</span>
   );
 }
@@ -83,7 +83,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
   const [saved, setSaved] = useState(false);
 
   return (
-    <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden shadow-xl shadow-black/20">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
@@ -94,11 +94,11 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
           </div>
         </div>
         {post.authorUid === uid ? (
-          <button onClick={() => onDelete(post.id)} className="p-2 rounded-full hover:bg-white/10 transition text-gray-400 hover:text-red-400">
+          <button onClick={() => onDelete(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400 hover:text-red-400">
             <Trash2 className="w-4 h-4" />
           </button>
         ) : (
-          <button className="p-2 rounded-full hover:bg-white/10 transition text-gray-400">
+          <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400">
             <MoreHorizontal className="w-4 h-4" />
           </button>
         )}
@@ -106,14 +106,14 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
 
       {/* Repost indicator */}
       {post.repostOf && (
-        <div className="px-4 pb-1 flex items-center gap-1.5 text-[11px] text-gray-500">
+        <div className="px-4 pb-1 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
           <Repeat2 size={11} /> Reposted
         </div>
       )}
 
       {/* Media */}
       {post.mediaUrl && (
-        <div className="relative bg-black">
+        <div className="relative bg-gray-100 dark:bg-black">
           {post.type === 'image' ? (
             <img src={post.mediaUrl} alt="" className="w-full aspect-square object-cover" />
           ) : (
@@ -137,21 +137,21 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
 
       {/* Action bar */}
       <div className="px-4 py-2.5 flex items-center gap-1">
-        <button onClick={() => onLike(post)} className="p-2 rounded-full hover:bg-white/10 transition group">
-          <Heart className={`w-5 h-5 transition-transform group-hover:scale-110 ${isLiked ? 'text-red-500 fill-red-500' : 'text-gray-300'}`} />
+        <button onClick={() => onLike(post)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
+          <Heart className={`w-5 h-5 transition-transform group-hover:scale-110 ${isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400 dark:text-gray-300'}`} />
         </button>
-        <button onClick={() => toggleComments(post.id)} className="p-2 rounded-full hover:bg-white/10 transition group">
-          <MessageCircle className="w-5 h-5 text-gray-300 group-hover:scale-110 transition-transform" />
+        <button onClick={() => toggleComments(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
+          <MessageCircle className="w-5 h-5 text-gray-400 dark:text-gray-300 group-hover:scale-110 transition-transform" />
         </button>
-        <button onClick={() => onShare(post.id)} className="p-2 rounded-full hover:bg-white/10 transition group">
-          <Share2 className="w-5 h-5 text-gray-300 group-hover:scale-110 transition-transform" />
+        <button onClick={() => onShare(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
+          <Share2 className="w-5 h-5 text-gray-400 dark:text-gray-300 group-hover:scale-110 transition-transform" />
         </button>
         <div className="flex-1" />
-        <button onClick={() => onRepost(post.id)} className="p-2 rounded-full hover:bg-white/10 transition group">
-          <Repeat2 className={`w-5 h-5 group-hover:scale-110 transition-transform ${post.reposts.includes(uid) ? 'text-green-400' : 'text-gray-300'}`} />
+        <button onClick={() => onRepost(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
+          <Repeat2 className={`w-5 h-5 group-hover:scale-110 transition-transform ${post.reposts.includes(uid) ? 'text-green-500 dark:text-green-400' : 'text-gray-400 dark:text-gray-300'}`} />
         </button>
-        <button onClick={() => setSaved(!saved)} className="p-2 rounded-full hover:bg-white/10 transition group">
-          <Bookmark className={`w-5 h-5 group-hover:scale-110 transition-transform ${saved ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+        <button onClick={() => setSaved(!saved)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
+          <Bookmark className={`w-5 h-5 group-hover:scale-110 transition-transform ${saved ? 'text-yellow-500 dark:text-yellow-400 fill-yellow-500 dark:fill-yellow-400' : 'text-gray-400 dark:text-gray-300'}`} />
         </button>
       </div>
 
@@ -159,7 +159,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
       {(post.likes.length > 0 || post.shares > 0) && (
         <div className="px-4 pb-1 space-y-0.5">
           {post.likes.length > 0 && (
-            <p className="text-sm font-bold text-white">{post.likes.length.toLocaleString()} {post.likes.length === 1 ? 'like' : 'likes'}</p>
+            <p className="text-sm font-bold text-gray-800 dark:text-white">{post.likes.length.toLocaleString()} {post.likes.length === 1 ? 'like' : 'likes'}</p>
           )}
         </div>
       )}
@@ -167,8 +167,8 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
       {/* Caption */}
       {post.content && (
         <div className="px-4 pb-1">
-          <p className="text-sm text-gray-200">
-            <span className="font-bold text-white mr-1.5">{post.authorName}</span>
+          <p className="text-sm text-gray-700 dark:text-gray-200">
+            <span className="font-bold text-gray-900 dark:text-white mr-1.5">{post.authorName}</span>
             {formatCaption(post.content)}
           </p>
         </div>
@@ -177,7 +177,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
       {/* View comments */}
       {(post.commentCount > 0 || expandedComments) && (
         <button onClick={() => toggleComments(post.id)} className="px-4 pb-1 text-left w-full">
-          <p className="text-xs text-gray-500 hover:text-gray-400 transition">
+          <p className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition">
             {post.commentCount > 0 && !expandedComments
               ? `View all ${post.commentCount} comment${post.commentCount !== 1 ? 's' : ''}`
               : post.commentCount > 0 ? 'Hide comments' : ''
@@ -188,20 +188,20 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
 
       {/* Comments section */}
       {expandedComments && (
-        <div className="border-t border-gray-800 px-4 py-3 space-y-3 max-h-64 overflow-y-auto">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-3 max-h-64 overflow-y-auto">
           {comments.length === 0 ? (
-            <p className="text-xs text-gray-500 text-center py-2">No comments yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No comments yet</p>
           ) : (
             comments.map((c) => (
               <div key={c.id} className="flex items-start gap-2.5 group">
                 {getAvatar(c.authorPhoto, c.authorName, 'w-7 h-7')}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-200">
-                    <span className="font-semibold text-white mr-1.5">{c.authorName}</span>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">
+                    <span className="font-semibold text-gray-900 dark:text-white mr-1.5">{c.authorName}</span>
                     {c.content}
                   </p>
                   <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-[10px] text-gray-500">{timeAgo(c.createdAt)}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{timeAgo(c.createdAt)}</span>
                     {c.authorUid === uid && (
                       <button onClick={() => onDelete(c.id)} className="text-[10px] text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition">Delete</button>
                     )}
@@ -214,14 +214,14 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
       )}
 
       {/* Comment input */}
-      <div className="border-t border-gray-800 px-4 py-3 flex items-center gap-3">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
         <input
           type="text"
           value={commentInputs[post.id] || ''}
           onChange={(e) => setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onComment(post.id); } }}
           placeholder="Add a comment..."
-          className="flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none"
+          className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
         />
         <button
           onClick={() => onComment(post.id)}
@@ -350,31 +350,31 @@ export default function FeedScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 max-w-lg mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 pt-2">
         <BookOpen className="w-6 h-6 text-indigo-400" />
-        <h1 className="text-xl font-bold text-white tracking-tight">Feed</h1>
-        <span className="text-[10px] text-gray-600 uppercase tracking-widest ml-auto font-medium">Public</span>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Feed</h1>
+        <span className="text-[10px] text-gray-400 dark:text-gray-600 uppercase tracking-widest ml-auto font-medium">Public</span>
       </div>
 
       {/* Composer */}
       <button
         onClick={() => setShowComposer(true)}
-        className="w-full mb-6 bg-gray-900 rounded-2xl border border-gray-800 p-4 flex items-center gap-3 hover:border-gray-700 transition-colors group"
+        className="w-full mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors group"
       >
         {getAvatar(user?.photoURL || null, user?.fullName || 'Student', 'w-10 h-10')}
-        <span className="text-gray-500 text-sm group-hover:text-gray-400 transition">Share something with the community...</span>
+        <span className="text-gray-400 dark:text-gray-500 text-sm group-hover:text-gray-600 dark:group-hover:text-gray-400 transition">Share something with the community...</span>
         <Plus className="w-5 h-5 text-indigo-400 ml-auto" />
       </button>
 
       {/* Composer modal */}
       {showComposer && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => { setShowComposer(false); setPostMedia(null); }}>
-          <div className="bg-gray-900 rounded-2xl w-full max-w-lg border border-gray-800 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-              <h3 className="text-base font-bold text-white">New Post</h3>
-              <button onClick={() => { setShowComposer(false); setPostMedia(null); }} className="p-1.5 rounded-full hover:bg-white/10 transition">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => { setShowComposer(false); setPostMedia(null); }}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-base font-bold text-gray-800 dark:text-white">New Post</h3>
+              <button onClick={() => { setShowComposer(false); setPostMedia(null); }} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
@@ -386,12 +386,12 @@ export default function FeedScreen() {
                   onChange={(e) => setPostText(e.target.value)}
                   placeholder="What's on your mind? Use #hashtags"
                   rows={3}
-                  className="flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none resize-none"
+                  className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none resize-none"
                   autoFocus
                 />
               </div>
               {postMedia && (
-                <div className="relative mb-3 rounded-xl overflow-hidden border border-gray-800">
+                <div className="relative mb-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
                   {postMedia.type === 'image' ? (
                     <img src={postMedia.url} alt="" className="w-full max-h-64 object-cover" />
                   ) : (
@@ -403,10 +403,10 @@ export default function FeedScreen() {
                 </div>
               )}
               <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 text-xs font-medium hover:bg-gray-700 hover:text-gray-300 transition">
+                <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">
                   <ImageIcon size={13} /> Photo
                 </button>
-                <button onClick={() => videoRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 text-xs font-medium hover:bg-gray-700 hover:text-gray-300 transition">
+                <button onClick={() => videoRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">
                   <Film size={13} /> Video
                 </button>
               </div>
@@ -427,18 +427,18 @@ export default function FeedScreen() {
 
       {/* Repost modal */}
       {showRepost && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setShowRepost(null)}>
-          <div className="bg-gray-900 rounded-2xl w-full max-w-md border border-gray-800 shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowRepost(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2"><Repeat2 size={16} className="text-green-400" /> Repost</h3>
-              <button onClick={() => setShowRepost(null)} className="p-1.5 rounded-full hover:bg-white/10"><X className="w-5 h-5 text-gray-400" /></button>
+              <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2"><Repeat2 size={16} className="text-green-500" /> Repost</h3>
+              <button onClick={() => setShowRepost(null)} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10"><X className="w-5 h-5 text-gray-400" /></button>
             </div>
             <textarea
               value={repostCaption}
               onChange={(e) => setRepostCaption(e.target.value)}
               placeholder="Add a caption..."
               rows={2}
-              className="w-full bg-gray-800 rounded-xl p-3 text-sm text-gray-200 placeholder-gray-500 outline-none border border-gray-700 focus:border-indigo-500 resize-none mb-3"
+              className="w-full bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none border border-gray-200 dark:border-gray-600 focus:border-indigo-400 dark:focus:border-indigo-500 resize-none mb-3"
             />
             <button onClick={() => handleRepost(showRepost)} className="w-full py-2.5 bg-green-500 hover:bg-green-400 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2">
               <Repeat2 size={14} /> Repost
@@ -453,10 +453,10 @@ export default function FeedScreen() {
           <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-gray-900 rounded-2xl border border-gray-800 p-16 text-center">
-          <ImageIcon className="w-14 h-14 text-gray-700 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm font-medium">No posts yet</p>
-          <p className="text-gray-600 text-xs mt-1">Be the first to share!</p>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-16 text-center">
+          <ImageIcon className="w-14 h-14 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No posts yet</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Be the first to share!</p>
         </div>
       ) : (
         <div className="space-y-6">
