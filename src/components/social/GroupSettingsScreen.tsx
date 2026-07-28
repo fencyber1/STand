@@ -72,9 +72,24 @@ export default function GroupSettingsScreen() {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setError('Photo must be under 2MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5MB'); return; }
     const reader = new FileReader();
-    reader.onload = () => setGroupPhoto(reader.result as string);
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 200;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
+        else { if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; } }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        setGroupPhoto(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = reader.result as string;
+    };
     reader.readAsDataURL(file);
   };
 

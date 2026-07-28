@@ -43,9 +43,24 @@ export default function EditProfileModal({ open, onClose }: Props) {
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return; }
     const reader = new FileReader();
-    reader.onload = (e) => setPhoto(e.target?.result as string);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 200;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
+        else { if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; } }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        setPhoto(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = e.target?.result as string;
+    };
     reader.readAsDataURL(file);
   };
 
