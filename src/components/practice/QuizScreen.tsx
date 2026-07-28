@@ -43,6 +43,7 @@ export default function QuizScreen() {
   const [textAnswer, setTextAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
+  const resultsRef = useRef<Result[]>([]);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [deepLoading, setDeepLoading] = useState(false);
@@ -63,6 +64,10 @@ export default function QuizScreen() {
   const questionTimingsRef = useRef<QuestionTiming[]>([]);
   const [note, setNote] = useState(() => storage.getQuestionNote(current.id));
   const [showNote, setShowNote] = useState(false);
+
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
 
   useEffect(() => {
     questionStartRef.current = Date.now();
@@ -153,7 +158,7 @@ export default function QuizScreen() {
     window.speechSynthesis.cancel();
     setSpeaking(false);
     if (isLast) {
-      const allResults = [...results];
+      const allResults = [...resultsRef.current];
       if (!showResult) return;
       const correctCount = allResults.filter((r) => r.correct === true).length;
       const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
@@ -227,14 +232,14 @@ export default function QuizScreen() {
 
   const goToResults = useCallback(() => {
     recordTiming();
-    const allResults = [...results];
+    const allResults = [...resultsRef.current];
     const correctCount = allResults.filter((r) => r.correct === true).length;
     const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
     storage.saveQuestionTimings(questionTimingsRef.current);
     navigate('/results', {
       state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
     });
-  }, [results, navigate, topic, state, questions, recordTiming]);
+  }, [navigate, topic, state, questions, recordTiming]);
 
   useEffect(() => {
     if (timeLeft <= 0 || timeLimit <= 0 || showResult || results.length >= questions.length) return;
@@ -258,9 +263,9 @@ export default function QuizScreen() {
     if (timeLimit > 0 && timeLeft === 0 && !showResult) {
       if (timerRef.current) clearInterval(timerRef.current);
       recordTiming();
-      const finalResults = [...results];
+      const finalResults = [...resultsRef.current];
       if (finalResults.length < questions.length) {
-        for (let i = results.length; i < questions.length; i++) {
+        for (let i = resultsRef.current.length; i < questions.length; i++) {
           finalResults.push({
             questionId: questions[i].id,
             userAnswer: '',
