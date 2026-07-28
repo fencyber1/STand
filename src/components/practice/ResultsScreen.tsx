@@ -1,8 +1,9 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard, Clock, Zap, Share2 } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard, Clock, Zap, Share2, Lightbulb } from 'lucide-react';
 import { storage } from '../../services/storage';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ACHIEVEMENTS } from '../../constants/achievements';
+import { getTopicFunFact } from '../../services/api';
 import type { QuestionTiming, AchievementStats } from '../../types';
 
 interface ResultsState {
@@ -38,6 +39,18 @@ export default function ResultsScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ResultsState | null;
+  const [funFact, setFunFact] = useState('');
+  const [funFactLoading, setFunFactLoading] = useState(true);
+
+  useEffect(() => {
+    if (state?.topic && state?.sector) {
+      setFunFactLoading(true);
+      getTopicFunFact(state.topic, state.sector)
+        .then(setFunFact)
+        .catch(() => setFunFact(''))
+        .finally(() => setFunFactLoading(false));
+    }
+  }, [state?.topic, state?.sector]);
 
   useEffect(() => {
     if (state) {
@@ -334,6 +347,26 @@ export default function ResultsScreen() {
           </div>
         )}
       </div>
+
+      {funFact && (
+        <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl p-5 border border-yellow-200 dark:border-yellow-800 transition-colors">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg shrink-0">
+              <Lightbulb size={20} className="text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-yellow-700 dark:text-yellow-300 mb-1">Fun Fact about {topic}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{funFact}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {funFactLoading && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
+          <div className="w-5 h-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-xs text-gray-400">Loading a fun fact about {topic}...</p>
+        </div>
+      )}
 
       {timingStats && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">

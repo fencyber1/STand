@@ -8,34 +8,6 @@ import BorderGlow from '../ui/BorderGlow';
 import CalculatorPanel from './CalculatorPanel';
 import CheatSheet from './CheatSheet';
 
-const FUN_FACTS = [
-  'Octopuses have three hearts and blue blood.',
-  'Honey never spoils — edible after 3000 years.',
-  'Bananas are berries, but strawberries aren\'t.',
-  'A group of flamingos is called a "flamboyance."',
-  'The human body has about 37.2 trillion cells.',
-  'Light takes 8 minutes to travel from the Sun to Earth.',
-  'There are more stars in the universe than grains of sand on Earth.',
-  'Water can boil and freeze at the same time (triple point).',
-  'A neutron star is so dense a teaspoon weighs 6 billion tons.',
-  'DNA in all your cells would stretch to Pluto and back.',
-  'The Amazon rainforest produces 20% of the world\'s oxygen.',
-  'Venus spins backwards compared to most planets.',
-  'Your brain uses 20% of your body\'s total energy.',
-  'Glass is actually a liquid that flows very slowly.',
-  'The Moon has moonquakes just like Earth has earthquakes.',
-  'Cows have best friends and get stressed when separated.',
-  'Sound travels 4x faster in water than in air.',
-  'The Great Wall of China is visible from space with the naked eye.',
-  'A day on Venus is longer than a year on Venus.',
-  'Your bones are stronger than steel per unit weight.',
-  'Butterflies taste with their feet.',
-  'The shortest war in history lasted 38 minutes.',
-  'Hot water freezes faster than cold water (Mpemba effect).',
-  'There are more possible chess games than atoms in the observable universe.',
-  'The human eye can distinguish about 10 million different colors.',
-];
-
 interface QuizState {
   questions: Question[];
   topic: string;
@@ -82,8 +54,6 @@ export default function QuizScreen() {
   const [speaking, setSpeaking] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showCheatSheet, setShowCheatSheet] = useState(false);
-  const [currentFact, setCurrentFact] = useState('');
-  const [showFact, setShowFact] = useState(false);
   const [speedTimeLeft, setSpeedTimeLeft] = useState(30);
   const speedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isLast = currentIndex === questions.length - 1;
@@ -305,13 +275,6 @@ export default function QuizScreen() {
       if (speedTimerRef.current) clearInterval(speedTimerRef.current);
     };
   }, [currentIndex, speedRound, showResult]);
-
-  useEffect(() => {
-    if (!showResult || isLast) return;
-    const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
-    setCurrentFact(fact);
-    setShowFact(true);
-  }, [showResult, isLast]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -600,24 +563,6 @@ export default function QuizScreen() {
         </div>
         </div>
       </BorderGlow>
-
-      {showFact && currentFact && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 max-w-sm">
-          <div className="flex items-start gap-2">
-            <Lightbulb size={18} className="text-yellow-500 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 mb-1">Did you know?</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{currentFact}</p>
-            </div>
-            <button
-              onClick={() => setShowFact(false)}
-              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {showCalculator && <CalculatorPanel onClose={() => setShowCalculator(false)} />}
       {showCheatSheet && <CheatSheet subject={current.subject} topic={current.topic} onClose={() => setShowCheatSheet(false)} />}

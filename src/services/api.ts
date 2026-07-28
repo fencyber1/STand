@@ -174,3 +174,11 @@ Write in plain text, no markdown formatting.`;
 
   return await callAI(prompt);
 }
+
+export async function getTopicFunFact(topic: string, subject: string): Promise<string> {
+  const prompt = `Give exactly ONE short, surprising, fun fact about "${topic}" in ${subject}. 
+It should be something most people don't know — a "wow" moment. 
+Write only the fact itself, 1-2 sentences max. No preamble, no "Did you know", no markdown.`;
+
+  return await callAI(prompt);
+}
