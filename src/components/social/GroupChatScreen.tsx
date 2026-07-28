@@ -216,7 +216,7 @@ export default function GroupChatScreen() {
   // ── Group List ──
   if (!groupId) {
     return (
-      <div className="min-h-[100dvh] min-h-screen relative" style={{ background: theme.gradient }}>
+      <div className="h-full relative overflow-y-auto" style={{ background: theme.gradient }}>
         {wallpaper && <div className="fixed inset-0 opacity-20 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
         <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
@@ -297,7 +297,7 @@ export default function GroupChatScreen() {
   if (!currentGroup) return <div className="flex items-center justify-center h-screen" style={{ background: theme.gradient }}><Loader2 className="w-8 h-8 text-white/60 animate-spin" /></div>;
 
   return (
-    <div className="flex h-[100dvh] h-screen relative overflow-hidden" style={{ background: theme.gradient }}>
+    <div className="flex h-full relative overflow-hidden" style={{ background: theme.gradient }}>
       {wallpaper && <div className="absolute inset-0 opacity-15 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
 
       <div className="relative z-10 flex flex-col flex-1 min-w-0 min-h-0">

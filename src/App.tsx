@@ -35,6 +35,12 @@ function ProtectedLayout() {
   return <Layout />;
 }
 
+function ProtectedFullScreen({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn } = useAuth();
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   const { isLoggedIn, loading } = useAuth();
 
@@ -53,6 +59,12 @@ export default function App() {
     <Routes>
       <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <LoginScreen />} />
       <Route path="/register" element={isLoggedIn ? <Navigate to="/" replace /> : <RegisterScreen />} />
+
+      {/* Chat routes — full screen, no Layout wrapper */}
+      <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+      <Route path="/chat/:chatId" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+      <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
+      <Route path="/groups-chat/:groupId" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
 
       {isLoggedIn ? (
         <Route path="/" element={<ProtectedLayout />}>
@@ -78,10 +90,6 @@ export default function App() {
           <Route path="profile" element={<ProfileScreen />} />
           <Route path="friends" element={<FriendsScreen />} />
           <Route path="feed" element={<FeedScreen />} />
-          <Route path="chat" element={<ChatScreen />} />
-          <Route path="chat/:chatId" element={<ChatScreen />} />
-          <Route path="groups-chat" element={<GroupChatScreen />} />
-          <Route path="groups-chat/:groupId" element={<GroupChatScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       ) : (
