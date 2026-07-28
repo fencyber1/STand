@@ -63,6 +63,7 @@ export default function EditProfileModal({ open, onClose }: Props) {
         uid: user.uid,
         displayName: name.trim() || user?.fullName || 'Student',
         photoURL: photo,
+        email: user.email,
         bio: bio.trim(),
         surname: surname.trim(),
         role,

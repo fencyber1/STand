@@ -71,12 +71,13 @@ export function subscribeToPresence(uids: string[], cb: (presences: Record<strin
 
 // ── User Profiles ──
 
-export async function upsertUserProfile(profile: { uid: string; displayName: string; photoURL: string | null; status?: string; bio?: string; surname?: string; role?: string; hobby?: string; country?: string }): Promise<void> {
+export async function upsertUserProfile(profile: { uid: string; displayName: string; photoURL: string | null; email?: string; status?: string; bio?: string; surname?: string; role?: string; hobby?: string; country?: string }): Promise<void> {
   const ref = doc(db, 'userProfiles', profile.uid);
   const existing = await getDoc(ref);
   const data: any = {
     displayName: profile.displayName,
     photoURL: profile.photoURL,
+    email: profile.email || '',
     status: profile.status || 'Available',
     bio: profile.bio || '',
     surname: profile.surname || '',

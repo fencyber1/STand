@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           uid: firebaseUser.uid,
           displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
           photoURL: firebaseUser.photoURL,
+          email: firebaseUser.email || '',
           status: 'Available',
         }).catch(() => {});
 
