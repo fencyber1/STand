@@ -72,6 +72,11 @@ async function loadAndMergeData(uid: string) {
   if (localImported.length === 0 && remoteData.importedQuestions?.length) storage.setImportedQuestions(remoteData.importedQuestions);
   if (!storage.getProfilePhoto() && remoteData.profilePhoto) storage.setProfilePhoto(remoteData.profilePhoto);
   if (!storage.getDisplayName() && remoteData.displayName) storage.setDisplayName(remoteData.displayName);
+  if (!storage.getBio() && remoteData.bio) storage.setBio(remoteData.bio);
+  if (!storage.getSurname() && remoteData.surname) storage.setSurname(remoteData.surname);
+  if (!storage.getRole() && remoteData.role) storage.setRole(remoteData.role);
+  if (!storage.getHobby() && remoteData.hobby) storage.setHobby(remoteData.hobby);
+  if (!storage.getCountry() && remoteData.country) storage.setCountry(remoteData.country);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -97,6 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             importedQuestions: storage.getImportedQuestions(),
             profilePhoto: storage.getProfilePhoto(),
             displayName: storage.getDisplayName(),
+            bio: storage.getBio(),
+            surname: storage.getSurname(),
+            role: storage.getRole(),
+            hobby: storage.getHobby(),
+            country: storage.getCountry(),
           });
         });
 
@@ -188,6 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             importedQuestions: storage.getImportedQuestions(),
             profilePhoto: storage.getProfilePhoto(),
             displayName: storage.getDisplayName(),
+            bio: storage.getBio(),
+            surname: storage.getSurname(),
+            role: storage.getRole(),
+            hobby: storage.getHobby(),
+            country: storage.getCountry(),
           }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 5000)),
         ]);

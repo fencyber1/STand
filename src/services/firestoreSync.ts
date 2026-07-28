@@ -17,6 +17,11 @@ export interface UserDataDoc {
   importedQuestions: Question[];
   profilePhoto: string | null;
   displayName: string | null;
+  bio: string;
+  surname: string;
+  role: string;
+  hobby: string;
+  country: string;
   updatedAt: any;
 }
 
@@ -65,6 +70,11 @@ export function mergeUserData(
     importedQuestions: Question[];
     profilePhoto: string | null;
     displayName: string | null;
+    bio: string;
+    surname: string;
+    role: string;
+    hobby: string;
+    country: string;
   },
   remote: UserDataDoc | null
 ) {
@@ -80,6 +90,11 @@ export function mergeUserData(
     importedQuestions: mergeArrays(local.importedQuestions, remote.importedQuestions || [], (q) => q.id),
     profilePhoto: local.profilePhoto || remote.profilePhoto || null,
     displayName: local.displayName || remote.displayName || null,
+    bio: local.bio || remote.bio || '',
+    surname: local.surname || remote.surname || '',
+    role: local.role || remote.role || '',
+    hobby: local.hobby || remote.hobby || '',
+    country: local.country || remote.country || '',
   };
 }
 
