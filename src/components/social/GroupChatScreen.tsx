@@ -6,7 +6,6 @@ import {
   subscribeToGroupMessages,
   sendGroupMessage,
   createChatGroup,
-  addGroupMember,
   subscribeToFriends,
   subscribeToPresence,
   setTyping,
@@ -26,6 +25,17 @@ function timeAgo(dateStr: string): string {
 function formatTime(dateStr: string): string {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function UserAvatar({ photo, name, size = 48 }: { photo: string | null; name: string; size?: number }) {
+  if (photo) {
+    return <img src={photo} alt="" style={{ width: size, height: size }} className="rounded-full object-cover" />;
+  }
+  return (
+    <div className="rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg" style={{ width: size, height: size }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 export default function GroupChatScreen() {
@@ -82,6 +92,15 @@ export default function GroupChatScreen() {
     return unsub;
   }, [groupId, groups, uid]);
 
+  useEffect(() => { return () => { if (uid) setTyping(uid, null); }; }, [uid]);
+
+  const handleTyping = useCallback(() => {
+    if (!groupId || !uid) return;
+    setTyping(uid, groupId);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => setTyping(uid, null), 2000);
+  }, [groupId, uid]);
+
   const currentGroup = groups.find((g) => g.id === groupId);
 
   const handleSendMessage = async () => {
@@ -91,11 +110,9 @@ export default function GroupChatScreen() {
     setSending(true);
     try {
       await sendGroupMessage(groupId, { uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, text);
-    } catch {
-      setNewMessage(text);
-    } finally {
-      setSending(false);
-    }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      setTyping(uid, null);
+    } catch { setNewMessage(text); } finally { setSending(false); }
   };
 
   const handleCreateGroup = async () => {
@@ -107,75 +124,71 @@ export default function GroupChatScreen() {
       setShowCreate(false);
       setGroupName('');
       setSelectedFriends([]);
-    } finally {
-      setCreating(false);
-    }
+    } finally { setCreating(false); }
   };
 
-  if (!uid) return <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-900 text-gray-500">Please log in.</div>;
+  if (!uid) return <div className="flex items-center justify-center h-full bg-gray-900 text-white">Please log in.</div>;
 
+  // ── Group List ──
   if (!groupId) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)' }}>
         <div className="max-w-2xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 pt-2">
             <div className="flex items-center gap-3">
-              <Users className="w-6 h-6 text-primary-500" />
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Group Chats</h1>
+              <Users className="w-6 h-6 text-white/80" />
+              <h1 className="text-2xl font-bold text-white">Group Chats</h1>
             </div>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors">
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 rounded-xl text-white text-sm font-medium transition-all">
               <Plus className="w-4 h-4" /> New Group
             </button>
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-primary-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-white/60 animate-spin" /></div>
           ) : groups.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-              <Users className="w-14 h-14 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No groups yet</p>
-              <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Create a group to start chatting with friends</p>
+            <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-12 text-center">
+              <Users className="w-14 h-14 text-white/30 mx-auto mb-3" />
+              <p className="text-white/50 text-sm font-medium">No groups yet</p>
+              <p className="text-white/30 text-xs mt-1">Create a group to start chatting</p>
             </div>
           ) : (
             <div className="space-y-2">
               {groups.map((group) => (
-                <button key={group.id} onClick={() => navigate(`/groups-chat/${group.id}`)} className="w-full bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors text-left">
-                  <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center text-white flex-shrink-0">
-                    <Users className="w-6 h-6" />
-                  </div>
+                <button key={group.id} onClick={() => navigate(`/groups-chat/${group.id}`)} className="w-full backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4 flex items-center gap-4 hover:bg-white/20 transition-all text-left">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-6 h-6" /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{group.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {group.lastMessage ? `${group.lastMessage}` : `${group.members.length} members`}
-                    </p>
+                    <p className="text-sm font-bold text-white truncate">{group.name}</p>
+                    <p className="text-xs text-white/40 mt-0.5">{group.members.length} members</p>
+                    {group.lastMessage && <p className="text-xs text-white/50 truncate mt-1">{group.lastMessage}</p>}
                   </div>
-                  {group.lastMessageAt && <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(group.lastMessageAt)}</span>}
+                  {group.lastMessageAt && <span className="text-[10px] text-white/30 flex-shrink-0">{timeAgo(group.lastMessageAt)}</span>}
                 </button>
               ))}
             </div>
           )}
 
           {showCreate && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
+              <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Create Group</h3>
-                  <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><X className="w-5 h-5 text-gray-500" /></button>
+                  <h3 className="text-lg font-bold text-white">Create Group</h3>
+                  <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-white/10"><X className="w-5 h-5 text-white/60" /></button>
                 </div>
-                <input type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" className="w-full bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-primary-500 mb-4" autoFocus />
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Add friends ({selectedFriends.length} selected)</p>
+                <input type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 outline-none mb-4" autoFocus />
+                <p className="text-xs font-medium text-white/40 mb-2">Add friends ({selectedFriends.length} selected)</p>
                 <div className="max-h-48 overflow-y-auto space-y-1 mb-4">
-                  {friends.length === 0 ? <p className="text-xs text-gray-400">No friends to add</p> : friends.map((f) => (
-                    <label key={f.uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                      <input type="checkbox" checked={selectedFriends.includes(f.uid)} onChange={() => setSelectedFriends((p) => p.includes(f.uid) ? p.filter((x) => x !== f.uid) : [...p, f.uid])} className="w-4 h-4 text-primary-600 rounded" />
-                      <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">{f.displayName.charAt(0).toUpperCase()}</div>
-                      <span className="text-sm text-gray-800 dark:text-gray-100">{f.displayName}</span>
+                  {friends.length === 0 ? <p className="text-xs text-white/30">No friends to add</p> : friends.map((f) => (
+                    <label key={f.uid} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 cursor-pointer">
+                      <input type="checkbox" checked={selectedFriends.includes(f.uid)} onChange={() => setSelectedFriends((p) => p.includes(f.uid) ? p.filter((x) => x !== f.uid) : [...p, f.uid])} className="w-4 h-4 text-blue-500 rounded" />
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">{f.displayName.charAt(0).toUpperCase()}</div>
+                      <span className="text-sm text-white">{f.displayName}</span>
                     </label>
                   ))}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
-                  <button onClick={handleCreateGroup} disabled={!groupName.trim() || selectedFriends.length === 0 || creating} className="flex-1 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50">
+                  <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm font-medium transition-all">Cancel</button>
+                  <button onClick={handleCreateGroup} disabled={!groupName.trim() || selectedFriends.length === 0 || creating} className="flex-1 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50">
                     {creating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Create'}
                   </button>
                 </div>
@@ -187,120 +200,128 @@ export default function GroupChatScreen() {
     );
   }
 
+  // ── Group Chat View ──
   const members = currentGroup?.members || [];
 
-  return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 flex items-center gap-3 shrink-0 shadow-sm">
-        <button onClick={() => navigate('/groups-chat')} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{currentGroup?.name || 'Group'}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{members.length} members</p>
-        </div>
-        <button onClick={() => setShowMembers(!showMembers)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-          <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-        </button>
-      </div>
+  if (!currentGroup) return <div className="flex items-center justify-center h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c, #4a8adc)' }}><Loader2 className="w-8 h-8 text-white/60 animate-spin" /></div>;
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+  return (
+    <div className="flex h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)' }}>
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Header */}
+        <div className="backdrop-blur-xl bg-black/20 border-b border-white/10 px-4 py-3 flex items-center gap-3 shrink-0">
+          <button onClick={() => navigate('/groups-chat')} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-white/70" />
+          </button>
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-bold text-white">{currentGroup.name}</p>
+              <p className="text-[11px] text-white/50">{members.length} members</p>
+            </div>
+          </div>
+          <button onClick={() => setShowMembers(!showMembers)} className={`p-2 rounded-lg transition-colors ${showMembers ? 'bg-white/20' : 'hover:bg-white/10'}`}>
+            <Users className="w-5 h-5 text-white/70" />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="space-y-3">
             {messages.map((msg, idx) => {
               const isOwn = msg.senderUid === uid;
               const prevMsg = idx > 0 ? messages[idx - 1] : null;
-              const showSender = !isOwn && (!prevMsg || prevMsg.senderUid !== msg.senderUid);
+              const showAvatar = !prevMsg || prevMsg.senderUid !== msg.senderUid;
               const senderName = msg.senderName || 'Unknown';
-              const senderPhoto = members.find((m) => m.uid === msg.senderUid)?.photoURL || null;
-              const isOnline = presenceMap[msg.senderUid]?.online;
 
               return (
-                <div key={msg.id} className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className="flex-shrink-0 mb-1" style={{ width: 36, height: 36 }}>
-                    {(showSender || isOwn) ? (
-                      <div className="relative">
-                        {isOwn ? (
-                          (user?.photoURL ? (
-                            <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-gray-800 shadow-md" />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white dark:ring-gray-800 text-xs">{(user?.fullName || 'Y').charAt(0).toUpperCase()}</div>
-                          ))
-                        ) : (
-                          <div className="relative">
-                            {senderPhoto ? (
-                              <img src={senderPhoto} alt="" className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-gray-800 shadow-md" />
-                            ) : (
-                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white dark:ring-gray-800 text-xs">{senderName.charAt(0).toUpperCase()}</div>
-                            )}
-                            {isOnline && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />}
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
+                <div key={msg.id} className={`relative ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
+                  {!isOwn && (
+                    <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
+                      {showAvatar ? (
+                        <UserAvatar photo={msg.senderPhoto || null} name={senderName} size={40} />
+                      ) : <div style={{ width: 40 }} />}
+                    </div>
+                  )}
 
-                  <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
-                    {showSender && !isOwn && (
-                      <p className="text-[11px] font-bold text-purple-500 dark:text-purple-400 mb-1 ml-4 uppercase tracking-wide">{senderName}</p>
+                  <div className="relative max-w-[68%]">
+                    {!isOwn && showAvatar && (
+                      <p className="text-[11px] font-bold text-yellow-300/80 mb-1 ml-3 uppercase tracking-wider">{senderName}</p>
                     )}
-                    <div className={`relative px-4 py-3 shadow-sm ${
-                      isOwn
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md'
-                        : 'bg-white/80 dark:bg-gray-800/80 backdrop-blur text-gray-800 dark:text-gray-100 border border-gray-200/50 dark:border-gray-700/50 rounded-2xl rounded-bl-md'
-                    }`}>
-                      <p className="text-sm break-words leading-relaxed">{msg.text}</p>
-                      <p className={`text-[10px] mt-1.5 ${isOwn ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'} text-right`}>{formatTime(msg.createdAt)}</p>
+
+                    <div
+                      className={`relative px-4 py-3 ${
+                        isOwn
+                          ? 'bg-black/40 backdrop-blur-md text-white rounded-2xl rounded-br-sm border border-white/5'
+                          : 'bg-black/40 backdrop-blur-md text-white rounded-2xl rounded-bl-sm border border-white/5'
+                      }`}
+                    >
+                      <p className="text-[13px] break-words leading-relaxed">{msg.text}</p>
+                      <p className="text-[10px] mt-1 text-right text-white/30">{formatTime(msg.createdAt)}</p>
                     </div>
                   </div>
+
+                  {isOwn && (
+                    <div className="flex-shrink-0 self-end" style={{ width: 40, marginLeft: -8, zIndex: 2 }}>
+                      {showAvatar ? (
+                        <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} />
+                      ) : <div style={{ width: 40 }} />}
+                    </div>
+                  )}
                 </div>
               );
             })}
-            <div ref={messagesEndRef} />
           </div>
+          <div ref={messagesEndRef} />
+        </div>
 
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur border-t border-gray-200/50 dark:border-gray-700/50 p-3 shrink-0">
-            <div className="flex items-center gap-2">
-              <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Type a message..." className="flex-1 bg-gray-100 dark:bg-gray-700/50 rounded-full px-4 py-2.5 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500" disabled={sending} />
-              <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all shadow-md disabled:opacity-50">
-                {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </button>
+        {/* Input */}
+        <div className="backdrop-blur-xl bg-black/20 border-t border-white/10 p-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+              placeholder="Type a message..."
+              className="flex-1 bg-white/10 backdrop-blur rounded-full px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-white/20"
+              disabled={sending}
+            />
+            <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+              {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Members Panel */}
+      {showMembers && (
+        <div className="w-64 backdrop-blur-xl bg-black/20 border-l border-white/10 overflow-y-auto shrink-0">
+          <div className="p-4">
+            <h3 className="text-sm font-bold text-white/80 mb-3">Members ({members.length})</h3>
+            <div className="space-y-3">
+              {members.map((member) => {
+                const online = presenceMap[member.uid]?.online;
+                return (
+                  <div key={member.uid} className="flex items-center gap-3">
+                    <div className="relative">
+                      <UserAvatar photo={member.photoURL || null} name={member.name} size={36} />
+                      {online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#1a2a6c]" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm text-white truncate">{member.name}</p>
+                        {member.role === 'admin' && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-white/40">{online ? 'Online' : 'Offline'}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
-
-        {showMembers && (
-          <div className="w-64 bg-white/80 dark:bg-gray-800/80 backdrop-blur border-l border-gray-200/50 dark:border-gray-700/50 overflow-y-auto shrink-0">
-            <div className="p-4">
-              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">Members ({members.length})</h3>
-              <div className="space-y-3">
-                {members.map((member) => {
-                  const online = presenceMap[member.uid]?.online;
-                  return (
-                    <div key={member.uid} className="flex items-center gap-3">
-                      <div className="relative">
-                        {member.photoURL ? (
-                          <img src={member.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-semibold">{member.name.charAt(0).toUpperCase()}</div>
-                        )}
-                        {online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-sm text-gray-800 dark:text-gray-100 truncate">{member.name}</p>
-                          {member.role === 'admin' && <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
-                        </div>
-                        <p className="text-xs text-gray-400">{online ? 'Online' : 'Offline'}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
