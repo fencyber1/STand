@@ -110,13 +110,34 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   await updateDoc(doc(db, 'userProfiles', uid), sanitize(data));
 }
 
-export async function searchUsers(searchTerm: string): Promise<UserProfile[]> {
+export async function searchUsers(searchTerm: string, excludeUid?: string): Promise<UserProfile[]> {
   const snap = await getDocs(collection(db, 'userProfiles'));
-  const term = searchTerm.toLowerCase();
+  const term = searchTerm.toLowerCase().trim();
+  const words = term.split(/\s+/).filter(Boolean);
   return snap.docs
     .map((d) => ({ uid: d.id, ...d.data() } as UserProfile))
-    .filter((u) => u.displayName.toLowerCase().includes(term) || u.uid === term)
-    .slice(0, 20);
+    .filter((u) => {
+      if (excludeUid && u.uid === excludeUid) return false;
+      const name = u.displayName.toLowerCase();
+      if (words.length === 0) return false;
+      return words.every((w) => name.includes(w));
+    })
+    .slice(0, 30);
+}
+
+export async function getSuggestedUsers(uid: string, limit: number = 10): Promise<UserProfile[]> {
+  const snap = await getDocs(collection(db, 'userProfiles'));
+  const friendSnap1 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', uid)));
+  const friendSnap2 = await getDocs(query(collection(db, 'friendRequests'), where('to', '==', uid)));
+  const friendUids = new Set<string>();
+  friendSnap1.docs.forEach((d) => friendUids.add(d.data().to));
+  friendSnap2.docs.forEach((d) => friendUids.add(d.data().from));
+  friendUids.add(uid);
+  return snap.docs
+    .map((d) => ({ uid: d.id, ...d.data() } as UserProfile))
+    .filter((u) => !friendUids.has(u.uid))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, limit);
 }
 
 // ── Friends ──

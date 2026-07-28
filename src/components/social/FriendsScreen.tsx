@@ -9,6 +9,7 @@ import {
   rejectFriendRequest,
   removeFriend,
   searchUsers,
+  getSuggestedUsers,
   subscribeToPresence,
   findOrCreateChatRoom,
 } from '../../services/socialService';
@@ -76,6 +77,7 @@ export default function FriendsScreen() {
   const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [suggested, setSuggested] = useState<UserProfile[]>([]);
   const [searching, setSearching] = useState(false);
   const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -100,6 +102,11 @@ export default function FriendsScreen() {
     return () => unsubPresence();
   }, [uid, friends]);
 
+  useEffect(() => {
+    if (!uid) return;
+    getSuggestedUsers(uid, 10).then(setSuggested).catch(() => {});
+  }, [uid, friends]);
+
   const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) {
       setSearchResults([]);
@@ -107,8 +114,8 @@ export default function FriendsScreen() {
     }
     setSearching(true);
     try {
-      const results = await searchUsers(searchTerm.trim());
-      setSearchResults(results.filter((r) => r.uid !== uid));
+      const results = await searchUsers(searchTerm.trim(), uid);
+      setSearchResults(results);
     } catch {
       setSearchResults([]);
     } finally {
@@ -402,16 +409,54 @@ export default function FriendsScreen() {
 
           <div className="space-y-2">
             {searchResults.length === 0 && !searching && searchTerm.trim() && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
-                <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No users found</p>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-1">No results for "{searchTerm}"</p>
+                {suggested.length > 0 && (
+                  <>
+                    <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-2 px-1">Suggested friends</p>
+                    {suggested.map((profile) => (
+                      <div key={profile.uid} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3 mb-2">
+                        <div className="flex-shrink-0">{getAvatar(profile.photoURL, profile.displayName)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{profile.displayName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
+                        </div>
+                        <button onClick={() => handleSendRequest(profile)} disabled={loadingAction === `send-${profile.uid}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0">
+                          {loadingAction === `send-${profile.uid}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                          Add
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
 
-            {searchResults.length === 0 && !searchTerm.trim() && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
-                <UserPlus className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Search for users to add as friends</p>
+            {!searchTerm.trim() && (
+              <div>
+                {suggested.length === 0 ? (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+                    <UserPlus className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Search for users to add as friends</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-2 px-1">Suggested friends</p>
+                    {suggested.map((profile) => (
+                      <div key={profile.uid} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3 mb-2">
+                        <div className="flex-shrink-0">{getAvatar(profile.photoURL, profile.displayName)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{profile.displayName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
+                        </div>
+                        <button onClick={() => handleSendRequest(profile)} disabled={loadingAction === `send-${profile.uid}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0">
+                          {loadingAction === `send-${profile.uid}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                          Add
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
 
