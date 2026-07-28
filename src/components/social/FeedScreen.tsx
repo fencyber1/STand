@@ -60,18 +60,20 @@ export default function FeedScreen() {
   useEffect(() => {
     if (!uid) return;
     const unsubFriends = subscribeToFriends(uid, (list) => setFriends(list));
-    return () => unsubFriends();
+    return unsubFriends();
   }, [uid]);
+
+  const friendUids = friends.map((f) => f.uid);
+  const friendUidsKey = friendUids.join(',');
 
   useEffect(() => {
     if (!uid) return;
-    const friendUids = friends.map((f) => f.uid);
-    const unsubFeed = subscribeToFeed(uid, friendUids, (list) => {
+    const unsub = subscribeToFeed(uid, friendUids, (list) => {
       setPosts(list);
       setLoading(false);
     });
-    return () => unsubFeed();
-  }, [uid, friends]);
+    return unsub;
+  }, [uid, friendUidsKey]);
 
   useEffect(() => {
     const expanded = Array.from(expandedComments);

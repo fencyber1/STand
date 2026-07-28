@@ -1,6 +1,6 @@
 import {
   collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
-  onSnapshot, query, where, orderBy, limit as fbLimit, serverTimestamp,
+  onSnapshot, query, where, serverTimestamp,
   writeBatch, documentId,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -276,7 +276,7 @@ export async function createPost(author: { uid: string; name: string; photo: str
 export function subscribeToFeed(uid: string, friendUids: string[], cb: (posts: Post[]) => void): () => void {
   const allUids = [uid, ...friendUids];
   if (allUids.length > 10) allUids.length = 10;
-  const q = query(collection(db, 'posts'), where('authorUid', 'in', allUids), orderBy('createdAt', 'desc'), fbLimit(50));
+  const q = query(collection(db, 'posts'), where('authorUid', 'in', allUids));
   return onSnapshot(q, (snap) => {
     const posts = snap.docs.map((d) => {
       const data = d.data();
@@ -290,7 +290,7 @@ export function subscribeToFeed(uid: string, friendUids: string[], cb: (posts: P
         commentCount: data.commentCount || 0,
         createdAt: data.createdAt,
       } as Post;
-    });
+    }).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 50);
     cb(posts);
   });
 }
@@ -329,7 +329,7 @@ export async function deletePost(postId: string): Promise<void> {
 // ── Comments ──
 
 export function subscribeToComments(postId: string, cb: (comments: PostComment[]) => void): () => void {
-  const q = query(collection(db, 'postComments'), where('postId', '==', postId), orderBy('createdAt', 'asc'));
+  const q = query(collection(db, 'postComments'), where('postId', '==', postId));
   return onSnapshot(q, (snap) => {
     const comments = snap.docs.map((d) => {
       const data = d.data();
@@ -342,7 +342,7 @@ export function subscribeToComments(postId: string, cb: (comments: PostComment[]
         content: data.content,
         createdAt: data.createdAt,
       } as PostComment;
-    });
+    }).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     cb(comments);
   });
 }
@@ -420,7 +420,7 @@ export function subscribeToUserChats(uid: string, cb: (chats: ChatRoom[]) => voi
 }
 
 export function subscribeToChatMessages(chatId: string, cb: (messages: ChatMessage[]) => void): () => void {
-  const q = query(collection(db, 'chatMessages'), where('chatId', '==', chatId), orderBy('createdAt', 'asc'));
+  const q = query(collection(db, 'chatMessages'), where('chatId', '==', chatId));
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => {
       const data = d.data();
@@ -434,7 +434,7 @@ export function subscribeToChatMessages(chatId: string, cb: (messages: ChatMessa
         createdAt: data.createdAt,
         read: data.read ?? false,
       } as ChatMessage;
-    }));
+    }).sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
   });
 }
 
@@ -522,7 +522,7 @@ export function subscribeToUserGroups(uid: string, cb: (groups: ChatGroup[]) => 
 }
 
 export function subscribeToGroupMessages(groupId: string, cb: (messages: GroupMessage[]) => void): () => void {
-  const q = query(collection(db, 'groupMessages'), where('groupId', '==', groupId), orderBy('createdAt', 'asc'));
+  const q = query(collection(db, 'groupMessages'), where('groupId', '==', groupId));
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => {
       const data = d.data();
@@ -536,7 +536,7 @@ export function subscribeToGroupMessages(groupId: string, cb: (messages: GroupMe
         createdAt: data.createdAt,
         readBy: data.readBy || [],
       } as GroupMessage;
-    }));
+    }).sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
   });
 }
 
