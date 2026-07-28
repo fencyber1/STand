@@ -264,6 +264,13 @@ export interface ChatMessage {
   senderName: string;
   senderPhoto: string | null;
   text: string;
+  type?: 'text' | 'image' | 'audio' | 'document' | 'contact' | 'location';
+  mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  fileSize?: number;
+  contact?: { name: string; phone: string; email: string };
+  location?: { lat: number; lng: number; name: string };
   createdAt: string;
   read: boolean;
 }
@@ -286,6 +293,13 @@ export interface GroupMessage {
   senderName: string;
   senderPhoto: string | null;
   text: string;
+  type?: 'text' | 'image' | 'audio' | 'document' | 'contact' | 'location';
+  mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  fileSize?: number;
+  contact?: { name: string; phone: string; email: string };
+  location?: { lat: number; lng: number; name: string };
   createdAt: string;
   readBy: string[];
 }

@@ -11,8 +11,12 @@ import {
   setTyping,
 } from '../../services/socialService';
 import type { ChatRoom, ChatMessage, Presence } from '../../types';
-import { Send, ArrowLeft, MessageCircle, Loader2, Palette } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, Loader2, Palette, Smile, Paperclip } from 'lucide-react';
 import ChatThemePicker from './ChatThemePicker';
+import EmojiPicker from './EmojiPicker';
+import AttachmentMenu from './AttachmentMenu';
+import ContactForm from './ContactForm';
+import MediaMessage from './MediaMessage';
 
 function formatTime(dateStr: string): string {
   if (!dateStr) return '';
@@ -47,6 +51,9 @@ export default function ChatScreen() {
   const uid = user?.uid || '';
   const { theme, wallpaper } = useChatTheme();
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [showAttach, setShowAttach] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
 
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -56,6 +63,9 @@ export default function ChatScreen() {
   const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingAttachRef = useRef<{ type: string; file?: File } | null>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -95,17 +105,85 @@ export default function ChatScreen() {
     typingTimeoutRef.current = setTimeout(() => setTyping(uid, null), 2000);
   }, [chatId, uid]);
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !chatId || !uid || sending) return;
-    const text = newMessage.trim();
-    setNewMessage('');
+  const doSend = useCallback(async (text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }) => {
+    if (!chatId || !uid || sending) return;
     setSending(true);
     try {
-      await sendChatMessage(chatId, { uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, text);
+      await sendChatMessage(chatId, { uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, text, media);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setTyping(uid, null);
-    } catch { setNewMessage(text); } finally { setSending(false); }
+    } catch { } finally { setSending(false); }
+  }, [chatId, uid, user, sending]);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    const text = newMessage.trim();
+    setNewMessage('');
+    setShowEmoji(false);
+    await doSend(text);
   };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji);
+    inputRef.current?.focus();
+  };
+
+  const readFile = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleAttachSelect = async (type: string) => {
+    if (type === 'image') {
+      pendingAttachRef.current = { type };
+      if (fileInputRef.current) { fileInputRef.current.accept = 'image/*'; fileInputRef.current.click(); }
+    } else if (type === 'audio') {
+      pendingAttachRef.current = { type };
+      if (fileInputRef.current) { fileInputRef.current.accept = 'audio/*'; fileInputRef.current.click(); }
+    } else if (type === 'document') {
+      pendingAttachRef.current = { type };
+      if (fileInputRef.current) { fileInputRef.current.accept = '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.zip,.rar'; fileInputRef.current.click(); }
+    } else if (type === 'contact') {
+      setShowContactForm(true);
+    } else if (type === 'location') {
+      if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          let name = 'Shared Location';
+          try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            const data = await resp.json();
+            if (data.display_name) name = data.display_name.split(',').slice(0, 3).join(', ');
+          } catch { }
+          await doSend('', { type: 'location', mediaUrl: '', location: { lat, lng, name } });
+        },
+        () => alert('Could not get your location')
+      );
+    }
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const pending = pendingAttachRef.current;
+    pendingAttachRef.current = null;
+    e.target.value = '';
+    if (!file || !pending) return;
+
+    if (file.size > 10 * 1024 * 1024) { alert('File must be under 10MB'); return; }
+    const dataUrl = await readFile(file);
+    await doSend('', { type: pending.type, mediaUrl: dataUrl, mediaType: file.type, fileName: file.name, fileSize: file.size });
+  };
+
+  const handleContactSend = async (contact: { name: string; phone: string; email: string }) => {
+    setShowContactForm(false);
+    await doSend('', { type: 'contact', mediaUrl: '', contact });
+  };
+
+  const handleSendText = () => { handleSendMessage(); };
 
   const getOtherInfo = (chat: ChatRoom) => {
     const other = chat.members.find((m) => m !== uid);
@@ -118,11 +196,7 @@ export default function ChatScreen() {
   if (!chatId) {
     return (
       <div className="min-h-screen relative" style={{ background: theme.gradient }}>
-        {wallpaper && (
-          <div className="fixed inset-0 opacity-20 pointer-events-none">
-            <img src={wallpaper} alt="" className="w-full h-full object-cover" />
-          </div>
-        )}
+        {wallpaper && <div className="fixed inset-0 opacity-20 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
         <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
             <div className="flex items-center gap-3">
@@ -147,21 +221,17 @@ export default function ChatScreen() {
                 const other = getOtherInfo(chat);
                 const online = presenceMap[other.uid]?.online;
                 return (
-                  <button
-                    key={chat.id}
-                    onClick={() => navigate(`/chat/${chat.id}`)}
-                    className="w-full backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4 flex items-center gap-4 hover:bg-white/20 transition-all text-left"
-                  >
+                  <button key={chat.id} onClick={() => navigate(`/chat/${chat.id}`)} className="w-full backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4 flex items-center gap-4 hover:bg-white/20 transition-all text-left">
                     <div className="relative flex-shrink-0">
                       <UserAvatar photo={other.photo} name={other.name} size={52} ring={theme.avatarRing} />
                       {online && <span className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-bold text-white truncate">{other.name}</p>
-                        {chat.lastMessageAt && <span className="text-[10px] text-white/40">{timeAgo(chat.lastMessageAt)}</span>}
+                        <p className={`text-sm font-bold ${theme.textColor} truncate`}>{other.name}</p>
+                        {chat.lastMessageAt && <span className={`text-[10px] ${theme.timestampColor}`}>{timeAgo(chat.lastMessageAt)}</span>}
                       </div>
-                      {chat.lastMessage && <p className="text-xs text-white/50 truncate mt-1">{chat.lastMessage}</p>}
+                      {chat.lastMessage && <p className={`text-xs ${theme.textColor === 'text-white' ? 'text-white/50' : 'text-gray-400'} truncate mt-1`}>{chat.lastMessage}</p>}
                     </div>
                   </button>
                 );
@@ -182,12 +252,7 @@ export default function ChatScreen() {
 
   return (
     <div className="flex flex-col h-screen relative" style={{ background: theme.gradient }}>
-      {/* Wallpaper overlay */}
-      {wallpaper && (
-        <div className="absolute inset-0 opacity-15 pointer-events-none">
-          <img src={wallpaper} alt="" className="w-full h-full object-cover" />
-        </div>
-      )}
+      {wallpaper && <div className="absolute inset-0 opacity-15 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
 
       {/* Header */}
       <div className={`relative z-10 ${theme.headerBg} px-4 py-3 flex items-center gap-3 shrink-0`}>
@@ -212,40 +277,41 @@ export default function ChatScreen() {
       </div>
 
       {/* Messages */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-4 py-4">
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 py-4" onClick={() => { if (showEmoji) setShowEmoji(false); }}>
         <div className="space-y-3">
           {messages.map((msg, idx) => {
             const isOwn = msg.senderUid === uid;
             const prevMsg = idx > 0 ? messages[idx - 1] : null;
             const showAvatar = !prevMsg || prevMsg.senderUid !== msg.senderUid;
             const senderName = msg.senderName || 'Unknown';
+            const isMedia = msg.type && msg.type !== 'text';
 
             return (
               <div key={msg.id} className={`relative ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
                 {!isOwn && (
                   <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
-                    {showAvatar ? (
-                      <UserAvatar photo={other?.photo || null} name={senderName} size={40} ring={theme.avatarRing} />
-                    ) : <div style={{ width: 40 }} />}
+                    {showAvatar ? <UserAvatar photo={other?.photo || null} name={senderName} size={40} ring={theme.avatarRing} /> : <div style={{ width: 40 }} />}
                   </div>
                 )}
 
-                <div className="relative max-w-[68%]">
+                <div className="relative max-w-[70%]">
                   {!isOwn && showAvatar && (
                     <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider`}>{senderName}</p>
                   )}
 
-                  <div className={`relative px-4 py-3 ${isOwn ? theme.bubbleOwn : theme.bubbleReceived}`}>
-                    <p className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</p>
+                  <div className={`relative ${isOwn ? theme.bubbleOwn : theme.bubbleReceived} ${isMedia ? 'px-2 py-2' : 'px-4 py-3'}`}>
+                    {isMedia ? (
+                      <MediaMessage type={msg.type!} mediaUrl={msg.mediaUrl} mediaType={msg.mediaType} fileName={msg.fileName} fileSize={msg.fileSize} contact={msg.contact} location={msg.location} isOwn={isOwn} />
+                    ) : (
+                      <p className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</p>
+                    )}
                     <p className={`text-[10px] mt-1 text-right ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
                   </div>
                 </div>
 
                 {isOwn && (
                   <div className="flex-shrink-0 self-end" style={{ width: 40, marginLeft: -8, zIndex: 2 }}>
-                    {showAvatar ? (
-                      <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} ring={theme.avatarRing} />
-                    ) : <div style={{ width: 40 }} />}
+                    {showAvatar ? <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} ring={theme.avatarRing} /> : <div style={{ width: 40 }} />}
                   </div>
                 )}
               </div>
@@ -255,27 +321,46 @@ export default function ChatScreen() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Emoji Picker */}
+      {showEmoji && (
+        <div className="relative z-20 px-3 pb-1">
+          <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />
+        </div>
+      )}
+
       {/* Input */}
       <div className={`relative z-10 ${theme.inputBg} p-3 shrink-0`}>
         <div className="flex items-center gap-2">
+          <button onClick={() => { setShowEmoji(!showEmoji); setShowAttach(false); }} className={`p-2 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>
+            <Smile className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/60' : 'text-gray-400'}`} />
+          </button>
+          <button onClick={() => { setShowAttach(!showAttach); setShowEmoji(false); }} className={`p-2 rounded-full transition-colors ${showAttach ? 'bg-white/20' : 'hover:bg-white/10'}`}>
+            <Paperclip className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/60' : 'text-gray-400'}`} />
+          </button>
           <input
+            ref={inputRef}
             type="text"
             value={newMessage}
             onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(); } }}
             placeholder="Type a message..."
             className={`flex-1 ${theme.inputField} ${theme.textColor}`}
             disabled={sending}
           />
-          <button
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
-            className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
+          <button onClick={handleSendText} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </div>
       </div>
+
+      {/* Hidden file input */}
+      <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
+
+      {/* Attachment menu */}
+      {showAttach && <AttachmentMenu onSelect={handleAttachSelect} onClose={() => setShowAttach(false)} />}
+
+      {/* Contact form */}
+      {showContactForm && <ContactForm onSend={handleContactSend} onClose={() => setShowContactForm(false)} />}
 
       <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
     </div>
