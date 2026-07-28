@@ -22,7 +22,7 @@ export default function MultiplayerLobbyScreen() {
   const [error, setError] = useState('');
 
   const userObj = {
-    uid: user?.email || '',
+    uid: user?.uid || '',
     name: user?.fullName || 'Student',
     photoURL: user?.photoURL || null,
   };

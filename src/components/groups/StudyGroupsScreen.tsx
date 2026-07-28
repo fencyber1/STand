@@ -23,7 +23,7 @@ export default function StudyGroupsScreen() {
   const [copiedCode, setCopiedCode] = useState('');
 
   const userObj = useMemo(() => ({
-    uid: user?.email || '',
+    uid: user?.uid || '',
     name: user?.fullName || 'Student',
     email: user?.email || '',
     photoURL: user?.photoURL || null,

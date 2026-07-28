@@ -32,7 +32,7 @@ export default function GroupChatScreen() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const uid = user?.email || '';
+  const uid = user?.uid || '';
 
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);

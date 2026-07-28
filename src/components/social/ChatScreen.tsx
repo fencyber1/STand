@@ -30,7 +30,7 @@ export default function ChatScreen() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const uid = user?.email || '';
+  const uid = user?.uid || '';
 
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

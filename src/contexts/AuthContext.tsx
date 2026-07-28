@@ -14,6 +14,7 @@ import { loadUserDataFromFirestore, saveUserDataToFirestore, scheduleSync } from
 import { upsertUserProfile } from '../services/socialService';
 
 interface AuthUser {
+  uid: string;
   fullName: string;
   email: string;
   photoURL: string | null;
@@ -41,6 +42,7 @@ const AuthContext = createContext<AuthContextType>({
 
 function mapUser(u: FirebaseUser): AuthUser {
   return {
+    uid: u.uid,
     fullName: u.displayName || u.email?.split('@')[0] || 'Student',
     email: u.email || '',
     photoURL: u.photoURL,

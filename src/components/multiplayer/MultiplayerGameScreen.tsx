@@ -24,7 +24,7 @@ export default function MultiplayerGameScreen() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
-  const uid = user?.email || '';
+  const uid = user?.uid || '';
 
   useEffect(() => {
     if (!roomCode) return;

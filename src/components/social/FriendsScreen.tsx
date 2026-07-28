@@ -69,7 +69,7 @@ type Tab = 'friends' | 'requests' | 'find';
 export default function FriendsScreen() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const uid = user?.email || '';
+  const uid = user?.uid || '';
 
   const [activeTab, setActiveTab] = useState<Tab>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
