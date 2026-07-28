@@ -139,15 +139,16 @@ STRICT RULES:
 - Each question's "subject" field MUST be exactly "${params.sector}".
 - Do NOT generate questions about topics outside ${params.sector}, even if they seem related.
 - EVERY question MUST include an "imageQuery" field — this is REQUIRED, not optional.
+- The imageQuery MUST be a Wikipedia article title (e.g. "Mitosis", "Supply and demand", "Water cycle", "Python (programming language)") that has a relevant diagram or illustration.
 
 Format: ${questionFormat}${difficultyLine}
 
 Return ONLY a JSON array. Each object:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"1-3 word search term for an image that illustrates this concept"}
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"exact Wikipedia article title for a related diagram"}
 
 For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
 For Theory: options can be omitted, correctAnswer is a model answer.
-The imageQuery is REQUIRED for every question. It should be a short search phrase (1-3 words) relevant to the concept being tested, suitable for finding an educational illustration. E.g. "cell division", "water cycle diagram", "Python loop", "mitosis stages", "supply and demand graph".
+The imageQuery is REQUIRED for every question. It MUST be a valid Wikipedia article title that has an image. Good examples: "Mitosis", "Photosynthesis", "Pythagorean theorem", "Supply and demand", "Newton's laws of motion", "Water cycle", "DNA".
 No markdown. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);

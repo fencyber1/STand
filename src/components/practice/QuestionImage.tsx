@@ -1,22 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 
 interface Props {
   query: string;
 }
 
-const sources = (q: string) => [
-  `https://loremflickr.com/480/300/${encodeURIComponent(q)}`,
-  `https://picsum.photos/seed/${encodeURIComponent(q)}/480/300`,
-];
+async function getWikipediaImage(query: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.thumbnail?.source || data.originalimage?.source || null;
+  } catch {
+    return null;
+  }
+}
 
 export default function QuestionImage({ query }: Props) {
-  const [srcIndex, setSrcIndex] = useState(0);
+  const [src, setSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
-  const urls = sources(query);
-  const src = urls[srcIndex];
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFailed(false);
+    setSrc(null);
+
+    getWikipediaImage(query).then((url) => {
+      if (cancelled) return;
+      if (url) {
+        setSrc(url);
+      } else {
+        setFailed(true);
+      }
+      setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [query]);
 
   if (failed) {
     return (
@@ -37,20 +61,15 @@ export default function QuestionImage({ query }: Props) {
             <ImageIcon size={24} className="text-gray-400 dark:text-gray-500" />
           </div>
         )}
-        <img
-          src={src}
-          alt={query}
-          className="rounded-xl object-cover max-h-52 border border-gray-200 dark:border-gray-600 shadow-sm"
-          style={{ minWidth: loading ? 480 : undefined }}
-          onLoad={() => setLoading(false)}
-          onError={() => {
-            if (srcIndex < urls.length - 1) {
-              setSrcIndex(srcIndex + 1);
-            } else {
-              setFailed(true);
-            }
-          }}
-        />
+        {src && (
+          <img
+            src={src}
+            alt={query}
+            className="rounded-xl object-contain max-h-60 border border-gray-200 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-800"
+            onLoad={() => setLoading(false)}
+            onError={() => setFailed(true)}
+          />
+        )}
       </div>
     </div>
   );
