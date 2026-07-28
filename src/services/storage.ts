@@ -275,17 +275,15 @@ export const storage = {
   },
 
   getChatWallpaper(): string | null {
-    return localStorage.getItem(k('stand_chat_wallpaper'));
+    return localStorage.getItem('stand_chat_wallpaper');
   },
 
   setChatWallpaper(dataUrl: string): void {
-    localStorage.setItem(k('stand_chat_wallpaper'), dataUrl);
-    notifyChange();
+    localStorage.setItem('stand_chat_wallpaper', dataUrl);
   },
 
   removeChatWallpaper(): void {
-    localStorage.removeItem(k('stand_chat_wallpaper'));
-    notifyChange();
+    localStorage.removeItem('stand_chat_wallpaper');
   },
 
   clearAllUserData(): void {
@@ -300,7 +298,6 @@ export const storage = {
       'stand_profile_photo',
       'stand_display_name',
       'stand_chat_theme',
-      'stand_chat_wallpaper',
     ];
     for (const base of keys) {
       localStorage.removeItem(k(base));
