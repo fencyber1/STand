@@ -31,11 +31,7 @@ export default function DocumentQuizScreen() {
     const ext = file.name.split('.').pop()?.toLowerCase();
 
     try {
-      if (ext === 'txt' || ext === 'md' || ext === 'text') {
-        const text = await file.text();
-        setDocText(text);
-        setStep('preview');
-      } else if (ext === 'pdf') {
+      if (ext === 'pdf') {
         const pdfjsLib = await import('pdfjs-dist');
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
         const arrayBuffer = await file.arrayBuffer();
@@ -55,7 +51,13 @@ export default function DocumentQuizScreen() {
         setDocText(result.value);
         setStep('preview');
       } else {
-        setError('Unsupported file type. Use .txt, .pdf, or .docx');
+        const text = await file.text();
+        if (text.trim().length < 20) {
+          setError('File appears to be empty or not text-readable. Try a different file.');
+          return;
+        }
+        setDocText(text);
+        setStep('preview');
       }
     } catch (e: any) {
       setError(`Failed to read file: ${e.message}`);
@@ -149,11 +151,10 @@ export default function DocumentQuizScreen() {
               >
                 <Upload size={36} className="mx-auto text-gray-400 dark:text-gray-500 mb-3" />
                 <p className="text-gray-700 dark:text-gray-300 font-medium">Drop a document here or click to browse</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Supports .txt, .pdf, .docx</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Supports PDF, DOCX, TXT, HTML, CSV, and more</p>
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".txt,.pdf,.docx,.md,.text"
                   onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
                   className="hidden"
                 />
