@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Question } from '../types';
+import { createChatGroup } from './socialService';
 
 function generateCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -48,6 +49,7 @@ export interface StudyGroup {
   code: string;
   createdBy: string;
   members: GroupMember[];
+  chatGroupId: string | null;
   createdAt: string;
 }
 
@@ -89,11 +91,23 @@ export async function createGroup(name: string, creator: { uid: string; name: st
     joinedAt: new Date().toISOString(),
     stats: { sessions: 0, avgScore: 0, streak: 0 },
   };
+
+  // Create a linked chat group for real-time messaging
+  let chatGroupId: string | null = null;
+  try {
+    chatGroupId = await createChatGroup(
+      { uid: creator.uid, name: creator.name, photo: creator.photoURL },
+      `${name} Chat`,
+      [creator.uid],
+    );
+  } catch { }
+
   await setDoc(ref, sanitizeForFirestore({
     name,
     code,
     createdBy: creator.uid,
     members: [member],
+    chatGroupId,
     createdAt: serverTimestamp(),
   }));
   return code;
@@ -125,6 +139,15 @@ export async function joinGroup(code: string, member: { uid: string; name: strin
     members: arrayUnion(newMember),
   });
 
+  // Add to linked chat group
+  const chatGroupId = data.chatGroupId;
+  if (chatGroupId) {
+    try {
+      const { addGroupMember } = await import('./socialService');
+      await addGroupMember(chatGroupId, { uid: member.uid, name: member.name, photo: member.photoURL });
+    } catch { }
+  }
+
   return { success: true, groupId: groupDoc.id };
 }
 
@@ -138,15 +161,26 @@ export function subscribeToGroup(groupId: string, callback: (group: StudyGroup |
       code: d.code,
       createdBy: d.createdBy,
       members: d.members || [],
+      chatGroupId: d.chatGroupId || null,
       createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
     });
   });
 }
 
 export async function leaveGroup(groupId: string, uid: string, member: GroupMember): Promise<void> {
+  const snap = await getDoc(doc(db, 'studyGroups', groupId));
+  const chatGroupId = snap.exists() ? snap.data().chatGroupId : null;
+
   await updateDoc(doc(db, 'studyGroups', groupId), {
     members: arrayRemove(member),
   });
+
+  if (chatGroupId) {
+    try {
+      const { removeGroupMember } = await import('./socialService');
+      await removeGroupMember(chatGroupId, uid);
+    } catch { }
+  }
 }
 
 export async function deleteGroup(groupId: string): Promise<void> {
@@ -297,6 +331,7 @@ export async function getUserGroups(uid: string): Promise<StudyGroup[]> {
       code: g.code,
       createdBy: g.createdBy,
       members: g.members || [],
+      chatGroupId: g.chatGroupId || null,
       createdAt: g.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
     }));
 }

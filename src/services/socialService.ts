@@ -516,6 +516,7 @@ export async function createChatGroup(creator: { uid: string; name: string; phot
   await setDoc(ref, sanitize({
     name: groupName,
     members,
+    memberUids,
     createdBy: creator.uid,
     lastMessage: '',
     lastMessageBy: '',
@@ -530,9 +531,11 @@ export async function addGroupMember(groupId: string, member: { uid: string; nam
   if (!snap.exists()) return;
   const data = snap.data();
   const members = data.members || [];
+  const memberUids = data.memberUids || [];
   if (members.some((m: any) => m.uid === member.uid)) return;
   members.push({ uid: member.uid, name: member.name, photoURL: member.photo, role: 'member' });
-  await updateDoc(doc(db, 'chatGroups', groupId), { members });
+  memberUids.push(member.uid);
+  await updateDoc(doc(db, 'chatGroups', groupId), { members, memberUids });
 }
 
 export async function removeGroupMember(groupId: string, uid: string): Promise<void> {
@@ -540,11 +543,12 @@ export async function removeGroupMember(groupId: string, uid: string): Promise<v
   if (!snap.exists()) return;
   const data = snap.data();
   const members = (data.members || []).filter((m: any) => m.uid !== uid);
-  await updateDoc(doc(db, 'chatGroups', groupId), { members });
+  const memberUids = (data.memberUids || []).filter((u: string) => u !== uid);
+  await updateDoc(doc(db, 'chatGroups', groupId), { members, memberUids });
 }
 
 export function subscribeToUserGroups(uid: string, cb: (groups: ChatGroup[]) => void): () => void {
-  const q = query(collection(db, 'chatGroups'), where('members', 'array-contains', { uid }));
+  const q = query(collection(db, 'chatGroups'), where('memberUids', 'array-contains', uid));
   return onSnapshot(q, (snap) => {
     const groups = snap.docs.map((d) => {
       const data = d.data();

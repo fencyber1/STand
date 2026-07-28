@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, LogIn, Copy, Crown, LogOut, Trash2, ArrowLeft,
   BookOpen, Trophy, Flame, CheckCircle, AlertCircle, Loader2,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
@@ -156,6 +157,11 @@ export default function StudyGroupsScreen() {
         </div>
 
         <div className="flex gap-3">
+          {activeGroup.chatGroupId && (
+            <button onClick={() => navigate(`/groups-chat/${activeGroup.chatGroupId}`)} className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition flex items-center justify-center gap-2">
+              <MessageCircle size={16} /> Group Chat
+            </button>
+          )}
           {isOwner ? (
             <button onClick={() => handleDelete(activeGroup)} className="flex-1 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition flex items-center justify-center gap-2">
               <Trash2 size={16} /> Delete Group
