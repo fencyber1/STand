@@ -9,10 +9,9 @@ import {
   editGroupMessage,
   createChatGroup,
   subscribeToFriends,
-  subscribeToPresence,
   setTyping,
 } from '../../services/socialService';
-import type { ChatGroup, GroupMessage, Friend, Presence } from '../../types';
+import type { ChatGroup, GroupMessage, Friend } from '../../types';
 import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette, Smile, Paperclip, Pencil, Settings, Lock } from 'lucide-react';
 import ChatThemePicker from './ChatThemePicker';
 import EmojiPicker from './EmojiPicker';
@@ -69,11 +68,9 @@ export default function GroupChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
-  const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,15 +100,6 @@ export default function GroupChatScreen() {
     const unsub = subscribeToGroupMessages(groupId, (msgs) => setMessages(msgs));
     return unsub;
   }, [groupId, uid]);
-
-  useEffect(() => {
-    const currentGroup = groups.find((g) => g.id === groupId);
-    if (!currentGroup) return;
-    const memberUids = currentGroup.members.map((m) => m.uid).filter((u) => u !== uid);
-    if (memberUids.length === 0) return;
-    const unsub = subscribeToPresence(memberUids, (map) => setPresenceMap(map));
-    return unsub;
-  }, [groupId, groups, uid]);
 
   useEffect(() => { return () => { if (uid) setTyping(uid, null); }; }, [uid]);
 
@@ -340,9 +328,6 @@ export default function GroupChatScreen() {
               <p className={`text-[11px] ${tc('text-gray-400', 'text-white/50')}`}>{members.length} members</p>
             </div>
           </div>
-          <button onClick={() => setShowMembers(!showMembers)} className={`p-2 rounded-lg transition-colors ${showMembers ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-            <Users className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
-          </button>
           <button onClick={() => navigate(`/groups-chat/${groupId}/settings`)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
             <Settings className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
           </button>
@@ -367,13 +352,13 @@ export default function GroupChatScreen() {
                 <div key={msg.id} className={`relative group ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
                   {!isOwn && (
                     <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
-                      {showAvatar ? <UserAvatar photo={msg.senderPhoto || null} name={senderName} size={40} ring={theme.avatarRing} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: msg.senderPhoto || null, online: presenceMap[msg.senderUid]?.online ?? false })} /> : <div style={{ width: 40 }} />}
+                      {showAvatar ? <UserAvatar photo={msg.senderPhoto || null} name={senderName} size={40} ring={theme.avatarRing} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: msg.senderPhoto || null, online: false })} /> : <div style={{ width: 40 }} />}
                     </div>
                   )}
 
                   <div className="relative max-w-[70%]">
                     {!isOwn && showAvatar && (
-                      <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider cursor-pointer`} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: msg.senderPhoto || null, online: presenceMap[msg.senderUid]?.online ?? false })}>{senderName}</p>
+                      <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider cursor-pointer`} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: msg.senderPhoto || null, online: false })}>{senderName}</p>
                     )}
 
                     {isEditing ? (
@@ -456,35 +441,6 @@ export default function GroupChatScreen() {
           )}
         </div>
       </div>
-
-      {/* Members Panel */}
-      {showMembers && (
-        <div className="relative z-10 w-64 backdrop-blur-xl bg-black/20 border-l border-white/10 overflow-y-auto shrink-0">
-          <div className="p-4">
-            <h3 className={`text-sm font-bold ${tc('text-gray-800', 'text-white/80')} mb-3`}>Members ({members.length})</h3>
-            <div className="space-y-3">
-              {members.map((member) => {
-                const online = presenceMap[member.uid]?.online;
-                return (
-                  <div key={member.uid} className="flex items-center gap-3">
-                    <div className="relative">
-                      <UserAvatar photo={member.photoURL || null} name={member.name} size={36} ring={theme.avatarRing} />
-                      {online && <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <p className={`text-sm ${theme.textColor} truncate`}>{member.name}</p>
-                        {member.role === 'admin' && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
-                      </div>
-                      <p className={`text-[11px] ${tc('text-gray-400', 'text-white/40')}`}>{online ? 'Online' : 'Offline'}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Hidden file input */}
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />

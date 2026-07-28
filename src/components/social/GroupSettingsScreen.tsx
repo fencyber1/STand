@@ -10,10 +10,9 @@ import {
 } from '../../services/socialService';
 import type { ChatGroup } from '../../types';
 import {
-  ArrowLeft, Camera, Save, Trash2, Crown, Shield, UserMinus,
-  Users, Loader2, CheckCircle, AlertCircle, Info, Lock, MessageCircle,
+  ArrowLeft, Camera, Save, Crown, Shield, UserMinus,
+  Users, Loader2, CheckCircle, AlertCircle, Lock, MessageCircle, X,
 } from 'lucide-react';
-import BorderGlow from '../ui/BorderGlow';
 
 export default function GroupSettingsScreen() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -32,6 +31,7 @@ export default function GroupSettingsScreen() {
   const [groupDesc, setGroupDesc] = useState('');
   const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
   const [messagePerm, setMessagePerm] = useState<'all' | 'admins'>('all');
+  const [expanded, setExpanded] = useState<'profile' | 'permissions' | null>('profile');
 
   useEffect(() => {
     if (!uid || !groupId) return;
@@ -72,7 +72,8 @@ export default function GroupSettingsScreen() {
         description: groupDesc.trim(),
         photoURL: groupPhoto,
       });
-      setSuccess('Group profile updated');
+      setSuccess('Profile updated');
+      setTimeout(() => setSuccess(''), 2000);
     } catch { setError('Failed to update profile'); }
     setSaving(false);
   };
@@ -84,6 +85,7 @@ export default function GroupSettingsScreen() {
     try {
       await updateGroupSettings(groupId, { messagePermission: messagePerm });
       setSuccess('Permissions updated');
+      setTimeout(() => setSuccess(''), 2000);
     } catch { setError('Failed to update permissions'); }
     setSaving(false);
   };
@@ -93,7 +95,8 @@ export default function GroupSettingsScreen() {
     const newRole = currentRole === 'admin' ? 'member' : 'admin';
     try {
       await setGroupMemberRole(groupId, memberUid, newRole);
-      setSuccess(`${newRole === 'admin' ? 'Made admin' : 'Removed admin'}`);
+      setSuccess(newRole === 'admin' ? 'Made admin' : 'Removed admin');
+      setTimeout(() => setSuccess(''), 2000);
     } catch { setError('Failed to change role'); }
   };
 
@@ -102,209 +105,168 @@ export default function GroupSettingsScreen() {
     try {
       await removeGroupMember(groupId, memberUid);
       setSuccess('Member removed');
+      setTimeout(() => setSuccess(''), 2000);
     } catch { setError('Failed to remove member'); }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-900">
-        <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+      <div className="flex items-center justify-center h-full bg-gray-900">
+        <Loader2 className="w-8 h-8 text-white/60 animate-spin" />
       </div>
     );
   }
 
   if (!group || !isAdmin) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+      <div className="flex items-center justify-center h-full bg-gray-900 text-white/40">
         Group not found or no access.
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-8">
-      <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
-      </button>
-
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Group Settings</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Manage group profile, members, and permissions</p>
-      </div>
-
-      {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center gap-2">
-          <AlertCircle size={16} /> {error}
-          <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-600">&times;</button>
-        </div>
-      )}
-      {success && (
-        <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-sm rounded-lg flex items-center gap-2">
-          <CheckCircle size={16} /> {success}
-          <button onClick={() => setSuccess('')} className="ml-auto text-green-400 hover:text-green-600">&times;</button>
-        </div>
-      )}
-
-      {/* Group Profile */}
-      <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#6366f1', '#3b82f6', '#10b981']}>
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
-            <Info size={16} /> Group Profile
-          </div>
-
-          {/* Photo */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              {groupPhoto ? (
-                <img src={groupPhoto} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-primary-500" />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold">
-                  {groupName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="absolute -bottom-1 -right-1 p-1.5 bg-primary-600 rounded-full text-white hover:bg-primary-700 transition shadow-lg"
-              >
-                <Camera size={14} />
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Group Photo</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Max 2MB. JPG or PNG.</p>
-            </div>
-          </div>
-
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group Name</label>
-            <input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-            <textarea
-              value={groupDesc}
-              onChange={(e) => setGroupDesc(e.target.value)}
-              placeholder="What is this group about?"
-              rows={3}
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 outline-none resize-none"
-            />
-          </div>
-
-          <button
-            onClick={handleSaveProfile}
-            disabled={saving || !groupName.trim()}
-            className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
-          >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            Save Profile
+    <div className="h-full overflow-y-auto bg-gray-900">
+      <div className="max-w-2xl mx-auto px-4 py-4 space-y-3 pb-12">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-white/70" />
           </button>
+          <h1 className="text-xl font-bold text-white">Group Settings</h1>
         </div>
-      </BorderGlow>
 
-      {/* Message Permissions */}
-      <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#f59e0b', '#ef4444', '#6366f1']}>
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
-            <Lock size={16} /> Message Permissions
+        {/* Alerts */}
+        {error && (
+          <div className="p-3 bg-red-500/20 border border-red-500/30 text-red-400 text-sm rounded-xl flex items-center gap-2">
+            <AlertCircle size={16} /> {error}
+            <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Control who can send messages in this group</p>
+        )}
+        {success && (
+          <div className="p-3 bg-green-500/20 border border-green-500/30 text-green-400 text-sm rounded-xl flex items-center gap-2">
+            <CheckCircle size={16} /> {success}
+          </div>
+        )}
 
-          <div className="space-y-2">
-            <button
-              onClick={() => setMessagePerm('all')}
-              className={`w-full p-4 rounded-lg border-2 text-left transition flex items-center gap-3 ${
-                messagePerm === 'all'
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <MessageCircle size={20} className={messagePerm === 'all' ? 'text-primary-600' : 'text-gray-400'} />
-              <div>
-                <p className="font-medium text-gray-800 dark:text-gray-200">All Members</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Anyone in the group can send messages</p>
+        {/* Profile Card */}
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
+          {/* Banner */}
+          <div className="h-24 bg-gradient-to-r from-purple-600/40 to-indigo-600/40 relative">
+            {groupPhoto && <img src={groupPhoto} alt="" className="w-full h-full object-cover" />}
+          </div>
+
+          {/* Avatar + Info */}
+          <div className="px-5 pb-5">
+            <div className="flex items-end gap-4 -mt-10 mb-4">
+              <div className="relative">
+                {groupPhoto ? (
+                  <img src={groupPhoto} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-gray-900 shadow-xl" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold border-4 border-gray-900 shadow-xl">
+                    {groupName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="absolute bottom-0 right-0 p-1.5 bg-primary-600 rounded-full text-white hover:bg-primary-700 transition shadow-lg"
+                >
+                  <Camera size={12} />
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
               </div>
+              <div className="flex-1 min-w-0 pb-1">
+                <h2 className="text-lg font-bold text-white truncate">{group.name}</h2>
+                <p className="text-xs text-white/40">{group.members.length} member{group.members.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+
+            {group.description && (
+              <p className="text-sm text-white/60 mb-4 leading-relaxed">{group.description}</p>
+            )}
+
+            {/* Edit Profile (collapsed) */}
+            <button
+              onClick={() => setExpanded(expanded === 'profile' ? null : 'profile')}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-white/70 font-medium"
+            >
+              <span>Edit Group Profile</span>
+              <span className="text-white/30">{expanded === 'profile' ? '−' : '+'}</span>
             </button>
 
-            <button
-              onClick={() => setMessagePerm('admins')}
-              className={`w-full p-4 rounded-lg border-2 text-left transition flex items-center gap-3 ${
-                messagePerm === 'admins'
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <Shield size={20} className={messagePerm === 'admins' ? 'text-primary-600' : 'text-gray-400'} />
-              <div>
-                <p className="font-medium text-gray-800 dark:text-gray-200">Admins Only</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Only admins can send messages</p>
+            {expanded === 'profile' && (
+              <div className="mt-3 space-y-3">
+                <input
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Group name"
+                  className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50"
+                />
+                <textarea
+                  value={groupDesc}
+                  onChange={(e) => setGroupDesc(e.target.value)}
+                  placeholder="Description (optional)"
+                  rows={2}
+                  className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50 resize-none"
+                />
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving || !groupName.trim()}
+                  className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  Save Profile
+                </button>
               </div>
-            </button>
+            )}
           </div>
-
-          <button
-            onClick={handleSavePermissions}
-            disabled={saving}
-            className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
-          >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            Save Permissions
-          </button>
         </div>
-      </BorderGlow>
 
-      {/* Members Management */}
-      <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#10b981', '#3b82f6', '#6366f1']}>
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
-            <Users size={16} /> Members ({group.members.length})
+        {/* Members */}
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
+              <Users size={14} /> Members
+            </h3>
+            <span className="text-xs text-white/30">{group.members.length}</span>
           </div>
-
-          <div className="space-y-2">
+          <div className="space-y-1">
             {group.members.map((m) => {
               const isMe = m.uid === uid;
               const isCreator = m.uid === group.createdBy;
               return (
-                <div key={m.uid} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div key={m.uid} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition group">
                   {m.photoURL ? (
-                    <img src={m.photoURL} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    <img src={m.photoURL} alt="" className="w-9 h-9 rounded-full object-cover" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
                       {m.name.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{m.name}</span>
-                      {isCreator && <Crown size={12} className="text-yellow-500 shrink-0" />}
-                      {m.role === 'admin' && !isCreator && <Shield size={12} className="text-blue-500 shrink-0" />}
-                      {isMe && <span className="text-xs text-gray-400">(you)</span>}
+                      <span className="text-sm text-white truncate">{m.name}</span>
+                      {isCreator && <Crown size={11} className="text-yellow-400 shrink-0" />}
+                      {m.role === 'admin' && !isCreator && <Shield size={11} className="text-blue-400 shrink-0" />}
+                      {isMe && <span className="text-[10px] text-white/30">(you)</span>}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{isCreator ? 'Owner' : m.role}</p>
+                    <p className="text-[11px] text-white/30">{isCreator ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Member'}</p>
                   </div>
-
                   {!isMe && !isCreator && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleToggleRole(m.uid, m.role)}
-                        className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition text-gray-500 dark:text-gray-400"
+                        className="p-1.5 rounded-lg hover:bg-white/10 transition text-white/40 hover:text-white/70"
                         title={m.role === 'admin' ? 'Remove admin' : 'Make admin'}
                       >
-                        {m.role === 'admin' ? <Shield size={14} className="text-blue-500" /> : <Crown size={14} />}
+                        {m.role === 'admin' ? <Shield size={13} className="text-blue-400" /> : <Crown size={13} />}
                       </button>
                       <button
                         onClick={() => handleRemoveMember(m.uid)}
-                        className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-500 hover:text-red-500"
+                        className="p-1.5 rounded-lg hover:bg-red-500/20 transition text-white/40 hover:text-red-400"
                         title="Remove member"
                       >
-                        <UserMinus size={14} />
+                        <UserMinus size={13} />
                       </button>
                     </div>
                   )}
@@ -313,9 +275,61 @@ export default function GroupSettingsScreen() {
             })}
           </div>
         </div>
-      </BorderGlow>
 
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+        {/* Permissions */}
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
+          <button
+            onClick={() => setExpanded(expanded === 'permissions' ? null : 'permissions')}
+            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition"
+          >
+            <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
+              <Lock size={14} /> Message Permissions
+            </h3>
+            <span className="text-white/30 text-xs">{expanded === 'permissions' ? '−' : '+'}</span>
+          </button>
+
+          {expanded === 'permissions' && (
+            <div className="px-4 pb-4 space-y-2">
+              <button
+                onClick={() => setMessagePerm('all')}
+                className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
+                  messagePerm === 'all'
+                    ? 'bg-primary-500/20 border border-primary-500/40'
+                    : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <MessageCircle size={18} className={messagePerm === 'all' ? 'text-primary-400' : 'text-white/30'} />
+                <div>
+                  <p className="text-sm font-medium text-white">All Members</p>
+                  <p className="text-[11px] text-white/40">Anyone can send messages</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setMessagePerm('admins')}
+                className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
+                  messagePerm === 'admins'
+                    ? 'bg-primary-500/20 border border-primary-500/40'
+                    : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <Shield size={18} className={messagePerm === 'admins' ? 'text-primary-400' : 'text-white/30'} />
+                <div>
+                  <p className="text-sm font-medium text-white">Admins Only</p>
+                  <p className="text-[11px] text-white/40">Only admins can send messages</p>
+                </div>
+              </button>
+              <button
+                onClick={handleSavePermissions}
+                disabled={saving}
+                className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2 mt-2"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Save Permissions
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
