@@ -105,10 +105,12 @@ export default function QuizScreen() {
       if (userNorm === correctNorm) {
         score = 100;
         isCorrect = true;
-      } else if (userNorm.includes(correctNorm) || correctNorm.includes(userNorm)) {
-        const ratio = Math.min(userNorm.length, correctNorm.length) / Math.max(userNorm.length, correctNorm.length);
-        score = Math.round(60 + ratio * 40);
-        isCorrect = ratio >= 0.8;
+      } else if (userNorm.includes(correctNorm)) {
+        score = 95;
+        isCorrect = true;
+      } else if (correctNorm.includes(userNorm)) {
+        score = 90;
+        isCorrect = true;
       } else {
         const userWords = new Set(userNorm.split(/\s+/));
         const correctWords = new Set(correctNorm.split(/\s+/));
@@ -116,7 +118,7 @@ export default function QuizScreen() {
         correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
         const ratio = correctWords.size > 0 ? overlap / correctWords.size : 0;
         score = Math.round(Math.min(100, Math.max(20, ratio * 100)));
-        isCorrect = ratio >= 0.8;
+        isCorrect = ratio >= 0.6;
       }
       result = {
         questionId: current.id,
