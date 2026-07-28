@@ -1,6 +1,6 @@
 import {
   collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
-  onSnapshot, query, where, serverTimestamp,
+  onSnapshot, query, where, orderBy, serverTimestamp,
   writeBatch, documentId,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -274,24 +274,63 @@ export async function getFriendUids(uid: string): Promise<string[]> {
 
 // ── Posts ──
 
-export async function createPost(author: { uid: string; name: string; photo: string | null }, content: string): Promise<string> {
+export async function createPost(author: { uid: string; name: string; photo: string | null }, content: string, media?: { url: string; type: 'image' | 'video'; mediaType: string }): Promise<string> {
   const ref = doc(collection(db, 'posts'));
   await setDoc(ref, sanitize({
     authorUid: author.uid,
     authorName: author.name,
     authorPhoto: author.photo,
     content,
+    type: media ? media.type : 'text',
+    mediaUrl: media?.url || null,
+    mediaType: media?.mediaType || null,
     likes: [],
     commentCount: 0,
+    reposts: [],
+    shares: 0,
     createdAt: ts(),
   }));
   return ref.id;
 }
 
-export function subscribeToFeed(uid: string, friendUids: string[], cb: (posts: Post[]) => void): () => void {
-  const allUids = [uid, ...friendUids];
-  if (allUids.length > 10) allUids.length = 10;
-  const q = query(collection(db, 'posts'), where('authorUid', 'in', allUids));
+export async function repostPost(author: { uid: string; name: string; photo: string | null }, originalPostId: string, caption: string): Promise<string> {
+  const ref = doc(collection(db, 'posts'));
+  await setDoc(ref, sanitize({
+    authorUid: author.uid,
+    authorName: author.name,
+    authorPhoto: author.photo,
+    content: caption,
+    type: 'text',
+    mediaUrl: null,
+    mediaType: null,
+    likes: [],
+    commentCount: 0,
+    reposts: [],
+    shares: 0,
+    repostOf: originalPostId,
+    createdAt: ts(),
+  }));
+  // Add to original post's reposts
+  const origRef = doc(db, 'posts', originalPostId);
+  const origSnap = await getDoc(origRef);
+  if (origSnap.exists()) {
+    const reposts: string[] = origSnap.data().reposts || [];
+    if (!reposts.includes(author.uid)) {
+      await updateDoc(origRef, { reposts: [...reposts, author.uid] });
+    }
+  }
+  return ref.id;
+}
+
+export async function sharePost(postId: string): Promise<void> {
+  const ref = doc(db, 'posts', postId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  await updateDoc(ref, { shares: (snap.data().shares || 0) + 1 });
+}
+
+export function subscribeToFeed(uid: string, cb: (posts: Post[]) => void): () => void {
+  const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
     const posts = snap.docs.map((d) => {
       const data = d.data();
@@ -301,11 +340,17 @@ export function subscribeToFeed(uid: string, friendUids: string[], cb: (posts: P
         authorName: data.authorName,
         authorPhoto: data.authorPhoto,
         content: data.content,
+        type: data.type || 'text',
+        mediaUrl: data.mediaUrl || undefined,
+        mediaType: data.mediaType || undefined,
         likes: data.likes || [],
         commentCount: data.commentCount || 0,
+        reposts: data.reposts || [],
+        shares: data.shares || 0,
+        repostOf: data.repostOf || undefined,
         createdAt: data.createdAt,
       } as Post;
-    }).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 50);
+    }).slice(0, 50);
     cb(posts);
   });
 }

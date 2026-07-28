@@ -235,8 +235,14 @@ export interface Post {
   authorName: string;
   authorPhoto: string | null;
   content: string;
+  type: 'text' | 'image' | 'video';
+  mediaUrl?: string;
+  mediaType?: string;
   likes: string[];
   commentCount: number;
+  reposts: string[];
+  shares: number;
+  repostOf?: string;
   createdAt: string;
 }
 
