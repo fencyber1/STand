@@ -200,9 +200,9 @@ export async function getDocumentQuestions(params: {
   difficulty?: string;
 }): Promise<{ questions: Question[] }> {
   const typeMap: Record<string, string> = {
-    MCQ: 'multiple choice with 4 options',
-    Theory: 'open-ended theory questions',
-    Fill: 'fill-in-the-blank questions',
+    MCQ: 'multiple choice with 4 options (A, B, C, D)',
+    Theory: 'open-ended theory questions requiring detailed answers',
+    Fill: 'fill-in-the-blank questions with key terms removed',
     True: 'true or false questions',
     Mixed: 'a mix of MCQ, theory, and true/false',
   };
@@ -212,23 +212,38 @@ export async function getDocumentQuestions(params: {
     ? `\nAll questions must be difficulty level: ${params.difficulty}.`
     : '';
 
-  const truncated = params.documentText.slice(0, 6000);
+  const truncated = params.documentText.slice(0, 15000);
 
-  const prompt = `You are an exam question generator. Generate exactly ${params.questionCount} exam questions based ONLY on the content of the document below. Do NOT use any outside knowledge — every question must be directly answerable from the document text.
+  const prompt = `You are an expert exam question generator. Your task is to generate exactly ${params.questionCount} high-quality exam questions based SOLELY on the uploaded document below.
 
-Format: ${questionFormat}${difficultyLine}
+CRITICAL RULES:
+- Every single question MUST be directly about the specific content, facts, concepts, definitions, formulas, processes, or examples found in this document
+- Questions must reference actual terms, names, numbers, dates, or details from the document — NOT generic/common-knowledge questions
+- Do NOT ask vague questions like "What is X?" without tying it to a specific detail in the document
+- If the document contains formulas, definitions, steps in a process, specific examples, or numerical data — generate questions that test knowledge of those exact details
+- The correct answer for every question must be explicitly stated or clearly implied in the document text
+- If the document covers a specific subject (e.g., biology, history, math), all questions must be about that subject's content as presented in the document
 
-DOCUMENT CONTENT:
+QUESTION FORMAT: ${questionFormat}
+${difficultyLine}
+
+DOCUMENT TEXT:
 ---
 ${truncated}
 ---
 
-Return ONLY a JSON array. Each object:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"From uploaded document"}
+STEP 1: First, identify the main topic, subtopics, key terms, definitions, formulas, and important facts in the document.
+STEP 2: Generate questions that test whether someone truly read and understood this specific document — not general knowledge.
+STEP 3: Ensure every question can be answered correctly ONLY by someone who has read this document.
+
+Return ONLY a JSON array. Each object must follow this exact structure:
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"Explain why this answer is correct based on the document content","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"[The actual subtopic from the document, e.g. 'Mitosis phases' or 'French Revolution causes']"}
 
 For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
-For Theory: options can be omitted, correctAnswer is a model answer.
-No markdown. No text outside the JSON array.`;
+For Theory: options can be omitted, correctAnswer is a detailed model answer.
+For FillBlank: question should have a blank (___) where the answer goes, correctAnswer is the missing term.
+
+No markdown formatting. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);
   const questions = parseQuestions(raw);
