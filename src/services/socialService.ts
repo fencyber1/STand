@@ -77,19 +77,25 @@ export async function upsertUserProfile(profile: { uid: string; displayName: str
   const data: any = {
     displayName: profile.displayName,
     photoURL: profile.photoURL,
-    email: profile.email || '',
     status: profile.status || 'Available',
-    bio: profile.bio || '',
-    surname: profile.surname || '',
-    role: profile.role || '',
-    hobby: profile.hobby || '',
-    country: profile.country || '',
     lastSeen: ts(),
   };
+  if (profile.email !== undefined) data.email = profile.email;
+  if (profile.bio !== undefined) data.bio = profile.bio;
+  if (profile.surname !== undefined) data.surname = profile.surname;
+  if (profile.role !== undefined) data.role = profile.role;
+  if (profile.hobby !== undefined) data.hobby = profile.hobby;
+  if (profile.country !== undefined) data.country = profile.country;
   if (!existing.exists()) {
     data.uid = profile.uid;
     data.online = false;
     data.typingIn = null;
+    if (!data.bio) data.bio = '';
+    if (!data.surname) data.surname = '';
+    if (!data.role) data.role = '';
+    if (!data.hobby) data.hobby = '';
+    if (!data.country) data.country = '';
+    if (!data.email) data.email = '';
   }
   await setDoc(ref, sanitize(data), { merge: true });
 }
