@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 
 const EMOJI_DATA: Record<string, string[]> = {
   'Smileys': [
@@ -43,7 +43,14 @@ interface Props {
 export default function EmojiPicker({ onSelect, onClose }: Props) {
   const [activeCategory, setActiveCategory] = useState(0);
   const [search, setSearch] = useState('');
+  const gridRef = useRef<HTMLDivElement>(null);
   const categoryNames = useMemo(() => Object.keys(EMOJI_DATA), []);
+
+  useEffect(() => {
+    if (gridRef.current && (window as any).twemoji) {
+      (window as any).twemoji.parse(gridRef.current, { folder: 'svg', ext: '.svg' });
+    }
+  }, [activeCategory, search]);
 
   const filteredEmojis = useMemo(() => {
     const emojis = EMOJI_DATA[categoryNames[activeCategory]] || [];
@@ -78,7 +85,7 @@ export default function EmojiPicker({ onSelect, onClose }: Props) {
       </div>
 
       {/* Emoji grid */}
-      <div className="p-2 h-64 overflow-y-auto">
+      <div ref={gridRef} className="p-2 h-64 overflow-y-auto">
         <div className="grid grid-cols-8 gap-0.5">
           {filteredEmojis.map((emoji, i) => (
             <button

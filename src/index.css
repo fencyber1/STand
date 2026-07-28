@@ -8,3 +8,22 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+img.emoji {
+  height: 1.2em;
+  width: 1.2em;
+  margin: 0 0.05em 0 0.1em;
+  vertical-align: -0.15em;
+  display: inline;
+}
+
+img.emoji.large {
+  height: 1.5em;
+  width: 1.5em;
+}
+
+.emoji-btn img.emoji {
+  height: 1.4em;
+  width: 1.4em;
+  margin: 0;
+}

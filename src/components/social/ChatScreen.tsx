@@ -17,6 +17,7 @@ import EmojiPicker from './EmojiPicker';
 import AttachmentMenu from './AttachmentMenu';
 import ContactForm from './ContactForm';
 import MediaMessage from './MediaMessage';
+import TwemojiText from './TwemojiText';
 
 function formatTime(dateStr: string): string {
   if (!dateStr) return '';
@@ -303,7 +304,7 @@ export default function ChatScreen() {
                     {isMedia ? (
                       <MediaMessage type={msg.type!} mediaUrl={msg.mediaUrl} mediaType={msg.mediaType} fileName={msg.fileName} fileSize={msg.fileSize} contact={msg.contact} location={msg.location} isOwn={isOwn} />
                     ) : (
-                      <p className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</p>
+                      <TwemojiText className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</TwemojiText>
                     )}
                     <p className={`text-[10px] mt-1 text-right ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
                   </div>
