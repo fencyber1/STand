@@ -63,8 +63,12 @@ export default function Layout() {
     return () => window.removeEventListener('storage', handler);
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // signOut still proceeds even if Firestore save fails
+    }
     navigate('/login');
   };
 

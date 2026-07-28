@@ -3,8 +3,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut,
   updateProfile,
   User as FirebaseUser,
@@ -24,7 +23,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => void;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   register: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
@@ -34,7 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   login: async () => ({ success: false }),
-  loginWithGoogle: () => {},
+  loginWithGoogle: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
 });
@@ -77,10 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getRedirectResult(auth).catch((e) => {
-      console.error('Redirect result error:', e.code, e.message);
-    });
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = mapUser(firebaseUser);
@@ -132,10 +127,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(() => {
-    signInWithRedirect(auth, googleProvider).catch((e) => {
-      console.error('Google redirect error:', e.code, e.message);
-    });
+  const loginWithGoogle = useCallback(async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      return { success: true };
+    } catch (e: any) {
+      console.error('Google sign-in error:', e.code, e.message);
+      const msg =
+        e.code === 'auth/popup-blocked' ? 'Popup was blocked by your browser. Allow popups and try again.'
+        : e.code === 'auth/popup-closed-by-user' ? 'Sign-in cancelled. Please try again.'
+        : e.code === 'auth/cancelled-popup-request' ? 'Sign-in cancelled. Please try again.'
+        : e.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
+        : e.code === 'auth/configuration-not-found' ? 'Google sign-in not configured. Enable it in Firebase Console.'
+        : `Failed to sign in with Google (${e.code}).`;
+      return { success: false, error: msg };
+    }
   }, []);
 
   const register = useCallback(async (fullName: string, email: string, password: string) => {
@@ -160,17 +166,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const uid = auth.currentUser?.uid;
     if (uid) {
       try {
-        await saveUserDataToFirestore(uid, {
-          history: storage.getHistory(),
-          bookmarks: storage.getBookmarks(),
-          studyPlans: storage.getStudyPlans(),
-          questionTimings: storage.getQuestionTimings(),
-          achievements: storage.getAchievements(),
-          questionNotes: storage.getAllQuestionNotes(),
-          importedQuestions: storage.getImportedQuestions(),
-          profilePhoto: storage.getProfilePhoto(),
-          displayName: storage.getDisplayName(),
-        });
+        await Promise.race([
+          saveUserDataToFirestore(uid, {
+            history: storage.getHistory(),
+            bookmarks: storage.getBookmarks(),
+            studyPlans: storage.getStudyPlans(),
+            questionTimings: storage.getQuestionTimings(),
+            achievements: storage.getAchievements(),
+            questionNotes: storage.getAllQuestionNotes(),
+            importedQuestions: storage.getImportedQuestions(),
+            profilePhoto: storage.getProfilePhoto(),
+            displayName: storage.getDisplayName(),
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 5000)),
+        ]);
       } catch (e) {
         console.error('Failed to save data before logout:', e);
       }

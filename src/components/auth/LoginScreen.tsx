@@ -35,9 +35,14 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setError('');
-    loginWithGoogle();
+    setLoading(true);
+    const result = await loginWithGoogle();
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error || 'Failed to sign in with Google.');
+    }
   };
 
   return (
