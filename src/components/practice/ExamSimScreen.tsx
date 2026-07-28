@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Timer, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
 import { storage } from '../../services/storage';
+import QuestionImage from './QuestionImage';
 import BorderGlow from '../ui/BorderGlow';
 
 interface ExamState {
@@ -285,14 +286,7 @@ export default function ExamSimScreen() {
             </div>
 
             {current.imageQuery && (
-              <div className="mb-5 flex justify-center">
-                <img
-                  src={`https://loremflickr.com/480/300/${encodeURIComponent(current.imageQuery)}`}
-                  alt={current.imageQuery}
-                  className="rounded-xl object-cover max-h-52 border border-gray-200 dark:border-gray-600 shadow-sm"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-              </div>
+              <QuestionImage query={current.imageQuery} />
             )}
 
             {current.type === 'MCQ' && current.options && (

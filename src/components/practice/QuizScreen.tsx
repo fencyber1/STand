@@ -7,6 +7,7 @@ import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 import CalculatorPanel from './CalculatorPanel';
 import CheatSheet from './CheatSheet';
+import QuestionImage from './QuestionImage';
 
 interface QuizState {
   questions: Question[];
@@ -433,14 +434,7 @@ export default function QuizScreen() {
         </div>
 
         {current.imageQuery && (
-          <div className="mb-5 flex justify-center">
-            <img
-              src={`https://loremflickr.com/480/300/${encodeURIComponent(current.imageQuery)}`}
-              alt={current.imageQuery}
-              className="rounded-xl object-cover max-h-52 border border-gray-200 dark:border-gray-600 shadow-sm"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          </div>
+          <QuestionImage query={current.imageQuery} />
         )}
 
         {showResult && (
