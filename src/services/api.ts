@@ -138,6 +138,7 @@ STRICT RULES:
 - The level is ${params.level} — questions must match this academic level.
 - Each question's "subject" field MUST be exactly "${params.sector}".
 - Do NOT generate questions about topics outside ${params.sector}, even if they seem related.
+- EVERY question MUST include an "imageQuery" field — this is REQUIRED, not optional.
 
 Format: ${questionFormat}${difficultyLine}
 
@@ -146,7 +147,7 @@ Return ONLY a JSON array. Each object:
 
 For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
 For Theory: options can be omitted, correctAnswer is a model answer.
-The imageQuery should be a short search phrase (1-3 words) relevant to the concept being tested, suitable for finding an educational illustration. E.g. "abstract noun", "water cycle diagram", "Python loop".
+The imageQuery is REQUIRED for every question. It should be a short search phrase (1-3 words) relevant to the concept being tested, suitable for finding an educational illustration. E.g. "cell division", "water cycle diagram", "Python loop", "mitosis stages", "supply and demand graph".
 No markdown. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);

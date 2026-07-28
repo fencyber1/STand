@@ -421,7 +421,7 @@ export default function QuizScreen() {
           </span>
         </div>
 
-        <div className="flex items-start gap-2 mb-6">
+        <div className="flex items-start gap-2 mb-4">
           <p className="text-gray-800 dark:text-gray-100 text-lg leading-relaxed flex-1">{current.question}</p>
           <button
             onClick={handleSpeak}
@@ -431,6 +431,17 @@ export default function QuizScreen() {
             {speaking ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
+
+        {current.imageQuery && (
+          <div className="mb-5 flex justify-center">
+            <img
+              src={`https://loremflickr.com/480/300/${encodeURIComponent(current.imageQuery)}`}
+              alt={current.imageQuery}
+              className="rounded-xl object-cover max-h-52 border border-gray-200 dark:border-gray-600 shadow-sm"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+        )}
 
         {showResult && (
           <div className="flex justify-end -mt-4 mb-2">

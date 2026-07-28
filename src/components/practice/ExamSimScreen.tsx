@@ -273,7 +273,7 @@ export default function ExamSimScreen() {
           colors={['#6366f1', '#8b5cf6', '#3b82f6']}
         >
           <div className="p-6 dark:bg-gray-800">
-            <div className="flex items-start gap-2 mb-6">
+            <div className="flex items-start gap-2 mb-4">
               <p className="text-gray-800 dark:text-gray-100 text-lg leading-relaxed flex-1">{current.question}</p>
               <button
                 onClick={handleSpeak}
@@ -283,6 +283,17 @@ export default function ExamSimScreen() {
                 {speaking ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
             </div>
+
+            {current.imageQuery && (
+              <div className="mb-5 flex justify-center">
+                <img
+                  src={`https://loremflickr.com/480/300/${encodeURIComponent(current.imageQuery)}`}
+                  alt={current.imageQuery}
+                  className="rounded-xl object-cover max-h-52 border border-gray-200 dark:border-gray-600 shadow-sm"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+            )}
 
             {current.type === 'MCQ' && current.options && (
               <div className="space-y-3 mb-6">
