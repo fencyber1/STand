@@ -66,10 +66,6 @@ export default function QuizScreen() {
   const [showNote, setShowNote] = useState(false);
 
   useEffect(() => {
-    resultsRef.current = results;
-  }, [results]);
-
-  useEffect(() => {
     questionStartRef.current = Date.now();
     setNote(storage.getQuestionNote(current.id));
     setShowNote(false);
@@ -149,7 +145,9 @@ export default function QuizScreen() {
       };
     }
 
-    setResults((prev) => [...prev, result]);
+    const newResults = [...resultsRef.current, result];
+    resultsRef.current = newResults;
+    setResults(newResults);
     setShowResult(true);
   }, [current, selectedAnswer, textAnswer, recordTiming]);
 
