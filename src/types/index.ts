@@ -271,6 +271,7 @@ export interface ChatMessage {
   fileSize?: number;
   contact?: { name: string; phone: string; email: string };
   location?: { lat: number; lng: number; name: string };
+  edited?: boolean;
   createdAt: string;
   read: boolean;
 }
@@ -300,6 +301,7 @@ export interface GroupMessage {
   fileSize?: number;
   contact?: { name: string; phone: string; email: string };
   location?: { lat: number; lng: number; name: string };
+  edited?: boolean;
   createdAt: string;
   readBy: string[];
 }

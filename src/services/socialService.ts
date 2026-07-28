@@ -440,6 +440,7 @@ export function subscribeToChatMessages(chatId: string, cb: (messages: ChatMessa
         location: data.location,
         createdAt: data.createdAt,
         read: data.read ?? false,
+        edited: data.edited ?? false,
       } as ChatMessage;
     }).sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
   });
@@ -473,6 +474,23 @@ export async function markChatRead(chatId: string, uid: string): Promise<void> {
     if (d.data().senderUid !== uid) batch.update(d.ref, { read: true });
   });
   await batch.commit();
+}
+
+export async function editChatMessage(messageId: string, newText: string): Promise<void> {
+  await updateDoc(doc(db, 'chatMessages', messageId), sanitize({ text: newText, edited: true }));
+}
+
+export async function editGroupMessage(messageId: string, newText: string): Promise<void> {
+  await updateDoc(doc(db, 'groupMessages', messageId), sanitize({ text: newText, edited: true }));
+}
+
+export async function getUserProfile(uid: string): Promise<{ uid: string; displayName: string; photoURL: string | null; email: string } | null> {
+  try {
+    const snap = await getDoc(doc(db, 'userProfiles', uid));
+    if (!snap.exists()) return null;
+    const d = snap.data();
+    return { uid: d.uid || uid, displayName: d.displayName || 'Unknown', photoURL: d.photoURL || null, email: d.email || '' };
+  } catch { return null; }
 }
 
 // ── Group Chat ──
@@ -551,6 +569,7 @@ export function subscribeToGroupMessages(groupId: string, cb: (messages: GroupMe
         location: data.location,
         createdAt: data.createdAt,
         readBy: data.readBy || [],
+        edited: data.edited ?? false,
       } as GroupMessage;
     }).sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
   });

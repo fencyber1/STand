@@ -7,16 +7,18 @@ import {
   subscribeToChatMessages,
   sendChatMessage,
   markChatRead,
+  editChatMessage,
   subscribeToPresence,
   setTyping,
 } from '../../services/socialService';
 import type { ChatRoom, ChatMessage, Presence } from '../../types';
-import { Send, ArrowLeft, MessageCircle, Loader2, Palette, Smile, Paperclip } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, Loader2, Palette, Smile, Paperclip, Check, CheckCheck, Pencil, X } from 'lucide-react';
 import ChatThemePicker from './ChatThemePicker';
 import EmojiPicker from './EmojiPicker';
 import AttachmentMenu from './AttachmentMenu';
 import ContactForm from './ContactForm';
 import MediaMessage from './MediaMessage';
+import ChatProfileModal from './ChatProfileModal';
 import TwemojiText from './TwemojiText';
 
 function formatTime(dateStr: string): string {
@@ -33,16 +35,22 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function UserAvatar({ photo, name, size = 48, ring }: { photo: string | null; name: string; size?: number; ring?: string }) {
+function UserAvatar({ photo, name, size = 48, ring, onClick }: { photo: string | null; name: string; size?: number; ring?: string; onClick?: () => void }) {
   const ringClass = ring || '';
   if (photo) {
-    return <img src={photo} alt="" style={{ width: size, height: size }} className={`rounded-full object-cover ${ringClass}`} />;
+    return <img src={photo} alt="" style={{ width: size, height: size }} className={`rounded-full object-cover ${ringClass} ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick} />;
   }
   return (
-    <div className={`rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg ${ringClass}`} style={{ width: size, height: size }}>
+    <div className={`rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg ${ringClass} ${onClick ? 'cursor-pointer' : ''}`} style={{ width: size, height: size }} onClick={onClick}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
+}
+
+function DeliveryIndicator({ read }: { read: boolean }) {
+  return read
+    ? <CheckCheck className="w-3.5 h-3.5 text-blue-400 inline-block ml-1" />
+    : <Check className="w-3.5 h-3.5 text-white/40 inline-block ml-1" />;
 }
 
 export default function ChatScreen() {
@@ -55,6 +63,9 @@ export default function ChatScreen() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
+  const [profileModal, setProfileModal] = useState<{ uid: string; name: string; photo: string | null; online: boolean } | null>(null);
+  const [editingMsg, setEditingMsg] = useState<ChatMessage | null>(null);
+  const [editText, setEditText] = useState('');
 
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -124,7 +135,15 @@ export default function ChatScreen() {
     await doSend(text);
   };
 
+  const handleEditSave = async () => {
+    if (!editingMsg || !editText.trim()) return;
+    await editChatMessage(editingMsg.id, editText.trim());
+    setEditingMsg(null);
+    setEditText('');
+  };
+
   const handleEmojiSelect = (emoji: string) => {
+    if (editingMsg) { setEditText((prev) => prev + emoji); return; }
     setNewMessage((prev) => prev + emoji);
     inputRef.current?.focus();
   };
@@ -183,8 +202,6 @@ export default function ChatScreen() {
     setShowContactForm(false);
     await doSend('', { type: 'contact', mediaUrl: '', contact });
   };
-
-  const handleSendText = () => { handleSendMessage(); };
 
   const getOtherInfo = (chat: ChatRoom) => {
     const other = chat.members.find((m) => m !== uid);
@@ -266,12 +283,14 @@ export default function ChatScreen() {
         {other && (
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative shrink-0">
-              <UserAvatar photo={other.photo} name={other.name} size={40} ring={theme.avatarRing} />
+              <UserAvatar photo={other.photo} name={other.name} size={40} ring={theme.avatarRing} onClick={() => setProfileModal({ uid: other.uid, name: other.name, photo: other.photo, online: otherOnline })} />
               {otherOnline && <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 cursor-pointer" onClick={() => setProfileModal({ uid: other.uid, name: other.name, photo: other.photo, online: otherOnline })}>
               <p className={`text-sm font-bold ${theme.textColor} truncate`}>{other.name}</p>
-              <p className={`text-[11px] ${theme.textColor === 'text-white' ? 'text-white/50' : 'text-gray-400'}`}>{otherOnline ? (otherTyping ? 'Typing...' : 'Online') : 'Offline'}</p>
+              <p className={`text-[11px] ${theme.textColor === 'text-white' ? 'text-white/50' : 'text-gray-400'}`}>
+                {otherTyping ? <span className="text-blue-400">typing...</span> : otherOnline ? 'Online' : 'Offline'}
+              </p>
             </div>
           </div>
         )}
@@ -289,28 +308,50 @@ export default function ChatScreen() {
             const showAvatar = !prevMsg || prevMsg.senderUid !== msg.senderUid;
             const senderName = msg.senderName || 'Unknown';
             const isMedia = msg.type && msg.type !== 'text';
+            const isEditing = editingMsg?.id === msg.id;
 
             return (
-              <div key={msg.id} className={`relative ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
+              <div key={msg.id} className={`relative group ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
                 {!isOwn && (
                   <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
-                    {showAvatar ? <UserAvatar photo={other?.photo || null} name={senderName} size={40} ring={theme.avatarRing} /> : <div style={{ width: 40 }} />}
+                    {showAvatar ? <UserAvatar photo={other?.photo || null} name={senderName} size={40} ring={theme.avatarRing} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: other?.photo || null, online: presenceMap[msg.senderUid]?.online ?? false })} /> : <div style={{ width: 40 }} />}
                   </div>
                 )}
 
                 <div className="relative max-w-[70%]">
                   {!isOwn && showAvatar && (
-                    <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider`}>{senderName}</p>
+                    <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider cursor-pointer`} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: other?.photo || null, online: presenceMap[msg.senderUid]?.online ?? false })}>{senderName}</p>
                   )}
 
-                  <div className={`relative ${isOwn ? theme.bubbleOwn : theme.bubbleReceived} ${isMedia ? 'px-2 py-2' : 'px-4 py-3'}`}>
-                    {isMedia ? (
-                      <MediaMessage type={msg.type!} mediaUrl={msg.mediaUrl} mediaType={msg.mediaType} fileName={msg.fileName} fileSize={msg.fileSize} contact={msg.contact} location={msg.location} isOwn={isOwn} />
-                    ) : (
-                      <TwemojiText className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</TwemojiText>
-                    )}
-                    <p className={`text-[10px] mt-1 text-right ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
-                  </div>
+                  {isEditing ? (
+                    <div className={`px-3 py-2 rounded-xl ${theme.bubbleOwn}`}>
+                      <input type="text" value={editText} onChange={(e) => setEditText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') { setEditingMsg(null); setEditText(''); } }} className={`w-full bg-transparent text-[13px] outline-none ${theme.textColor}`} autoFocus />
+                      <div className="flex items-center gap-2 mt-1">
+                        <button onClick={handleEditSave} className="text-[11px] text-blue-400 font-medium">Save</button>
+                        <button onClick={() => { setEditingMsg(null); setEditText(''); }} className="text-[11px] text-white/40">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`relative ${isOwn ? theme.bubbleOwn : theme.bubbleReceived} ${isMedia ? 'px-2 py-2' : 'px-4 py-3'}`}>
+                      {isMedia ? (
+                        <MediaMessage type={msg.type!} mediaUrl={msg.mediaUrl} mediaType={msg.mediaType} fileName={msg.fileName} fileSize={msg.fileSize} contact={msg.contact} location={msg.location} isOwn={isOwn} />
+                      ) : (
+                        <TwemojiText className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</TwemojiText>
+                      )}
+                      <div className="flex items-center justify-end gap-1 mt-1">
+                        {msg.edited && <span className={`text-[9px] ${theme.timestampColor} italic`}>edited</span>}
+                        <p className={`text-[10px] ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
+                        {isOwn && <DeliveryIndicator read={msg.read} />}
+                      </div>
+
+                      {/* Edit button for own messages */}
+                      {isOwn && msg.type === 'text' && (
+                        <button onClick={() => { setEditingMsg(msg); setEditText(msg.text); }} className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-white/10">
+                          <Pencil className="w-3.5 h-3.5 text-white/40" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {isOwn && (
@@ -346,12 +387,12 @@ export default function ChatScreen() {
             type="text"
             value={newMessage}
             onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
             placeholder="Type a message..."
             className={`flex-1 ${theme.inputField} ${theme.textColor}`}
             disabled={sending}
           />
-          <button onClick={handleSendText} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
+          <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </div>
@@ -365,6 +406,9 @@ export default function ChatScreen() {
 
       {/* Contact form */}
       {showContactForm && <ContactForm onSend={handleContactSend} onClose={() => setShowContactForm(false)} />}
+
+      {/* Profile modal */}
+      {profileModal && <ChatProfileModal uid={profileModal.uid} name={profileModal.name} photo={profileModal.photo} online={profileModal.online} onClose={() => setProfileModal(null)} />}
 
       <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
     </div>
