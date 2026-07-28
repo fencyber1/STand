@@ -79,6 +79,7 @@ export default function FriendsScreen() {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [suggested, setSuggested] = useState<UserProfile[]>([]);
   const [searching, setSearching] = useState(false);
+  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
@@ -126,11 +127,13 @@ export default function FriendsScreen() {
   const handleSendRequest = async (target: UserProfile) => {
     setLoadingAction(`send-${target.uid}`);
     try {
-      await sendFriendRequest(
+      const result = await sendFriendRequest(
         { uid, name: user?.fullName || '', photo: user?.photoURL || null },
         { uid: target.uid, name: target.displayName, photo: target.photoURL }
       );
-      setSearchResults((prev) => prev.filter((r) => r.uid !== target.uid));
+      if (result.success) {
+        setSentRequests((prev) => new Set(prev).add(target.uid));
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -189,6 +192,29 @@ export default function FriendsScreen() {
   };
 
   const isOnline = (friendUid: string) => presenceMap[friendUid]?.online ?? false;
+
+  const renderAddButton = (profile: UserProfile) => {
+    const sent = sentRequests.has(profile.uid);
+    const loading = loadingAction === `send-${profile.uid}`;
+    if (sent) {
+      return (
+        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium flex-shrink-0">
+          <Check className="w-3.5 h-3.5" />
+          Request sent
+        </span>
+      );
+    }
+    return (
+      <button
+        onClick={() => handleSendRequest(profile)}
+        disabled={loading}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0"
+      >
+        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+        Add
+      </button>
+    );
+  };
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'friends', label: 'Friends', count: friends.length },
@@ -421,10 +447,7 @@ export default function FriendsScreen() {
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{profile.displayName}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
                         </div>
-                        <button onClick={() => handleSendRequest(profile)} disabled={loadingAction === `send-${profile.uid}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0">
-                          {loadingAction === `send-${profile.uid}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-                          Add
-                        </button>
+                        {renderAddButton(profile)}
                       </div>
                     ))}
                   </>
@@ -449,10 +472,7 @@ export default function FriendsScreen() {
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{profile.displayName}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
                         </div>
-                        <button onClick={() => handleSendRequest(profile)} disabled={loadingAction === `send-${profile.uid}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0">
-                          {loadingAction === `send-${profile.uid}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-                          Add
-                        </button>
+                        {renderAddButton(profile)}
                       </div>
                     ))}
                   </>
@@ -474,18 +494,7 @@ export default function FriendsScreen() {
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
                 </div>
-                <button
-                  onClick={() => handleSendRequest(profile)}
-                  disabled={loadingAction === `send-${profile.uid}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  {loadingAction === `send-${profile.uid}` ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <UserPlus className="w-3.5 h-3.5" />
-                  )}
-                  Add
-                </button>
+                {renderAddButton(profile)}
               </div>
             ))}
           </div>
