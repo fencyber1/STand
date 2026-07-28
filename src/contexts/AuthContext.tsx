@@ -60,6 +60,7 @@ async function loadAndMergeData(uid: string) {
   const localAchievements = storage.getAchievements();
   const localNotes = storage.getAllQuestionNotes();
   const localImported = storage.getImportedQuestions();
+  const localSavedDocs = storage.getSavedDocuments();
 
   if (localHistory.length === 0 && remoteData.history?.length) storage.setHistory(remoteData.history);
   if (localBookmarks.length === 0 && remoteData.bookmarks?.length) storage.setBookmarks(remoteData.bookmarks);
@@ -70,6 +71,9 @@ async function loadAndMergeData(uid: string) {
     storage.setAllQuestionNotes(remoteData.questionNotes);
   }
   if (localImported.length === 0 && remoteData.importedQuestions?.length) storage.setImportedQuestions(remoteData.importedQuestions);
+  if (localSavedDocs.length === 0 && remoteData.savedDocuments?.length) {
+    for (const d of remoteData.savedDocuments) storage.saveDocument(d);
+  }
   if (!storage.getProfilePhoto() && remoteData.profilePhoto) storage.setProfilePhoto(remoteData.profilePhoto);
   if (!storage.getDisplayName() && remoteData.displayName) storage.setDisplayName(remoteData.displayName);
   if (!storage.getBio() && remoteData.bio) storage.setBio(remoteData.bio);
@@ -100,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             achievements: storage.getAchievements(),
             questionNotes: storage.getAllQuestionNotes(),
             importedQuestions: storage.getImportedQuestions(),
+            savedDocuments: storage.getSavedDocuments(),
             profilePhoto: storage.getProfilePhoto(),
             displayName: storage.getDisplayName(),
             bio: storage.getBio(),
@@ -197,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             achievements: storage.getAchievements(),
             questionNotes: storage.getAllQuestionNotes(),
             importedQuestions: storage.getImportedQuestions(),
+            savedDocuments: storage.getSavedDocuments(),
             profilePhoto: storage.getProfilePhoto(),
             displayName: storage.getDisplayName(),
             bio: storage.getBio(),

@@ -1,11 +1,14 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Upload, FileText, Loader2, AlertCircle, CheckCircle,
-  Trash2, Eye, EyeOff, ChevronDown, ChevronUp, Settings2,
+  ArrowLeft, Upload, FileText, Loader2, AlertCircle,
+  Trash2, Eye, EyeOff, Settings2, Save, FolderOpen,
+  CheckCircle, X,
 } from 'lucide-react';
 import { getDocumentQuestions } from '../../services/api';
 import { QUESTION_TYPES, DIFFICULTY_LEVELS } from '../../constants';
+import { storage } from '../../services/storage';
+import type { SavedDocument } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
 
 type Step = 'upload' | 'preview' | 'generating';
@@ -18,6 +21,7 @@ export default function DocumentQuizScreen() {
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
   const [showPreview, setShowPreview] = useState(true);
+  const [saved, setSaved] = useState(false);
 
   const [questionCount, setQuestionCount] = useState(5);
   const [questionType, setQuestionType] = useState('MCQ');
@@ -25,9 +29,12 @@ export default function DocumentQuizScreen() {
 
   const [generating, setGenerating] = useState(false);
 
+  const [savedDocs, setSavedDocs] = useState<SavedDocument[]>(() => storage.getSavedDocuments());
+
   const handleFile = async (file: File) => {
     setError('');
     setFileName(file.name);
+    setSaved(false);
     const ext = file.name.split('.').pop()?.toLowerCase();
 
     try {
@@ -79,6 +86,7 @@ export default function DocumentQuizScreen() {
     setFileName('Pasted text');
     setStep('preview');
     setError('');
+    setSaved(false);
   };
 
   const handleGenerate = async () => {
@@ -112,11 +120,30 @@ export default function DocumentQuizScreen() {
     setGenerating(false);
   };
 
-  const handleDropToUpload = () => {
-    setDocText('');
-    setFileName('');
-    setStep('upload');
-    setError('');
+  const handleSaveDoc = () => {
+    if (!docText.trim() || saved) return;
+    const doc: SavedDocument = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: fileName,
+      text: docText,
+      wordCount: docText.split(/\s+/).filter(Boolean).length,
+      createdAt: new Date().toISOString(),
+    };
+    storage.saveDocument(doc);
+    setSavedDocs(storage.getSavedDocuments());
+    setSaved(true);
+  };
+
+  const handleDeleteDoc = (id: string) => {
+    storage.deleteSavedDocument(id);
+    setSavedDocs(storage.getSavedDocuments());
+  };
+
+  const handleLoadDoc = (doc: SavedDocument) => {
+    setFileName(doc.name);
+    setDocText(doc.text);
+    setSaved(true);
+    setStep('preview');
   };
 
   const wordCount = docText.split(/\s+/).filter(Boolean).length;
@@ -136,6 +163,40 @@ export default function DocumentQuizScreen() {
         <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center gap-2">
           <AlertCircle size={16} /> {error}
         </div>
+      )}
+
+      {/* Saved Documents List */}
+      {step === 'upload' && savedDocs.length > 0 && (
+        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.3} colors={['#6366f1', '#3b82f6', '#10b981']}>
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-gray-300 font-semibold text-sm">
+              <FolderOpen size={16} /> Saved Documents
+            </div>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {savedDocs.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg group">
+                  <button onClick={() => handleLoadDoc(doc)} className="flex-1 text-left min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-primary-500 shrink-0" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{doc.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 ml-[22px]">
+                      <span className="text-xs text-gray-400">{doc.wordCount} words</span>
+                      <span className="text-xs text-gray-400">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDoc(doc.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-500 transition opacity-0 group-hover:opacity-100 shrink-0"
+                    title="Delete document"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </BorderGlow>
       )}
 
       {/* Step: Upload */}
@@ -184,6 +245,7 @@ export default function DocumentQuizScreen() {
                 <FileText size={16} className="text-primary-500" />
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{fileName}</span>
                 <span className="text-xs text-gray-400">{wordCount} words</span>
+                {saved && <span className="text-xs text-green-500 flex items-center gap-1"><CheckCircle size={10} /> Saved</span>}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -194,10 +256,10 @@ export default function DocumentQuizScreen() {
                   {showPreview ? 'Hide' : 'Show'}
                 </button>
                 <button
-                  onClick={handleDropToUpload}
+                  onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); }}
                   className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
                 >
-                  <Trash2 size={12} /> Change
+                  <X size={12} /> Change
                 </button>
               </div>
             </div>
@@ -205,6 +267,17 @@ export default function DocumentQuizScreen() {
               <div className="max-h-48 overflow-y-auto text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 whitespace-pre-wrap leading-relaxed">
                 {docText.slice(0, 3000)}{docText.length > 3000 && '\n\n... (truncated for preview)'}
               </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {!saved && (
+              <button
+                onClick={handleSaveDoc}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
+              >
+                <Save size={16} /> Save Document
+              </button>
             )}
           </div>
 

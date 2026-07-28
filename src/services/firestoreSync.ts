@@ -5,7 +5,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { SessionData, Question, QuestionTiming, StoredAchievement } from '../types';
+import type { SessionData, Question, QuestionTiming, StoredAchievement, SavedDocument } from '../types';
 
 export interface UserDataDoc {
   history: SessionData[];
@@ -15,6 +15,7 @@ export interface UserDataDoc {
   achievements: StoredAchievement[];
   questionNotes: Record<string, string>;
   importedQuestions: Question[];
+  savedDocuments: SavedDocument[];
   profilePhoto: string | null;
   displayName: string | null;
   bio: string;
@@ -68,6 +69,7 @@ export function mergeUserData(
     achievements: StoredAchievement[];
     questionNotes: Record<string, string>;
     importedQuestions: Question[];
+    savedDocuments: SavedDocument[];
     profilePhoto: string | null;
     displayName: string | null;
     bio: string;
@@ -88,6 +90,7 @@ export function mergeUserData(
     achievements: mergeArrays(local.achievements, remote.achievements || [], (a) => a.id),
     questionNotes: { ...(remote.questionNotes || {}), ...local.questionNotes },
     importedQuestions: mergeArrays(local.importedQuestions, remote.importedQuestions || [], (q) => q.id),
+    savedDocuments: mergeArrays(local.savedDocuments, remote.savedDocuments || [], (d) => d.id),
     profilePhoto: local.profilePhoto || remote.profilePhoto || null,
     displayName: local.displayName || remote.displayName || null,
     bio: local.bio || remote.bio || '',

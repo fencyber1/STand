@@ -334,3 +334,11 @@ export interface ChatTheme {
   onlineIndicator: string;
   avatarRing: string;
 }
+
+export interface SavedDocument {
+  id: string;
+  name: string;
+  text: string;
+  wordCount: number;
+  createdAt: string;
+}

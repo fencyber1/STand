@@ -1,4 +1,4 @@
-import type { SessionData, Question, QuestionTiming, StoredAchievement, QuestionNote } from '../types';
+import type { SessionData, Question, QuestionTiming, StoredAchievement, QuestionNote, SavedDocument } from '../types';
 
 const USER_TOKEN_KEY = 'stand_user_token';
 const USER_KEY = 'stand_user';
@@ -301,6 +301,28 @@ export const storage = {
     localStorage.removeItem('stand_chat_wallpaper');
   },
 
+  getSavedDocuments(): SavedDocument[] {
+    return readJson<SavedDocument[]>('stand_saved_documents', []);
+  },
+
+  saveDocument(doc: SavedDocument): void {
+    const docs = this.getSavedDocuments();
+    const existing = docs.findIndex((d) => d.id === doc.id);
+    if (existing >= 0) {
+      docs[existing] = doc;
+    } else {
+      docs.unshift(doc);
+    }
+    writeJson('stand_saved_documents', docs);
+    notifyChange();
+  },
+
+  deleteSavedDocument(id: string): void {
+    const docs = this.getSavedDocuments().filter((d) => d.id !== id);
+    writeJson('stand_saved_documents', docs);
+    notifyChange();
+  },
+
   clearAllUserData(): void {
     const keys = [
       'stand_history',
@@ -318,6 +340,7 @@ export const storage = {
       'stand_hobby',
       'stand_country',
       'stand_chat_theme',
+      'stand_saved_documents',
     ];
     for (const base of keys) {
       localStorage.removeItem(k(base));
