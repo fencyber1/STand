@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Upload, FileText, Loader2, AlertCircle,
-  Trash2, Eye, EyeOff, Settings2, Save, FolderOpen,
+  Trash2, Settings2, Save, FolderOpen,
   CheckCircle, X,
 } from 'lucide-react';
 import { getDocumentQuestions } from '../../services/api';
@@ -20,7 +20,6 @@ export default function DocumentQuizScreen() {
   const [docText, setDocText] = useState('');
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
-  const [showPreview, setShowPreview] = useState(true);
   const [saved, setSaved] = useState(false);
 
   const [questionCount, setQuestionCount] = useState(5);
@@ -249,13 +248,6 @@ export default function DocumentQuizScreen() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
-                >
-                  {showPreview ? <EyeOff size={12} /> : <Eye size={12} />}
-                  {showPreview ? 'Hide' : 'Show'}
-                </button>
-                <button
                   onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); }}
                   className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
                 >
@@ -263,11 +255,9 @@ export default function DocumentQuizScreen() {
                 </button>
               </div>
             </div>
-            {showPreview && (
-              <div className="max-h-48 overflow-y-auto text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 whitespace-pre-wrap leading-relaxed">
-                {docText.slice(0, 3000)}{docText.length > 3000 && '\n\n... (truncated for preview)'}
-              </div>
-            )}
+            <div className="max-h-48 overflow-y-auto text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 whitespace-pre-wrap leading-relaxed">
+              {docText.slice(0, 3000)}{docText.length > 3000 && '\n\n... (truncated for preview)'}
+            </div>
           </div>
 
           <div className="flex gap-2">
