@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChatTheme } from '../../contexts/ChatThemeContext';
 import {
   subscribeToUserGroups,
   subscribeToGroupMessages,
@@ -11,7 +12,8 @@ import {
   setTyping,
 } from '../../services/socialService';
 import type { ChatGroup, GroupMessage, Friend, Presence } from '../../types';
-import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown } from 'lucide-react';
+import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette } from 'lucide-react';
+import ChatThemePicker from './ChatThemePicker';
 
 function timeAgo(dateStr: string): string {
   if (!dateStr) return '';
@@ -27,12 +29,13 @@ function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function UserAvatar({ photo, name, size = 48 }: { photo: string | null; name: string; size?: number }) {
+function UserAvatar({ photo, name, size = 48, ring }: { photo: string | null; name: string; size?: number; ring?: string }) {
+  const ringClass = ring || '';
   if (photo) {
-    return <img src={photo} alt="" style={{ width: size, height: size }} className="rounded-full object-cover" />;
+    return <img src={photo} alt="" style={{ width: size, height: size }} className={`rounded-full object-cover ${ringClass}`} />;
   }
   return (
-    <div className="rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg" style={{ width: size, height: size }}>
+    <div className={`rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg ${ringClass}`} style={{ width: size, height: size }}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -43,6 +46,8 @@ export default function GroupChatScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const uid = user?.uid || '';
+  const { theme, wallpaper } = useChatTheme();
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -127,21 +132,33 @@ export default function GroupChatScreen() {
     } finally { setCreating(false); }
   };
 
+  const tc = (light: string, dark: string) => theme.textColor === 'text-white' ? dark : light;
+
   if (!uid) return <div className="flex items-center justify-center h-full bg-gray-900 text-white">Please log in.</div>;
 
   // ── Group List ──
   if (!groupId) {
     return (
-      <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)' }}>
-        <div className="max-w-2xl mx-auto p-4">
+      <div className="min-h-screen relative" style={{ background: theme.gradient }}>
+        {wallpaper && (
+          <div className="fixed inset-0 opacity-20">
+            <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
             <div className="flex items-center gap-3">
-              <Users className="w-6 h-6 text-white/80" />
-              <h1 className="text-2xl font-bold text-white">Group Chats</h1>
+              <Users className={`w-6 h-6 ${tc('text-primary-500', 'text-white/80')}`} />
+              <h1 className={`text-2xl font-bold ${theme.textColor}`}>Group Chats</h1>
             </div>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 rounded-xl text-white text-sm font-medium transition-all">
-              <Plus className="w-4 h-4" /> New Group
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowThemePicker(true)} className="p-2 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 rounded-xl transition-all">
+                <Palette className="w-5 h-5 text-white/70" />
+              </button>
+              <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 rounded-xl text-white text-sm font-medium transition-all">
+                <Plus className="w-4 h-4" /> New Group
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -158,11 +175,11 @@ export default function GroupChatScreen() {
                 <button key={group.id} onClick={() => navigate(`/groups-chat/${group.id}`)} className="w-full backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4 flex items-center gap-4 hover:bg-white/20 transition-all text-left">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-6 h-6" /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{group.name}</p>
-                    <p className="text-xs text-white/40 mt-0.5">{group.members.length} members</p>
-                    {group.lastMessage && <p className="text-xs text-white/50 truncate mt-1">{group.lastMessage}</p>}
+                    <p className={`text-sm font-bold ${theme.textColor} truncate`}>{group.name}</p>
+                    <p className={`text-xs ${tc('text-gray-500', 'text-white/40')} mt-0.5`}>{group.members.length} members</p>
+                    {group.lastMessage && <p className={`text-xs ${tc('text-gray-400', 'text-white/50')} truncate mt-1`}>{group.lastMessage}</p>}
                   </div>
-                  {group.lastMessageAt && <span className="text-[10px] text-white/30 flex-shrink-0">{timeAgo(group.lastMessageAt)}</span>}
+                  {group.lastMessageAt && <span className={`text-[10px] ${tc('text-gray-400', 'text-white/30')} flex-shrink-0`}>{timeAgo(group.lastMessageAt)}</span>}
                 </button>
               ))}
             </div>
@@ -170,9 +187,9 @@ export default function GroupChatScreen() {
 
           {showCreate && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
-              <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-gray-900 rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Create Group</h3>
+                  <h3 className={`text-lg font-bold ${theme.textColor}`}>Create Group</h3>
                   <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg hover:bg-white/10"><X className="w-5 h-5 text-white/60" /></button>
                 </div>
                 <input type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 outline-none mb-4" autoFocus />
@@ -196,6 +213,7 @@ export default function GroupChatScreen() {
             </div>
           )}
         </div>
+        <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
       </div>
     );
   }
@@ -203,25 +221,35 @@ export default function GroupChatScreen() {
   // ── Group Chat View ──
   const members = currentGroup?.members || [];
 
-  if (!currentGroup) return <div className="flex items-center justify-center h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c, #4a8adc)' }}><Loader2 className="w-8 h-8 text-white/60 animate-spin" /></div>;
+  if (!currentGroup) return <div className="flex items-center justify-center h-screen" style={{ background: theme.gradient }}><Loader2 className="w-8 h-8 text-white/60 animate-spin" /></div>;
 
   return (
-    <div className="flex h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)' }}>
-      <div className="flex flex-col flex-1 min-w-0">
+    <div className="flex h-screen relative" style={{ background: theme.gradient }}>
+      {/* Wallpaper overlay */}
+      {wallpaper && (
+        <div className="absolute inset-0 opacity-15 pointer-events-none">
+          <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="backdrop-blur-xl bg-black/20 border-b border-white/10 px-4 py-3 flex items-center gap-3 shrink-0">
+        <div className={`${theme.headerBg} px-4 py-3 flex items-center gap-3 shrink-0`}>
           <button onClick={() => navigate('/groups-chat')} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white/70" />
+            <ArrowLeft className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
           </button>
           <div className="flex items-center gap-3 flex-1">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"><Users className="w-5 h-5" /></div>
             <div>
-              <p className="text-sm font-bold text-white">{currentGroup.name}</p>
-              <p className="text-[11px] text-white/50">{members.length} members</p>
+              <p className={`text-sm font-bold ${theme.textColor}`}>{currentGroup.name}</p>
+              <p className={`text-[11px] ${tc('text-gray-400', 'text-white/50')}`}>{members.length} members</p>
             </div>
           </div>
           <button onClick={() => setShowMembers(!showMembers)} className={`p-2 rounded-lg transition-colors ${showMembers ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-            <Users className="w-5 h-5 text-white/70" />
+            <Users className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
+          </button>
+          <button onClick={() => setShowThemePicker(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+            <Palette className={`w-5 h-5 ${tc('text-gray-500', 'text-white/70')}`} />
           </button>
         </div>
 
@@ -239,32 +267,26 @@ export default function GroupChatScreen() {
                   {!isOwn && (
                     <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
                       {showAvatar ? (
-                        <UserAvatar photo={msg.senderPhoto || null} name={senderName} size={40} />
+                        <UserAvatar photo={msg.senderPhoto || null} name={senderName} size={40} ring={theme.avatarRing} />
                       ) : <div style={{ width: 40 }} />}
                     </div>
                   )}
 
                   <div className="relative max-w-[68%]">
                     {!isOwn && showAvatar && (
-                      <p className="text-[11px] font-bold text-yellow-300/80 mb-1 ml-3 uppercase tracking-wider">{senderName}</p>
+                      <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider`}>{senderName}</p>
                     )}
 
-                    <div
-                      className={`relative px-4 py-3 ${
-                        isOwn
-                          ? 'bg-black/40 backdrop-blur-md text-white rounded-2xl rounded-br-sm border border-white/5'
-                          : 'bg-black/40 backdrop-blur-md text-white rounded-2xl rounded-bl-sm border border-white/5'
-                      }`}
-                    >
-                      <p className="text-[13px] break-words leading-relaxed">{msg.text}</p>
-                      <p className="text-[10px] mt-1 text-right text-white/30">{formatTime(msg.createdAt)}</p>
+                    <div className={`relative px-4 py-3 ${isOwn ? theme.bubbleOwn : theme.bubbleReceived}`}>
+                      <p className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</p>
+                      <p className={`text-[10px] mt-1 text-right ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
                     </div>
                   </div>
 
                   {isOwn && (
                     <div className="flex-shrink-0 self-end" style={{ width: 40, marginLeft: -8, zIndex: 2 }}>
                       {showAvatar ? (
-                        <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} />
+                        <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} ring={theme.avatarRing} />
                       ) : <div style={{ width: 40 }} />}
                     </div>
                   )}
@@ -276,7 +298,7 @@ export default function GroupChatScreen() {
         </div>
 
         {/* Input */}
-        <div className="backdrop-blur-xl bg-black/20 border-t border-white/10 p-3 shrink-0">
+        <div className={`${theme.inputBg} p-3 shrink-0`}>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -284,10 +306,10 @@ export default function GroupChatScreen() {
               onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
               placeholder="Type a message..."
-              className="flex-1 bg-white/10 backdrop-blur rounded-full px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-white/20"
+              className={`flex-1 ${theme.inputField} ${theme.textColor}`}
               disabled={sending}
             />
-            <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
               {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </div>
@@ -296,24 +318,24 @@ export default function GroupChatScreen() {
 
       {/* Members Panel */}
       {showMembers && (
-        <div className="w-64 backdrop-blur-xl bg-black/20 border-l border-white/10 overflow-y-auto shrink-0">
+        <div className={`relative z-10 w-64 backdrop-blur-xl bg-black/20 border-l border-white/10 overflow-y-auto shrink-0`}>
           <div className="p-4">
-            <h3 className="text-sm font-bold text-white/80 mb-3">Members ({members.length})</h3>
+            <h3 className={`text-sm font-bold ${tc('text-gray-800', 'text-white/80')} mb-3`}>Members ({members.length})</h3>
             <div className="space-y-3">
               {members.map((member) => {
                 const online = presenceMap[member.uid]?.online;
                 return (
                   <div key={member.uid} className="flex items-center gap-3">
                     <div className="relative">
-                      <UserAvatar photo={member.photoURL || null} name={member.name} size={36} />
-                      {online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#1a2a6c]" />}
+                      <UserAvatar photo={member.photoURL || null} name={member.name} size={36} ring={theme.avatarRing} />
+                      {online && <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <p className="text-sm text-white truncate">{member.name}</p>
+                        <p className={`text-sm ${theme.textColor} truncate`}>{member.name}</p>
                         {member.role === 'admin' && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
                       </div>
-                      <p className="text-[11px] text-white/40">{online ? 'Online' : 'Offline'}</p>
+                      <p className={`text-[11px] ${tc('text-gray-400', 'text-white/40')}`}>{online ? 'Online' : 'Offline'}</p>
                     </div>
                   </div>
                 );
@@ -322,6 +344,8 @@ export default function GroupChatScreen() {
           </div>
         </div>
       )}
+
+      <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
     </div>
   );
 }

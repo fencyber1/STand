@@ -265,6 +265,29 @@ export const storage = {
     notifyChange();
   },
 
+  getChatThemeId(): string {
+    return localStorage.getItem(k('stand_chat_theme')) || 'ocean';
+  },
+
+  setChatThemeId(id: string): void {
+    localStorage.setItem(k('stand_chat_theme'), id);
+    notifyChange();
+  },
+
+  getChatWallpaper(): string | null {
+    return localStorage.getItem(k('stand_chat_wallpaper'));
+  },
+
+  setChatWallpaper(dataUrl: string): void {
+    localStorage.setItem(k('stand_chat_wallpaper'), dataUrl);
+    notifyChange();
+  },
+
+  removeChatWallpaper(): void {
+    localStorage.removeItem(k('stand_chat_wallpaper'));
+    notifyChange();
+  },
+
   clearAllUserData(): void {
     const keys = [
       'stand_history',
@@ -276,6 +299,8 @@ export const storage = {
       'stand_imported_questions',
       'stand_profile_photo',
       'stand_display_name',
+      'stand_chat_theme',
+      'stand_chat_wallpaper',
     ];
     for (const base of keys) {
       localStorage.removeItem(k(base));

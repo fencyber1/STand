@@ -296,3 +296,21 @@ export interface Presence {
   lastSeen: string;
   typingIn: string | null;
 }
+
+export interface ChatTheme {
+  id: string;
+  name: string;
+  gradient: string;
+  bubbleOwn: string;
+  bubbleReceived: string;
+  senderNameColor: string;
+  headerBg: string;
+  inputBg: string;
+  inputField: string;
+  sendButton: string;
+  sendButtonShadow: string;
+  textColor: string;
+  timestampColor: string;
+  onlineIndicator: string;
+  avatarRing: string;
+}

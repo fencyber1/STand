@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChatTheme } from '../../contexts/ChatThemeContext';
 import {
   subscribeToUserChats,
   subscribeToChatMessages,
@@ -10,7 +11,8 @@ import {
   setTyping,
 } from '../../services/socialService';
 import type { ChatRoom, ChatMessage, Presence } from '../../types';
-import { Send, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, Loader2, Palette } from 'lucide-react';
+import ChatThemePicker from './ChatThemePicker';
 
 function formatTime(dateStr: string): string {
   if (!dateStr) return '';
@@ -26,13 +28,13 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function UserAvatar({ photo, name, size = 48 }: { photo: string | null; name: string; size?: number }) {
-  const s = `w-[${size}px] h-[${size}px]`;
+function UserAvatar({ photo, name, size = 48, ring }: { photo: string | null; name: string; size?: number; ring?: string }) {
+  const ringClass = ring || '';
   if (photo) {
-    return <img src={photo} alt="" className={`${s} rounded-full object-cover`} style={{ width: size, height: size }} />;
+    return <img src={photo} alt="" style={{ width: size, height: size }} className={`rounded-full object-cover ${ringClass}`} />;
   }
   return (
-    <div className={`rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg`} style={{ width: size, height: size }}>
+    <div className={`rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg ${ringClass}`} style={{ width: size, height: size }}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -43,6 +45,8 @@ export default function ChatScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const uid = user?.uid || '';
+  const { theme, wallpaper } = useChatTheme();
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   const [chats, setChats] = useState<ChatRoom[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -113,8 +117,13 @@ export default function ChatScreen() {
   // ── Chat List ──
   if (!chatId) {
     return (
-      <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)' }}>
-        <div className="max-w-2xl mx-auto p-4">
+      <div className="min-h-screen relative" style={{ background: theme.gradient }}>
+        {wallpaper && (
+          <div className="fixed inset-0 opacity-20">
+            <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center gap-3 mb-6 pt-2">
             <MessageCircle className="w-6 h-6 text-white/80" />
             <h1 className="text-2xl font-bold text-white">Messages</h1>
@@ -139,8 +148,8 @@ export default function ChatScreen() {
                     className="w-full backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4 flex items-center gap-4 hover:bg-white/20 transition-all text-left"
                   >
                     <div className="relative flex-shrink-0">
-                      <UserAvatar photo={other.photo} name={other.name} size={52} />
-                      {online && <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#1a2a6c]" />}
+                      <UserAvatar photo={other.photo} name={other.name} size={52} ring={theme.avatarRing} />
+                      {online && <span className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
@@ -155,6 +164,7 @@ export default function ChatScreen() {
             </div>
           )}
         </div>
+        <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
       </div>
     );
   }
@@ -166,28 +176,38 @@ export default function ChatScreen() {
   const otherTyping = other ? presenceMap[other.uid]?.typingIn === chatId : false;
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)' }}>
+    <div className="flex flex-col h-screen relative" style={{ background: theme.gradient }}>
+      {/* Wallpaper overlay */}
+      {wallpaper && (
+        <div className="absolute inset-0 opacity-15 pointer-events-none">
+          <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+
       {/* Header */}
-      <div className="backdrop-blur-xl bg-black/20 border-b border-white/10 px-4 py-3 flex items-center gap-3 shrink-0">
+      <div className={`relative z-10 ${theme.headerBg} px-4 py-3 flex items-center gap-3 shrink-0`}>
         <button onClick={() => navigate('/chat')} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-white/70" />
+          <ArrowLeft className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`} />
         </button>
         {other && (
           <div className="flex items-center gap-3 flex-1">
             <div className="relative">
-              <UserAvatar photo={other.photo} name={other.name} size={40} />
-              {otherOnline && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#1a2a6c]" />}
+              <UserAvatar photo={other.photo} name={other.name} size={40} ring={theme.avatarRing} />
+              {otherOnline && <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
             </div>
             <div>
-              <p className="text-sm font-bold text-white">{other.name}</p>
-              <p className="text-[11px] text-white/50">{otherOnline ? (otherTyping ? 'Typing...' : 'Online') : 'Offline'}</p>
+              <p className={`text-sm font-bold ${theme.textColor}`}>{other.name}</p>
+              <p className={`text-[11px] ${theme.textColor === 'text-white' ? 'text-white/50' : 'text-gray-400'}`}>{otherOnline ? (otherTyping ? 'Typing...' : 'Online') : 'Offline'}</p>
             </div>
           </div>
         )}
+        <button onClick={() => setShowThemePicker(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+          <Palette className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`} />
+        </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-3">
           {messages.map((msg, idx) => {
             const isOwn = msg.senderUid === uid;
@@ -197,40 +217,29 @@ export default function ChatScreen() {
 
             return (
               <div key={msg.id} className={`relative ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
-                {/* Avatar — only for received messages, positioned outside bubble */}
                 {!isOwn && (
                   <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
                     {showAvatar ? (
-                      <UserAvatar photo={other?.photo || null} name={senderName} size={40} />
+                      <UserAvatar photo={other?.photo || null} name={senderName} size={40} ring={theme.avatarRing} />
                     ) : <div style={{ width: 40 }} />}
                   </div>
                 )}
 
-                {/* Bubble container */}
-                <div className={`relative max-w-[68%] ${isOwn ? 'items-end' : ''}`}>
-                  {/* Sender name for received */}
+                <div className="relative max-w-[68%]">
                   {!isOwn && showAvatar && (
-                    <p className="text-[11px] font-bold text-yellow-300/80 mb-1 ml-3 uppercase tracking-wider">{senderName}</p>
+                    <p className={`text-[11px] font-bold ${theme.senderNameColor} mb-1 ml-3 uppercase tracking-wider`}>{senderName}</p>
                   )}
 
-                  {/* The bubble */}
-                  <div
-                    className={`relative px-4 py-3 ${
-                      isOwn
-                        ? 'bg-black/40 backdrop-blur-md text-white rounded-2xl rounded-br-sm border border-white/5'
-                        : 'bg-black/40 backdrop-blur-md text-white rounded-2xl rounded-bl-sm border border-white/5'
-                    }`}
-                  >
-                    <p className="text-[13px] break-words leading-relaxed">{msg.text}</p>
-                    <p className="text-[10px] mt-1 text-right text-white/30">{formatTime(msg.createdAt)}</p>
+                  <div className={`relative px-4 py-3 ${isOwn ? theme.bubbleOwn : theme.bubbleReceived}`}>
+                    <p className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</p>
+                    <p className={`text-[10px] mt-1 text-right ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
                   </div>
                 </div>
 
-                {/* Avatar — for own messages, positioned outside bubble */}
                 {isOwn && (
                   <div className="flex-shrink-0 self-end" style={{ width: 40, marginLeft: -8, zIndex: 2 }}>
                     {showAvatar ? (
-                      <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} />
+                      <UserAvatar photo={user?.photoURL || null} name={user?.fullName || 'You'} size={40} ring={theme.avatarRing} />
                     ) : <div style={{ width: 40 }} />}
                   </div>
                 )}
@@ -242,7 +251,7 @@ export default function ChatScreen() {
       </div>
 
       {/* Input */}
-      <div className="backdrop-blur-xl bg-black/20 border-t border-white/10 p-3 shrink-0">
+      <div className={`relative z-10 ${theme.inputBg} p-3 shrink-0`}>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -250,18 +259,20 @@ export default function ChatScreen() {
             onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
             placeholder="Type a message..."
-            className="flex-1 bg-white/10 backdrop-blur rounded-full px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-white/20"
+            className={`flex-1 ${theme.inputField} ${theme.textColor}`}
             disabled={sending}
           />
           <button
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || sending}
-            className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </div>
       </div>
+
+      <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
     </div>
   );
 }
