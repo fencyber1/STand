@@ -196,7 +196,7 @@ export default function ChatScreen() {
   // ── Chat List ──
   if (!chatId) {
     return (
-      <div className="min-h-screen relative" style={{ background: theme.gradient }}>
+      <div className="min-h-[100dvh] min-h-screen relative" style={{ background: theme.gradient }}>
         {wallpaper && <div className="fixed inset-0 opacity-20 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
         <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
@@ -252,7 +252,7 @@ export default function ChatScreen() {
   const otherTyping = other ? presenceMap[other.uid]?.typingIn === chatId : false;
 
   return (
-    <div className="flex flex-col h-screen relative" style={{ background: theme.gradient }}>
+    <div className="flex flex-col h-[100dvh] h-screen relative overflow-hidden" style={{ background: theme.gradient }}>
       {wallpaper && <div className="absolute inset-0 opacity-15 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
 
       {/* Header */}
@@ -261,24 +261,24 @@ export default function ChatScreen() {
           <ArrowLeft className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`} />
         </button>
         {other && (
-          <div className="flex items-center gap-3 flex-1">
-            <div className="relative">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="relative shrink-0">
               <UserAvatar photo={other.photo} name={other.name} size={40} ring={theme.avatarRing} />
               {otherOnline && <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${theme.onlineIndicator} rounded-full border-2 border-[#1a2a6c]`} />}
             </div>
-            <div>
-              <p className={`text-sm font-bold ${theme.textColor}`}>{other.name}</p>
+            <div className="min-w-0">
+              <p className={`text-sm font-bold ${theme.textColor} truncate`}>{other.name}</p>
               <p className={`text-[11px] ${theme.textColor === 'text-white' ? 'text-white/50' : 'text-gray-400'}`}>{otherOnline ? (otherTyping ? 'Typing...' : 'Online') : 'Offline'}</p>
             </div>
           </div>
         )}
-        <button onClick={() => setShowThemePicker(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+        <button onClick={() => setShowThemePicker(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors shrink-0">
           <Palette className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`} />
         </button>
       </div>
 
       {/* Messages */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-4 py-4" onClick={() => { if (showEmoji) setShowEmoji(false); }}>
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-4" onClick={() => { if (showEmoji) setShowEmoji(false); }}>
         <div className="space-y-3">
           {messages.map((msg, idx) => {
             const isOwn = msg.senderUid === uid;
@@ -324,13 +324,13 @@ export default function ChatScreen() {
 
       {/* Emoji Picker */}
       {showEmoji && (
-        <div className="relative z-20 px-3 pb-1">
+        <div className="absolute bottom-[60px] left-0 right-0 z-30 px-3">
           <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />
         </div>
       )}
 
       {/* Input */}
-      <div className={`relative z-10 ${theme.inputBg} p-3 shrink-0`}>
+      <div className={`relative z-10 ${theme.inputBg} px-3 py-2 shrink-0 safe-area-bottom`}>
         <div className="flex items-center gap-2">
           <button onClick={() => { setShowEmoji(!showEmoji); setShowAttach(false); }} className={`p-2 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>
             <Smile className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/60' : 'text-gray-400'}`} />

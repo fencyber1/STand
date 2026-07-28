@@ -27,3 +27,13 @@ img.emoji.large {
   width: 1.4em;
   margin: 0;
 }
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh;
+  }
+}

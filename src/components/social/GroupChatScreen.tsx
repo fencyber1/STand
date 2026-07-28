@@ -216,7 +216,7 @@ export default function GroupChatScreen() {
   // ── Group List ──
   if (!groupId) {
     return (
-      <div className="min-h-screen relative" style={{ background: theme.gradient }}>
+      <div className="min-h-[100dvh] min-h-screen relative" style={{ background: theme.gradient }}>
         {wallpaper && <div className="fixed inset-0 opacity-20 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
         <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
@@ -297,10 +297,10 @@ export default function GroupChatScreen() {
   if (!currentGroup) return <div className="flex items-center justify-center h-screen" style={{ background: theme.gradient }}><Loader2 className="w-8 h-8 text-white/60 animate-spin" /></div>;
 
   return (
-    <div className="flex h-screen relative" style={{ background: theme.gradient }}>
+    <div className="flex h-[100dvh] h-screen relative overflow-hidden" style={{ background: theme.gradient }}>
       {wallpaper && <div className="absolute inset-0 opacity-15 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
 
-      <div className="relative z-10 flex flex-col flex-1 min-w-0">
+      <div className="relative z-10 flex flex-col flex-1 min-w-0 min-h-0">
         {/* Header */}
         <div className={`${theme.headerBg} px-4 py-3 flex items-center gap-3 shrink-0`}>
           <button onClick={() => navigate('/groups-chat')} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -322,7 +322,7 @@ export default function GroupChatScreen() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4" onClick={() => { if (showEmoji) setShowEmoji(false); }}>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4" onClick={() => { if (showEmoji) setShowEmoji(false); }}>
           <div className="space-y-3">
             {messages.map((msg, idx) => {
               const isOwn = msg.senderUid === uid;
@@ -368,13 +368,13 @@ export default function GroupChatScreen() {
 
         {/* Emoji Picker */}
         {showEmoji && (
-          <div className="relative z-20 px-3 pb-1">
+          <div className="absolute bottom-[60px] left-0 right-0 z-30 px-3">
             <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />
           </div>
         )}
 
         {/* Input */}
-        <div className={`${theme.inputBg} p-3 shrink-0`}>
+        <div className={`${theme.inputBg} px-3 py-2 shrink-0 safe-area-bottom`}>
           <div className="flex items-center gap-2">
             <button onClick={() => { setShowEmoji(!showEmoji); setShowAttach(false); }} className={`p-2 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>
               <Smile className={`w-5 h-5 ${tc('text-gray-400', 'text-white/60')}`} />
