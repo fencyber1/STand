@@ -130,7 +130,15 @@ export async function generateQuestions(params: {
     ? `\nAll questions must be difficulty level: ${params.difficulty}.`
     : '';
 
-  const prompt = `Generate exactly ${params.count} exam questions about "${params.topic}" for ${params.sector} at ${params.level} level.
+  const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${params.count} exam questions.
+
+STRICT RULES:
+- Every question MUST be directly about the ${params.sector} subject. Do NOT include questions from any other subject or course.
+- The topic is "${params.topic}" — all questions must relate to this topic WITHIN the ${params.sector} curriculum.
+- The level is ${params.level} — questions must match this academic level.
+- Each question's "subject" field MUST be exactly "${params.sector}".
+- Do NOT generate questions about topics outside ${params.sector}, even if they seem related.
+
 Format: ${questionFormat}${difficultyLine}
 
 Return ONLY a JSON array. Each object:
