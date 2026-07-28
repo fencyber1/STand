@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
 import { storage } from '../services/storage';
+import { loadUserDataFromFirestore, saveUserDataToFirestore, scheduleSync } from '../services/firestoreSync';
 
 interface AuthUser {
   fullName: string;
@@ -50,18 +51,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = mapUser(firebaseUser);
-        setUser(mapped);
         storage.setActiveUserId(firebaseUser.uid);
         storage.setUser(mapped);
         if (!storage.getToken()) {
           storage.setToken('firebase-' + firebaseUser.uid);
         }
+
+        storage.setOnDataChange(() => {
+          scheduleSync(firebaseUser.uid, {
+            history: storage.getHistory(),
+            bookmarks: storage.getBookmarks(),
+            studyPlans: storage.getStudyPlans(),
+            questionTimings: storage.getQuestionTimings(),
+            achievements: storage.getAchievements(),
+            questionNotes: storage.getAllQuestionNotes(),
+            importedQuestions: storage.getImportedQuestions(),
+            profilePhoto: storage.getProfilePhoto(),
+            displayName: storage.getDisplayName(),
+          });
+        });
+
+        const remoteData = await loadUserDataFromFirestore(firebaseUser.uid);
+        if (remoteData) {
+          const localData = {
+            history: storage.getHistory(),
+            bookmarks: storage.getBookmarks(),
+            studyPlans: storage.getStudyPlans(),
+            questionTimings: storage.getQuestionTimings(),
+            achievements: storage.getAchievements(),
+            questionNotes: storage.getAllQuestionNotes(),
+            importedQuestions: storage.getImportedQuestions(),
+            profilePhoto: storage.getProfilePhoto(),
+            displayName: storage.getDisplayName(),
+          };
+
+          const merged = {
+            history: localData.history.length > 0 ? localData.history : (remoteData.history || []),
+            bookmarks: localData.bookmarks.length > 0 ? localData.bookmarks : (remoteData.bookmarks || []),
+            studyPlans: localData.studyPlans.length > 0 ? localData.studyPlans : (remoteData.studyPlans || []),
+            questionTimings: localData.questionTimings.length > 0 ? localData.questionTimings : (remoteData.questionTimings || []),
+            achievements: localData.achievements.length > 0 ? localData.achievements : (remoteData.achievements || []),
+            questionNotes: Object.keys(localData.questionNotes).length > 0 ? localData.questionNotes : (remoteData.questionNotes || {}),
+            importedQuestions: localData.importedQuestions.length > 0 ? localData.importedQuestions : (remoteData.importedQuestions || []),
+            profilePhoto: localData.profilePhoto || remoteData.profilePhoto || null,
+            displayName: localData.displayName || remoteData.displayName || null,
+          };
+
+          storage.setHistory(merged.history);
+          storage.setBookmarks(merged.bookmarks);
+          storage.setStudyPlans(merged.studyPlans);
+          storage.setQuestionTimings(merged.questionTimings);
+          storage.setAchievements(merged.achievements);
+          storage.setAllQuestionNotes(merged.questionNotes);
+          storage.setImportedQuestions(merged.importedQuestions);
+          if (merged.profilePhoto) storage.setProfilePhoto(merged.profilePhoto);
+          if (merged.displayName) storage.setDisplayName(merged.displayName);
+        }
+
+        setUser(mapped);
       } else {
         setUser(null);
         storage.setActiveUserId(null);
+        storage.setOnDataChange(null);
         storage.removeToken();
         storage.removeUser();
       }
@@ -121,6 +175,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      await saveUserDataToFirestore(uid, {
+        history: storage.getHistory(),
+        bookmarks: storage.getBookmarks(),
+        studyPlans: storage.getStudyPlans(),
+        questionTimings: storage.getQuestionTimings(),
+        achievements: storage.getAchievements(),
+        questionNotes: storage.getAllQuestionNotes(),
+        importedQuestions: storage.getImportedQuestions(),
+        profilePhoto: storage.getProfilePhoto(),
+        displayName: storage.getDisplayName(),
+      });
+    }
     await signOut(auth);
   }, []);
 

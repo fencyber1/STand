@@ -5,9 +5,14 @@ const USER_KEY = 'stand_user';
 const USERS_KEY = 'stand_users';
 
 let _userId: string | null = null;
+let _onDataChange: (() => void) | null = null;
 
 function k(base: string): string {
   return _userId ? `${base}_${_userId}` : base;
+}
+
+function notifyChange(): void {
+  if (_onDataChange) _onDataChange();
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -26,6 +31,10 @@ function writeJson(key: string, value: any): void {
 export const storage = {
   setActiveUserId(id: string | null): void {
     _userId = id;
+  },
+
+  setOnDataChange(callback: (() => void) | null): void {
+    _onDataChange = callback;
   },
 
   getActiveUserId(): string | null {
@@ -79,14 +88,24 @@ export const storage = {
     const history = this.getHistory();
     history.push(session);
     writeJson('stand_history', history);
+    notifyChange();
   },
 
   clearHistory(): void {
     localStorage.removeItem(k('stand_history'));
+    notifyChange();
+  },
+
+  setHistory(data: SessionData[]): void {
+    writeJson('stand_history', data);
   },
 
   getStudyPlans(): any[] {
     return readJson('stand_study_plans', []);
+  },
+
+  setStudyPlans(data: any[]): void {
+    writeJson('stand_study_plans', data);
   },
 
   saveStudyPlan(plan: any): void {
@@ -98,11 +117,13 @@ export const storage = {
       plans.push(plan);
     }
     writeJson('stand_study_plans', plans);
+    notifyChange();
   },
 
   deleteStudyPlan(id: string): void {
     const plans = this.getStudyPlans().filter((p: any) => p.id !== id);
     writeJson('stand_study_plans', plans);
+    notifyChange();
   },
 
   getBookmarks(): Question[] {
@@ -115,16 +136,22 @@ export const storage = {
     if (index >= 0) {
       bookmarks.splice(index, 1);
       writeJson('stand_bookmarks', bookmarks);
+      notifyChange();
       return false;
     } else {
       bookmarks.push(question);
       writeJson('stand_bookmarks', bookmarks);
+      notifyChange();
       return true;
     }
   },
 
   isBookmarked(questionId: string): boolean {
     return this.getBookmarks().some((b) => b.id === questionId);
+  },
+
+  setBookmarks(data: Question[]): void {
+    writeJson('stand_bookmarks', data);
   },
 
   getQuestionTimings(): QuestionTiming[] {
@@ -143,6 +170,11 @@ export const storage = {
       }
     }
     writeJson('stand_question_timings', merged);
+    notifyChange();
+  },
+
+  setQuestionTimings(data: QuestionTiming[]): void {
+    writeJson('stand_question_timings', data);
   },
 
   getAchievements(): StoredAchievement[] {
@@ -154,7 +186,12 @@ export const storage = {
     if (achievements.some((a) => a.id === id)) return false;
     achievements.push({ id, unlockedAt: new Date().toISOString() });
     writeJson('stand_achievements', achievements);
+    notifyChange();
     return true;
+  },
+
+  setAchievements(data: StoredAchievement[]): void {
+    writeJson('stand_achievements', data);
   },
 
   isAchievementUnlocked(id: string): boolean {
@@ -174,10 +211,15 @@ export const storage = {
       delete notes[questionId];
     }
     writeJson('stand_question_notes', notes);
+    notifyChange();
   },
 
   getAllQuestionNotes(): Record<string, string> {
     return readJson<Record<string, string>>('stand_question_notes', {});
+  },
+
+  setAllQuestionNotes(data: Record<string, string>): void {
+    writeJson('stand_question_notes', data);
   },
 
   getImportedQuestions(): Question[] {
@@ -186,6 +228,11 @@ export const storage = {
 
   saveImportedQuestions(questions: Question[]): void {
     writeJson('stand_imported_questions', questions);
+    notifyChange();
+  },
+
+  setImportedQuestions(data: Question[]): void {
+    writeJson('stand_imported_questions', data);
   },
 
   getProfilePhoto(): string | null {
@@ -202,6 +249,7 @@ export const storage = {
     } else {
       localStorage.removeItem(k('stand_profile_photo'));
     }
+    notifyChange();
   },
 
   getDisplayName(): string | null {
@@ -214,5 +262,6 @@ export const storage = {
 
   setDisplayName(name: string): void {
     localStorage.setItem(k('stand_display_name'), name);
+    notifyChange();
   },
 };
