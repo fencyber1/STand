@@ -14,6 +14,7 @@ import type { ChatGroup, Friend } from '../../types';
 import {
   ArrowLeft, Camera, Save, Crown, Shield, UserMinus,
   Users, Loader2, CheckCircle, AlertCircle, Lock, MessageCircle, X, UserPlus,
+  Eye, EyeOff, Settings,
 } from 'lucide-react';
 
 export default function GroupSettingsScreen() {
@@ -34,7 +35,8 @@ export default function GroupSettingsScreen() {
   const [groupDesc, setGroupDesc] = useState('');
   const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
   const [messagePerm, setMessagePerm] = useState<'all' | 'admins'>('all');
-  const [expanded, setExpanded] = useState<'profile' | 'permissions' | 'addMember' | null>('profile');
+  const [editProfile, setEditProfile] = useState<'all' | 'admins'>('all');
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export default function GroupSettingsScreen() {
         setGroupDesc(g.description || '');
         setGroupPhoto(g.photoURL || null);
         setMessagePerm(g.settings?.messagePermission || 'all');
+        setEditProfile(g.settings?.editProfile || 'all');
       }
       setLoading(false);
     });
@@ -62,6 +65,7 @@ export default function GroupSettingsScreen() {
   const isOwner = group?.createdBy === uid;
   const myRole = group?.members.find((m) => m.uid === uid)?.role;
   const isAdmin = isOwner || myRole === 'admin';
+  const canEditProfile = isAdmin || group?.settings?.editProfile === 'all';
   const memberUids = group?.members.map((m) => m.uid) || [];
   const nonMembers = friends.filter((f) => !memberUids.includes(f.uid));
 
@@ -99,6 +103,18 @@ export default function GroupSettingsScreen() {
       setSuccess('Permissions updated');
       setTimeout(() => setSuccess(''), 2000);
     } catch { setError('Failed to update permissions'); }
+    setSaving(false);
+  };
+
+  const handleSaveEditProfile = async () => {
+    if (!groupId) return;
+    setSaving(true);
+    setError('');
+    try {
+      await updateGroupSettings(groupId, { editProfile });
+      setSuccess('Profile edit permission updated');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch { setError('Failed to update setting'); }
     setSaving(false);
   };
 
@@ -140,10 +156,10 @@ export default function GroupSettingsScreen() {
     );
   }
 
-  if (!group || !isAdmin) {
+  if (!group) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-900 text-white/40">
-        Group not found or no access.
+        Group not found.
       </div>
     );
   }
@@ -156,7 +172,9 @@ export default function GroupSettingsScreen() {
           <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-5 h-5 text-white/70" />
           </button>
-          <h1 className="text-xl font-bold text-white">Group Settings</h1>
+          <h1 className="text-xl font-bold text-white">
+            {isAdmin ? 'Group Settings' : 'Group Info'}
+          </h1>
         </div>
 
         {/* Alerts */}
@@ -187,13 +205,17 @@ export default function GroupSettingsScreen() {
                     {groupName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="absolute bottom-0 right-0 p-1.5 bg-primary-600 rounded-full text-white hover:bg-primary-700 transition shadow-lg"
-                >
-                  <Camera size={12} />
-                </button>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                {canEditProfile && (
+                  <>
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="absolute bottom-0 right-0 p-1.5 bg-primary-600 rounded-full text-white hover:bg-primary-700 transition shadow-lg"
+                    >
+                      <Camera size={12} />
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  </>
+                )}
               </div>
               <div className="flex-1 min-w-0 pb-1">
                 <h2 className="text-lg font-bold text-white truncate">{group.name}</h2>
@@ -203,42 +225,52 @@ export default function GroupSettingsScreen() {
             {group.description && (
               <p className="text-sm text-white/60 mb-4 leading-relaxed">{group.description}</p>
             )}
-            <button
-              onClick={() => setExpanded(expanded === 'profile' ? null : 'profile')}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-white/70 font-medium"
-            >
-              <span>Edit Group Profile</span>
-              <span className="text-white/30">{expanded === 'profile' ? '−' : '+'}</span>
-            </button>
-            {expanded === 'profile' && (
-              <div className="mt-3 space-y-3">
-                <input
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Group name"
-                  className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50"
-                />
-                <textarea
-                  value={groupDesc}
-                  onChange={(e) => setGroupDesc(e.target.value)}
-                  placeholder="Description (optional)"
-                  rows={2}
-                  className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50 resize-none"
-                />
+
+            {/* Edit Profile — admin or allowed members */}
+            {canEditProfile && (
+              <>
                 <button
-                  onClick={handleSaveProfile}
-                  disabled={saving || !groupName.trim()}
-                  className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2"
+                  onClick={() => setExpanded(expanded === 'profile' ? null : 'profile')}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-white/70 font-medium"
                 >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  Save Profile
+                  <span>Edit Group Profile</span>
+                  <span className="text-white/30">{expanded === 'profile' ? '−' : '+'}</span>
                 </button>
-              </div>
+                {expanded === 'profile' && (
+                  <div className="mt-3 space-y-3">
+                    <input
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      placeholder="Group name"
+                      className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50"
+                    />
+                    <textarea
+                      value={groupDesc}
+                      onChange={(e) => setGroupDesc(e.target.value)}
+                      placeholder="Description (optional)"
+                      rows={2}
+                      className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50 resize-none"
+                    />
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={saving || !groupName.trim()}
+                      className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2"
+                    >
+                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      Save Profile
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!canEditProfile && (
+              <p className="text-xs text-white/30 italic">Only admins can edit the group profile</p>
             )}
           </div>
         </div>
 
-        {/* Members */}
+        {/* Members — visible to everyone */}
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
@@ -268,7 +300,8 @@ export default function GroupSettingsScreen() {
                     </div>
                     <p className="text-[11px] text-white/30">{isCreator ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Member'}</p>
                   </div>
-                  {!isMe && !isCreator && (
+                  {/* Admin actions — only visible to admins */}
+                  {isAdmin && !isMe && !isCreator && (
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleToggleRole(m.uid, m.role)}
@@ -291,94 +324,157 @@ export default function GroupSettingsScreen() {
             })}
           </div>
 
-          {/* Add Member */}
-          <button
-            onClick={() => setExpanded(expanded === 'addMember' ? null : 'addMember')}
-            className="w-full mt-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-primary-400 font-medium flex items-center justify-center gap-2"
-          >
-            <UserPlus size={14} /> Add Member
-          </button>
-          {expanded === 'addMember' && (
-            <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
-              {nonMembers.length === 0 ? (
-                <p className="text-xs text-white/30 text-center py-3">All friends are already in this group</p>
-              ) : (
-                nonMembers.map((f) => (
-                  <div key={f.uid} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition">
-                    {f.photoURL ? (
-                      <img src={f.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                        {f.displayName.charAt(0).toUpperCase()}
+          {/* Add Member — admin only */}
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => setExpanded(expanded === 'addMember' ? null : 'addMember')}
+                className="w-full mt-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-primary-400 font-medium flex items-center justify-center gap-2"
+              >
+                <UserPlus size={14} /> Add Member
+              </button>
+              {expanded === 'addMember' && (
+                <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                  {nonMembers.length === 0 ? (
+                    <p className="text-xs text-white/30 text-center py-3">All friends are already in this group</p>
+                  ) : (
+                    nonMembers.map((f) => (
+                      <div key={f.uid} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition">
+                        {f.photoURL ? (
+                          <img src={f.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                            {f.displayName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="flex-1 text-sm text-white truncate">{f.displayName}</span>
+                        <button
+                          onClick={() => handleAddMember(f)}
+                          disabled={addingMember}
+                          className="px-3 py-1 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                        >
+                          Add
+                        </button>
                       </div>
-                    )}
-                    <span className="flex-1 text-sm text-white truncate">{f.displayName}</span>
-                    <button
-                      onClick={() => handleAddMember(f)}
-                      disabled={addingMember}
-                      className="px-3 py-1 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))
+                    ))
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
-        {/* Permissions */}
-        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
-          <button
-            onClick={() => setExpanded(expanded === 'permissions' ? null : 'permissions')}
-            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition"
-          >
-            <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
-              <Lock size={14} /> Message Permissions
-            </h3>
-            <span className="text-white/30 text-xs">{expanded === 'permissions' ? '−' : '+'}</span>
-          </button>
-          {expanded === 'permissions' && (
-            <div className="px-4 pb-4 space-y-2">
+        {/* ─── Admin-Only Settings ─── */}
+        {isAdmin && (
+          <>
+            {/* Message Permissions */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
               <button
-                onClick={() => setMessagePerm('all')}
-                className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
-                  messagePerm === 'all'
-                    ? 'bg-primary-500/20 border border-primary-500/40'
-                    : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                }`}
+                onClick={() => setExpanded(expanded === 'permissions' ? null : 'permissions')}
+                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition"
               >
-                <MessageCircle size={18} className={messagePerm === 'all' ? 'text-primary-400' : 'text-white/30'} />
-                <div>
-                  <p className="text-sm font-medium text-white">All Members</p>
-                  <p className="text-[11px] text-white/40">Anyone can send messages</p>
+                <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
+                  <Lock size={14} /> Message Permissions
+                </h3>
+                <span className="text-white/30 text-xs">{expanded === 'permissions' ? '−' : '+'}</span>
+              </button>
+              {expanded === 'permissions' && (
+                <div className="px-4 pb-4 space-y-2">
+                  <button
+                    onClick={() => setMessagePerm('all')}
+                    className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
+                      messagePerm === 'all'
+                        ? 'bg-primary-500/20 border border-primary-500/40'
+                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <MessageCircle size={18} className={messagePerm === 'all' ? 'text-primary-400' : 'text-white/30'} />
+                    <div>
+                      <p className="text-sm font-medium text-white">All Members</p>
+                      <p className="text-[11px] text-white/40">Anyone can send messages</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setMessagePerm('admins')}
+                    className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
+                      messagePerm === 'admins'
+                        ? 'bg-primary-500/20 border border-primary-500/40'
+                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <Shield size={18} className={messagePerm === 'admins' ? 'text-primary-400' : 'text-white/30'} />
+                    <div>
+                      <p className="text-sm font-medium text-white">Admins Only</p>
+                      <p className="text-[11px] text-white/40">Only admins can send messages</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleSavePermissions}
+                    disabled={saving}
+                    className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2 mt-2"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save
+                  </button>
                 </div>
-              </button>
-              <button
-                onClick={() => setMessagePerm('admins')}
-                className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
-                  messagePerm === 'admins'
-                    ? 'bg-primary-500/20 border border-primary-500/40'
-                    : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <Shield size={18} className={messagePerm === 'admins' ? 'text-primary-400' : 'text-white/30'} />
-                <div>
-                  <p className="text-sm font-medium text-white">Admins Only</p>
-                  <p className="text-[11px] text-white/40">Only admins can send messages</p>
-                </div>
-              </button>
-              <button
-                onClick={handleSavePermissions}
-                disabled={saving}
-                className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2 mt-2"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                Save Permissions
-              </button>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* Edit Profile Permission */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
+              <button
+                onClick={() => setExpanded(expanded === 'editPerm' ? null : 'editPerm')}
+                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition"
+              >
+                <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
+                  <Settings size={14} /> Profile Edit Permission
+                </h3>
+                <span className="text-white/30 text-xs">{expanded === 'editPerm' ? '−' : '+'}</span>
+              </button>
+              {expanded === 'editPerm' && (
+                <div className="px-4 pb-4 space-y-2">
+                  <p className="text-xs text-white/40 mb-2">Choose who can edit the group name, photo, and description</p>
+                  <button
+                    onClick={() => setEditProfile('all')}
+                    className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
+                      editProfile === 'all'
+                        ? 'bg-primary-500/20 border border-primary-500/40'
+                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <Eye size={18} className={editProfile === 'all' ? 'text-primary-400' : 'text-white/30'} />
+                    <div>
+                      <p className="text-sm font-medium text-white">All Members</p>
+                      <p className="text-[11px] text-white/40">Anyone can edit the group profile</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setEditProfile('admins')}
+                    className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
+                      editProfile === 'admins'
+                        ? 'bg-primary-500/20 border border-primary-500/40'
+                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <EyeOff size={18} className={editProfile === 'admins' ? 'text-primary-400' : 'text-white/30'} />
+                    <div>
+                      <p className="text-sm font-medium text-white">Admins Only</p>
+                      <p className="text-[11px] text-white/40">Only admins can edit the group profile</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleSaveEditProfile}
+                    disabled={saving}
+                    className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2 mt-2"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

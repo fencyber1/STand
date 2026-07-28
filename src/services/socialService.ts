@@ -520,7 +520,7 @@ export async function createChatGroup(creator: { uid: string; name: string; phot
     members,
     memberUids,
     createdBy: creator.uid,
-    settings: { messagePermission: 'all' },
+    settings: { messagePermission: 'all', editProfile: 'all' },
     lastMessage: '',
     lastMessageBy: '',
     lastMessageAt: ts(),
@@ -554,7 +554,7 @@ export async function updateGroupProfile(groupId: string, updates: { name?: stri
   await updateDoc(doc(db, 'chatGroups', groupId), sanitize(updates));
 }
 
-export async function updateGroupSettings(groupId: string, settings: { messagePermission?: 'all' | 'admins' }): Promise<void> {
+export async function updateGroupSettings(groupId: string, settings: { messagePermission?: 'all' | 'admins'; editProfile?: 'all' | 'admins' }): Promise<void> {
   const snap = await getDoc(doc(db, 'chatGroups', groupId));
   if (!snap.exists()) return;
   const current = snap.data().settings || { messagePermission: 'all' };
@@ -582,7 +582,7 @@ export function subscribeToUserGroups(uid: string, cb: (groups: ChatGroup[]) => 
         members: data.members || [],
         memberUids: data.memberUids || [],
         createdBy: data.createdBy,
-        settings: data.settings || { messagePermission: 'all' },
+        settings: data.settings || { messagePermission: 'all', editProfile: 'all' },
         lastMessage: data.lastMessage || '',
         lastMessageBy: data.lastMessageBy || '',
         lastMessageAt: data.lastMessageAt || '',

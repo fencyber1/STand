@@ -290,6 +290,7 @@ export interface ChatGroup {
   createdBy: string;
   settings: {
     messagePermission: 'all' | 'admins';
+    editProfile: 'all' | 'admins';
   };
   lastMessage: string;
   lastMessageBy: string;
