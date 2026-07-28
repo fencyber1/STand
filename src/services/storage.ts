@@ -266,7 +266,7 @@ export const storage = {
   },
 
   getChatThemeId(): string {
-    return localStorage.getItem(k('stand_chat_theme')) || 'ocean';
+    return localStorage.getItem(k('stand_chat_theme')) || 'default';
   },
 
   setChatThemeId(id: string): void {

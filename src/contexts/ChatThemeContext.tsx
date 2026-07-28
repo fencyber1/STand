@@ -4,6 +4,23 @@ import { storage } from '../services/storage';
 
 const PRESET_THEMES: ChatTheme[] = [
   {
+    id: 'default',
+    name: 'Default',
+    gradient: 'linear-gradient(135deg, #111827 0%, #1f2937 50%, #111827 100%)',
+    bubbleOwn: 'bg-blue-600/80 backdrop-blur-md text-white rounded-2xl rounded-br-sm border border-blue-500/20',
+    bubbleReceived: 'bg-white/10 backdrop-blur-md text-white rounded-2xl rounded-bl-sm border border-white/5',
+    senderNameColor: 'text-blue-300/80',
+    headerBg: 'backdrop-blur-xl bg-gray-900/80 border-b border-white/5',
+    inputBg: 'backdrop-blur-xl bg-gray-900/80 border-t border-white/5',
+    inputField: 'bg-white/10 backdrop-blur rounded-full px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-blue-500/30',
+    sendButton: 'bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/30',
+    sendButtonShadow: 'shadow-blue-500/30',
+    textColor: 'text-white',
+    timestampColor: 'text-white/30',
+    onlineIndicator: 'bg-green-500',
+    avatarRing: 'ring-2 ring-white/10',
+  },
+  {
     id: 'ocean',
     name: 'Ocean',
     gradient: 'linear-gradient(135deg, #1a2a6c 0%, #2a4a9c 40%, #3a6abc 70%, #4a8adc 100%)',
@@ -153,7 +170,10 @@ interface ChatThemeContextType {
 const ChatThemeContext = createContext<ChatThemeContextType | undefined>(undefined);
 
 export function ChatThemeProvider({ children }: { children: ReactNode }) {
-  const [currentId, setCurrentId] = useState(storage.getChatThemeId());
+  const [currentId, setCurrentId] = useState(() => {
+    const stored = storage.getChatThemeId();
+    return stored === 'ocean' ? 'default' : stored;
+  });
   const [wallpaper, setWallpaperState] = useState<string | null>(storage.getChatWallpaper());
 
   const theme = PRESET_THEMES.find((t) => t.id === currentId) || PRESET_THEMES[0];
