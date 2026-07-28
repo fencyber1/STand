@@ -182,3 +182,50 @@ Write only the fact itself, 1-2 sentences max. No preamble, no "Did you know", n
 
   return await callAI(prompt);
 }
+
+export async function getDocumentQuestions(params: {
+  documentText: string;
+  questionCount: number;
+  questionType: string;
+  difficulty?: string;
+}): Promise<{ questions: Question[] }> {
+  const typeMap: Record<string, string> = {
+    MCQ: 'multiple choice with 4 options',
+    Theory: 'open-ended theory questions',
+    Fill: 'fill-in-the-blank questions',
+    True: 'true or false questions',
+    Mixed: 'a mix of MCQ, theory, and true/false',
+  };
+
+  const questionFormat = typeMap[params.questionType] || typeMap['MCQ'];
+  const difficultyLine = params.difficulty && params.difficulty !== 'all'
+    ? `\nAll questions must be difficulty level: ${params.difficulty}.`
+    : '';
+
+  const truncated = params.documentText.slice(0, 6000);
+
+  const prompt = `You are an exam question generator. Generate exactly ${params.questionCount} exam questions based ONLY on the content of the document below. Do NOT use any outside knowledge — every question must be directly answerable from the document text.
+
+Format: ${questionFormat}${difficultyLine}
+
+DOCUMENT CONTENT:
+---
+${truncated}
+---
+
+Return ONLY a JSON array. Each object:
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"From uploaded document"}
+
+For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
+For Theory: options can be omitted, correctAnswer is a model answer.
+No markdown. No text outside the JSON array.`;
+
+  const raw = await callAI(prompt);
+  const questions = parseQuestions(raw);
+
+  if (questions.length === 0) {
+    throw new Error('No questions were generated from the document. Please try again.');
+  }
+
+  return { questions };
+}

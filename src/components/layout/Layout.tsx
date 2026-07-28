@@ -21,6 +21,7 @@ import {
   ArrowRightLeft,
   Users,
   Swords,
+  FileText,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,6 +31,7 @@ import Logo from '../landing/Logo';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/practice', label: 'Practice', icon: GraduationCap },
+  { to: '/doc-quiz', label: 'Document Quiz', icon: FileText },
   { to: '/exam-setup', label: 'Exam Sim', icon: Shield },
   { to: '/history', label: 'History', icon: Clock },
   { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },

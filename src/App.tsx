@@ -23,6 +23,7 @@ import SessionCompareScreen from './components/practice/SessionCompareScreen';
 import StudyGroupsScreen from './components/groups/StudyGroupsScreen';
 import MultiplayerLobbyScreen from './components/multiplayer/MultiplayerLobbyScreen';
 import MultiplayerGameScreen from './components/multiplayer/MultiplayerGameScreen';
+import DocumentQuizScreen from './components/practice/DocumentQuizScreen';
 
 function ProtectedLayout() {
   const { isLoggedIn } = useAuth();
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/" element={<ProtectedLayout />}>
           <Route index element={<DashboardScreen />} />
           <Route path="practice" element={<HomeScreen />} />
+          <Route path="doc-quiz" element={<DocumentQuizScreen />} />
           <Route path="quiz" element={<QuizScreen />} />
           <Route path="exam-setup" element={<ExamSetupScreen />} />
           <Route path="exam" element={<ExamSimScreen />} />
