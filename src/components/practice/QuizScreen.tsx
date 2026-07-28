@@ -102,7 +102,10 @@ export default function QuizScreen() {
       const correctNorm = normalize(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
       let score: number;
       let isCorrect: boolean;
-      if (userNorm === correctNorm) {
+      if (!userNorm) {
+        score = 0;
+        isCorrect = false;
+      } else if (userNorm === correctNorm) {
         score = 100;
         isCorrect = true;
       } else if (userNorm.includes(correctNorm)) {
@@ -570,7 +573,7 @@ export default function QuizScreen() {
           {!showResult ? (
             <button
               onClick={handleSubmit}
-              disabled={(current.type === 'MCQ' || current.type === 'TrueFalse') && !selectedAnswer}
+              disabled={((current.type === 'MCQ' || current.type === 'TrueFalse') && !selectedAnswer) || (current.type === 'Theory' && !textAnswer.trim())}
               className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />
