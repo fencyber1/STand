@@ -16,8 +16,7 @@ import {
 import type { Post, PostComment } from '../../types';
 import {
   Heart, MessageCircle, Send, Trash2, Plus, X, Loader2,
-  Image as ImageIcon, BookOpen, ChevronDown, User,
-  Repeat2, Share2, Bookmark, MoreHorizontal, Hash, Film,
+  BookOpen, User, Repeat2, Share2, Bookmark, MoreHorizontal, Hash,
 } from 'lucide-react';
 
 function timeAgo(dateStr: string): string {
@@ -38,29 +37,6 @@ function formatCaption(text: string) {
       ? <span key={i} className="text-indigo-500 dark:text-indigo-400 hover:underline cursor-pointer">{part}</span>
       : <span key={i}>{part}</span>
   );
-}
-
-function compressImage(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 800;
-        let w = img.width;
-        let h = img.height;
-        if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
-        else { if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; } }
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.75));
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
 }
 
 function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, comments, expandedComments, toggleComments, commentInputs, setCommentInputs, submittingComment, getAvatar }: {
@@ -111,29 +87,10 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
         </div>
       )}
 
-      {/* Media */}
-      {post.mediaUrl && (
-        <div className="relative bg-gray-100 dark:bg-black">
-          {post.type === 'image' ? (
-            <img src={post.mediaUrl} alt="" className="w-full aspect-square object-cover" />
-          ) : (
-            <div className="relative">
-              <video src={post.mediaUrl} className="w-full aspect-square object-cover" controls playsInline />
-              <div className="absolute top-3 right-3 px-2 py-0.5 bg-black/60 rounded-full flex items-center gap-1">
-                <Film size={10} className="text-white" />
-                <span className="text-[10px] text-white font-medium">VIDEO</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* No media — text-only post */}
-      {!post.mediaUrl && (
-        <div className="px-4 pb-3">
-          <p className="text-[15px] text-gray-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
-        </div>
-      )}
+      {/* Content */}
+      <div className="px-4 pb-3">
+        <p className="text-[15px] text-gray-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+      </div>
 
       {/* Action bar */}
       <div className="px-4 py-2.5 flex items-center gap-1">
@@ -243,7 +200,6 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
   const [postText, setPostText] = useState('');
-  const [postMedia, setPostMedia] = useState<{ url: string; type: 'image' | 'video'; mediaType: string } | null>(null);
   const [posting, setPosting] = useState(false);
 
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
@@ -254,8 +210,6 @@ export default function FeedScreen() {
   const [repostCaption, setRepostCaption] = useState('');
 
   const commentUnsubs = useRef<Record<string, () => void>>({});
-  const fileRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -284,29 +238,15 @@ export default function FeedScreen() {
     setExpandedComments((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }, []);
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return; }
-    const compressed = await compressImage(file);
-    setPostMedia({ url: compressed, type: 'image', mediaType: 'image/jpeg' });
-  };
-
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) { alert('Video must be under 20MB'); return; }
-    const reader = new FileReader();
-    reader.onload = () => setPostMedia({ url: reader.result as string, type: 'video', mediaType: file.type });
-    reader.readAsDataURL(file);
-  };
-
   const handleCreatePost = async () => {
-    if ((!postText.trim() && !postMedia) || !uid) return;
+    if (!postText.trim() || !uid) return;
     setPosting(true);
     try {
-      await createPost({ uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, postText.trim(), postMedia || undefined);
-      setPostText(''); setPostMedia(null); setShowComposer(false);
+      await createPost({ uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, postText.trim());
+      setPostText(''); setShowComposer(false);
+    } catch (err) {
+      console.error('Failed to create post:', err);
+      alert('Failed to post. Please try again.');
     } finally { setPosting(false); }
   };
 
@@ -370,11 +310,11 @@ export default function FeedScreen() {
 
       {/* Composer modal */}
       {showComposer && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => { setShowComposer(false); setPostMedia(null); }}>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowComposer(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-base font-bold text-gray-800 dark:text-white">New Post</h3>
-              <button onClick={() => { setShowComposer(false); setPostMedia(null); }} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition">
+              <button onClick={() => setShowComposer(false)} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
@@ -385,34 +325,14 @@ export default function FeedScreen() {
                   value={postText}
                   onChange={(e) => setPostText(e.target.value)}
                   placeholder="What's on your mind? Use #hashtags"
-                  rows={3}
+                  rows={4}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none resize-none"
                   autoFocus
                 />
               </div>
-              {postMedia && (
-                <div className="relative mb-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {postMedia.type === 'image' ? (
-                    <img src={postMedia.url} alt="" className="w-full max-h-64 object-cover" />
-                  ) : (
-                    <video src={postMedia.url} className="w-full max-h-64 object-cover" controls />
-                  )}
-                  <button onClick={() => setPostMedia(null)} className="absolute top-2 right-2 p-1 bg-black/60 rounded-full text-white hover:bg-black/80 transition">
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-              <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                  <ImageIcon size={13} /> Photo
-                </button>
-                <button onClick={() => videoRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                  <Film size={13} /> Video
-                </button>
-              </div>
               <button
                 onClick={handleCreatePost}
-                disabled={(!postText.trim() && !postMedia) || posting}
+                disabled={!postText.trim() || posting}
                 className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-sm font-bold transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -420,8 +340,6 @@ export default function FeedScreen() {
               </button>
             </div>
           </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-          <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
         </div>
       )}
 
@@ -454,7 +372,7 @@ export default function FeedScreen() {
         </div>
       ) : posts.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-16 text-center">
-          <ImageIcon className="w-14 h-14 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <BookOpen className="w-14 h-14 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No posts yet</p>
           <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Be the first to share!</p>
         </div>

@@ -3,7 +3,8 @@ import {
   onSnapshot, query, where, orderBy, serverTimestamp,
   writeBatch, documentId,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from './firebase';
 import type { UserProfile, FriendRequest, Friend, Post, PostComment, ChatRoom, ChatMessage, ChatGroup, GroupMessage, Presence } from '../types';
 
 function sanitize(obj: any): any {
@@ -17,6 +18,12 @@ function sanitize(obj: any): any {
 
 function ts(): string {
   return new Date().toISOString();
+}
+
+export async function uploadMedia(file: Blob, path: string): Promise<string> {
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
 }
 
 // ── User Presence ──
@@ -276,20 +283,23 @@ export async function getFriendUids(uid: string): Promise<string[]> {
 
 export async function createPost(author: { uid: string; name: string; photo: string | null }, content: string, media?: { url: string; type: 'image' | 'video'; mediaType: string }): Promise<string> {
   const ref = doc(collection(db, 'posts'));
-  await setDoc(ref, sanitize({
+  const docData: any = {
     authorUid: author.uid,
     authorName: author.name,
     authorPhoto: author.photo,
     content,
     type: media ? media.type : 'text',
-    mediaUrl: media?.url || null,
-    mediaType: media?.mediaType || null,
     likes: [],
     commentCount: 0,
     reposts: [],
     shares: 0,
     createdAt: ts(),
-  }));
+  };
+  if (media) {
+    docData.mediaUrl = media.url;
+    docData.mediaType = media.mediaType;
+  }
+  await setDoc(ref, sanitize(docData));
   return ref.id;
 }
 
@@ -357,10 +367,13 @@ export function subscribeToFeed(uid: string, cb: (posts: Post[]) => void): () =>
 
 export async function toggleLike(postId: string, uid: string, liked: boolean): Promise<void> {
   const ref = doc(db, 'posts', postId);
-  if (liked) {
-    await updateDoc(ref, { likes: [uid] });
-  } else {
-    await updateDoc(ref, { likes: [] });
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const likes: string[] = snap.data().likes || [];
+  if (liked && !likes.includes(uid)) {
+    await updateDoc(ref, { likes: [...likes, uid] });
+  } else if (!liked) {
+    await updateDoc(ref, { likes: likes.filter((l) => l !== uid) });
   }
 }
 
