@@ -9,9 +9,10 @@ import {
   editGroupMessage,
   createChatGroup,
   subscribeToFriends,
+  subscribeToPresence,
   setTyping,
 } from '../../services/socialService';
-import type { ChatGroup, GroupMessage, Friend } from '../../types';
+import type { ChatGroup, GroupMessage, Friend, Presence } from '../../types';
 import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette, Smile, Paperclip, Pencil, Settings, Lock } from 'lucide-react';
 import ChatThemePicker from './ChatThemePicker';
 import EmojiPicker from './EmojiPicker';
@@ -71,6 +72,7 @@ export default function GroupChatScreen() {
   const [groupName, setGroupName] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +103,15 @@ export default function GroupChatScreen() {
     return unsub;
   }, [groupId, uid]);
 
+  useEffect(() => {
+    const currentGroup = groups.find((g) => g.id === groupId);
+    if (!currentGroup) return;
+    const memberUids = currentGroup.members.map((m) => m.uid).filter((u) => u !== uid);
+    if (memberUids.length === 0) return;
+    const unsub = subscribeToPresence(memberUids, (map) => setPresenceMap(map));
+    return unsub;
+  }, [groupId, groups, uid]);
+
   useEffect(() => { return () => { if (uid) setTyping(uid, null); }; }, [uid]);
 
   const handleTyping = useCallback(() => {
@@ -114,6 +125,17 @@ export default function GroupChatScreen() {
   const myRole = currentGroup?.members.find((m) => m.uid === uid)?.role;
   const isGroupAdmin = currentGroup?.createdBy === uid || myRole === 'admin';
   const canSendMessages = !currentGroup || currentGroup.settings?.messagePermission !== 'admins' || isGroupAdmin;
+
+  const typingMembers = currentGroup
+    ? currentGroup.members.filter((m) => m.uid !== uid && presenceMap[m.uid]?.typingIn === groupId).map((m) => m.name)
+    : [];
+  const typingText = typingMembers.length === 0
+    ? ''
+    : typingMembers.length === 1
+      ? `${typingMembers[0]} is typing...`
+      : typingMembers.length === 2
+        ? `${typingMembers[0]} and ${typingMembers[1]} are typing...`
+        : `${typingMembers[0]} and ${typingMembers.length - 1} others are typing...`;
 
   const doSend = useCallback(async (text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }) => {
     if (!groupId || !uid || sending || !canSendMessages) return;
@@ -325,7 +347,11 @@ export default function GroupChatScreen() {
             )}
             <div>
               <p className={`text-sm font-bold ${theme.textColor}`}>{currentGroup.name}</p>
-              <p className={`text-[11px] ${tc('text-gray-400', 'text-white/50')}`}>{members.length} members</p>
+              {typingText ? (
+                <p className="text-[11px] text-blue-400 font-medium">{typingText}</p>
+              ) : (
+                <p className={`text-[11px] ${tc('text-gray-400', 'text-white/50')}`}>{members.length} members</p>
+              )}
             </div>
           </div>
           <button onClick={() => navigate(`/groups-chat/${groupId}/settings`)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
