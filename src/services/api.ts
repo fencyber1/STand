@@ -277,6 +277,9 @@ export async function gradeTheoryAnswer(params: {
   question: string;
   studentAnswer: string;
   modelAnswer: string;
+  subject?: string;
+  level?: string;
+  difficulty?: string;
   totalMarks?: number;
 }): Promise<{ score: number; feedback: string; tier1: number; tier2: number; tier3: number }> {
   const total = params.totalMarks || 100;
@@ -287,22 +290,124 @@ export async function gradeTheoryAnswer(params: {
     return { score: 0, tier1: 0, tier2: 0, tier3: 0, feedback: 'Answer is too short to demonstrate any understanding.' };
   }
 
-  const prompt = `You are a strict expert exam grader. Grade this student's theory answer using a 3-tier rubric. Be HARSH — only award marks for genuine, demonstrated understanding. A one-word or very short answer that doesn't explain anything should get 0.
+  // Build strictness block based on education level + difficulty
+  const level = (params.level || '').toLowerCase();
+  const difficulty = (params.difficulty || '').toLowerCase();
+  const subject = params.subject || 'General';
 
-QUESTION: ${params.question}
+  let strictness = '';
 
-MODEL ANSWER: ${params.modelAnswer}
+  if (level.includes('jss') || level.includes('bece')) {
+    // Junior secondary — lenient
+    if (difficulty === 'easy') {
+      strictness = `GRADING STRICTNESS: LENIENT (JSS/BECE Level, Easy Difficulty)
+- This is a young student at a basic education level. Be encouraging and lenient.
+- Reward effort and attempt to answer. Even a partial correct idea deserves marks.
+- Accept simple, everyday language. Do NOT require technical terminology.
+- Basic understanding of the concept is sufficient for full Tier 1 marks.
+- Accept examples from everyday life, even if not academically precise.
+- Critical analysis (Tier 3) is a bonus — don't heavily penalize its absence.
+- A reasonable attempt in simple words should score at least ${Math.round(total * 0.3)}.`;
+    } else if (difficulty === 'hard') {
+      strictness = `GRADING STRICTNESS: MODERATE (JSS/BECE Level, Hard Difficulty)
+- This is a basic-level student attempting a harder question. Be fair but expect more effort.
+- Reward clear understanding of the core concept.
+- Simple language is acceptable, but the answer should show the student tried to explain, not just guess.
+- Basic use of relevant terms is a plus but not strictly required.
+- Accept straightforward explanations without requiring deep analysis.`;
+    } else {
+      strictness = `GRADING STRICTNESS: MODERATE-LENIENT (JSS/BECE Level, Medium Difficulty)
+- This is a basic-level student. Be fair and encouraging.
+- Accept simple language. Reward understanding over terminology.
+- A clear, correct basic explanation should score well.
+- Don't penalize heavily for missing technical terms if the concept is understood.`;
+    }
+  } else if (level.includes('sss') || level.includes('waec') || level.includes('neco')) {
+    // Senior secondary — moderate
+    if (difficulty === 'easy') {
+      strictness = `GRADING STRICTNESS: MODERATE (Senior Secondary Level, Easy Difficulty)
+- This is a secondary school student with foundational knowledge.
+- Expect basic use of subject-specific terminology.
+- The answer should demonstrate understanding beyond just everyday language.
+- Accept explanations that show the student has studied the topic.
+- Simple but correct explanations score well.
+- Penalize answers that are clearly guessing or off-topic.`;
+    } else if (difficulty === 'hard') {
+      strictness = `GRADING STRICTNESS: STRICT (Senior Secondary Level, Hard Difficulty)
+- This is a secondary school student attempting an advanced question.
+- Expect clear use of technical terminology relevant to the subject.
+- The answer should show the student can connect concepts.
+- Vague or superficial answers should score low.
+- Require specific examples or mechanisms, not just general statements.
+- For ${subject}: expect subject-appropriate language and reasoning.`;
+    } else {
+      strictness = `GRADING STRICTNESS: MODERATE-STRICT (Senior Secondary Level, Medium Difficulty)
+- Expect the student to use relevant terminology and explain concepts clearly.
+- The answer should show understanding of mechanisms, not just definitions.
+- Accept well-structured explanations that demonstrate study of the topic.
+- Penalize vague or incomplete answers appropriately.`;
+    }
+  } else if (level.includes('university') || level.includes('jamb')) {
+    // University — strict
+    if (difficulty === 'easy') {
+      strictness = `GRADING STRICTNESS: STRICT (University Level, Easy Difficulty)
+- This is a university student. Even for an easy question, expect university-level response.
+- Require accurate use of technical terminology for ${subject}.
+- The answer should be well-structured and precise.
+- Acceptable: correct explanation with proper terms.
+- Not acceptable: vague, casual, or superficial responses.
+- Penalize lack of subject-specific language.`;
+    } else if (difficulty === 'hard') {
+      strictness = `GRADING STRICTNESS: VERY STRICT (University Level, Hard Difficulty)
+- This is a university student attempting a challenging question. Hold them to the highest standard.
+- REQUIRE precise technical terminology specific to ${subject}.
+- REQUIRE detailed explanations of mechanisms, processes, or theories.
+- REQUIRE critical analysis, connections between concepts, and evaluation.
+- Vague answers = 0 for that tier. Superficial = minimal marks.
+- Penalize heavily for: missing technical terms, lack of depth, no examples, generic responses.
+- A good answer should demonstrate genuine understanding that could be applied to new contexts.
+- For ${subject}: expect discipline-appropriate reasoning and evidence.`;
+    } else {
+      strictness = `GRADING STRICTNESS: STRICT (University Level, Medium Difficulty)
+- Expect university-level response with proper technical terminology for ${subject}.
+- The answer should demonstrate understanding of mechanisms and processes.
+- Require specific examples or evidence, not just general statements.
+- Penalize vague or incomplete explanations.
+- The response should show the student has engaged with the material at depth.`;
+    }
+  } else if (level.includes('professional') || level.includes('certification')) {
+    // Professional — very strict
+    if (difficulty === 'hard') {
+      strictness = `GRADING STRICTNESS: VERY STRICT (Professional/Certification Level, Hard Difficulty)
+- This is a professional or certification candidate. Apply the strictest standards.
+- REQUIRE expert-level terminology and precise technical language for ${subject}.
+- REQUIRE detailed, practical knowledge with real-world application.
+- REQUIRE critical evaluation and nuanced understanding.
+- Vague or generic answers should score near 0.
+- The answer should demonstrate professional competence, not just academic knowledge.
+- For ${subject}: expect industry-standard terminology and practical reasoning.`;
+    } else {
+      strictness = `GRADING STRICTNESS: STRICT (Professional/Certification Level, ${difficulty === 'easy' ? 'Easy' : 'Medium'} Difficulty)
+- Expect professional-level response with industry-appropriate terminology for ${subject}.
+- The answer should demonstrate practical understanding, not just theoretical knowledge.
+- Require specific, actionable knowledge where applicable.
+- Penalize generic or textbook-only responses.`;
+    }
+  } else {
+    // Default — moderate-strict
+    strictness = `GRADING STRICTNESS: MODERATE-STRICT
+- Expect a clear, well-explained answer with relevant terminology.
+- The answer should demonstrate understanding of the core concept.
+- Penalize vague or off-topic responses.`;
+  }
 
-STUDENT ANSWER: ${params.studentAnswer}
+  const prompt = `You are a strict expert exam grader. Grade this student's theory answer using a 3-tier rubric.
 
-TOTAL MARKS AVAILABLE: ${total}
+SUBJECT: ${subject}
+EDUCATION LEVEL: ${params.level || 'Unknown'}
+DIFFICULTY: ${params.difficulty || 'Medium'}
 
-CRITICAL RULES:
-- If the answer is vague, nonsensical, or shows zero understanding → score 0
-- If the answer only restates part of the question without explaining → score 0-${Math.round(total * 0.1)}
-- Only award marks when there is CLEAR evidence the student understands the concept
-- Partial answers get partial marks proportional to what they actually demonstrate
-- Do NOT be generous. Be fair but strict.
+${strictness}
 
 QUESTION: ${params.question}
 
@@ -333,10 +438,9 @@ Tier 3 - Critical Analysis & Connections (${Math.round(total * 0.25)} marks):
 Score: 0 (none), ${Math.round(total * 0.05)} (vague), ${Math.round(total * 0.1)} (some), ${Math.round(total * 0.15)} (good), ${Math.round(total * 0.25)} (excellent)
 
 IMPORTANT RULES:
+- Follow the strictness guidelines above strictly
 - Look for evidence of understanding, not exact wording
 - Accept alternative explanations if academically valid
-- Give credit for partial understanding
-- Deduct only for genuine errors, not wording differences
 - The total score must be out of ${total}
 
 Return ONLY valid JSON, no markdown:

@@ -111,6 +111,9 @@ export default function QuizScreen() {
             question: current.question,
             studentAnswer: textAnswer,
             modelAnswer,
+            subject: state.sector,
+            level: state.level,
+            difficulty: current.difficulty,
           });
           result = {
             questionId: current.id,
