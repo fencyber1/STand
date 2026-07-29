@@ -279,7 +279,7 @@ export async function gradeTheoryAnswer(params: {
   modelAnswer: string;
   totalMarks?: number;
 }): Promise<{ score: number; feedback: string; tier1: number; tier2: number; tier3: number }> {
-  const total = params.totalMarks || 20;
+  const total = params.totalMarks || 100;
   const wordCount = params.studentAnswer.trim().split(/\s+/).filter(Boolean).length;
 
   // Short-circuit: trivial or empty answers get 0
