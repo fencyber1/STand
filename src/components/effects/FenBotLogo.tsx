@@ -8,19 +8,24 @@ export default function FenBotLogo({ size = 280 }: Props) {
   return (
     <div className="relative inline-flex items-center justify-center rounded-full overflow-hidden" style={{ width: size, height: size }}>
       <Strands
-        colors={['#6366F1', '#8B5CF6', '#A78BFA', '#C4B5FD']}
-        count={5}
+        colors={['#f97316', '#7c3aed', '#06b6d4']}
+        count={6}
         speed={0.6}
-        amplitude={1.5}
-        waviness={2.5}
-        thickness={2.5}
-        glow={4}
-        taper={3}
-        spread={1.8}
-        intensity={0.5}
-        saturation={1.5}
-        opacity={0.9}
-        scale={1.2}
+        amplitude={2.3}
+        waviness={2.4}
+        thickness={3.2}
+        glow={0.8}
+        taper={3.1}
+        spread={3}
+        hueShift={0}
+        intensity={0.45}
+        saturation={1.55}
+        opacity={1}
+        scale={1.3}
+        glass={false}
+        refraction={0.55}
+        dispersion={1}
+        glassSize={0.98}
       />
     </div>
   );

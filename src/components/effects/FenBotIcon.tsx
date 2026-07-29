@@ -12,19 +12,24 @@ export default function FenBotIcon({ size = 36, className = '' }: Props) {
       style={{ width: size, height: size }}
     >
       <Strands
-        colors={['#6366F1', '#8B5CF6', '#A78BFA']}
-        count={3}
-        speed={0.8}
-        amplitude={1.5}
-        waviness={2}
-        thickness={2}
-        glow={3}
-        taper={2}
-        spread={1.2}
-        intensity={0.6}
-        saturation={1.5}
+        colors={['#f97316', '#7c3aed', '#06b6d4']}
+        count={6}
+        speed={0.6}
+        amplitude={2.3}
+        waviness={2.4}
+        thickness={3.2}
+        glow={0.8}
+        taper={3.1}
+        spread={3}
+        hueShift={0}
+        intensity={0.45}
+        saturation={1.55}
         opacity={1}
-        scale={1.5}
+        scale={1.3}
+        glass={false}
+        refraction={0.55}
+        dispersion={1}
+        glassSize={0.98}
       />
     </div>
   );
