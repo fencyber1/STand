@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Loader2, Sparkles, RotateCcw } from 'lucide-react';
-import Strands from '../effects/Strands';
+import Logo from '../landing/Logo';
 import TwemojiText from '../social/TwemojiText';
 
 const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
@@ -222,24 +222,20 @@ export default function FenBot() {
 
   return (
     <div className="h-full flex flex-col bg-gray-950 relative overflow-hidden">
-      {/* Strands Background */}
-      <div className="absolute inset-0 z-0">
-        <Strands
-          colors={['#6366F1', '#8B5CF6', '#06B6D4', '#F59E0B']}
-          count={4}
-          speed={0.4}
-          amplitude={1.2}
-          waviness={2}
-          thickness={2}
-          glow={3}
-          taper={4}
-          spread={1.5}
-          intensity={0.3}
-          saturation={1.2}
-          opacity={0.6}
-          scale={1.3}
-        />
+      {/* Logo Background */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+        <div className="opacity-[0.03] select-none pointer-events-none" style={{ animation: 'logoFloat 8s ease-in-out infinite' }}>
+          <Logo size={600} className="text-indigo-400" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-transparent to-gray-950" />
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-transparent to-gray-950" />
       </div>
+      <style>{`
+        @keyframes logoFloat {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          50% { transform: scale(1.05) rotate(1deg); }
+        }
+      `}</style>
 
       {/* Header */}
       <div className="relative z-10 backdrop-blur-xl bg-gray-900/70 border-b border-white/5 px-4 py-3 flex items-center gap-3 shrink-0">
