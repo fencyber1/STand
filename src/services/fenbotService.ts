@@ -1,6 +1,6 @@
 import {
   collection, doc, setDoc, getDocs, deleteDoc,
-  query, where, orderBy,
+  query, where,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -22,11 +22,10 @@ export async function loadFenBotConversations(uid: string): Promise<FenBotConver
   try {
     const q = query(
       collection(db, 'fenbotConversations'),
-      where('uid', '==', uid),
-      orderBy('updatedAt', 'desc')
+      where('uid', '==', uid)
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({
+    const convos = snap.docs.map((d) => ({
       id: d.id,
       uid: d.data().uid,
       title: d.data().title,
@@ -34,6 +33,8 @@ export async function loadFenBotConversations(uid: string): Promise<FenBotConver
       createdAt: d.data().createdAt,
       updatedAt: d.data().updatedAt,
     }));
+    convos.sort((a, b) => b.updatedAt - a.updatedAt);
+    return convos;
   } catch {
     return [];
   }
