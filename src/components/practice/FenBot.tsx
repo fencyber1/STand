@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, Sparkles, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Sparkles, Plus, MessageSquare, Trash2, Settings, ArrowUp } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
+import { useAuth } from '../../contexts/AuthContext';
 
 const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
 
@@ -21,6 +22,14 @@ function getHeaders(): Record<string, string> {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 const SYSTEM_PROMPT = `You are FenBot, a friendly AI tutor built into the STand study platform. Your mission is to make ANY topic — no matter how complex — simple and understandable.
@@ -78,13 +87,26 @@ End with 2-3 quick questions to test understanding (without answers — let the 
 - Use markdown formatting throughout`;
 
 const SUGGESTIONS = [
-  { icon: '🧬', label: 'How DNA works', topic: 'Explain how DNA replication works' },
-  { icon: '⚛️', label: 'Quantum computing', topic: 'Explain quantum computing in simple terms' },
-  { icon: '🧮', label: 'Calculus basics', topic: 'Explain the concept of derivatives in calculus' },
-  { icon: '🧠', label: 'Machine learning', topic: 'Explain how neural networks learn' },
-  { icon: '⚡', label: 'Electricity', topic: 'Explain how electricity and circuits work' },
-  { icon: '🌍', label: 'Plate tectonics', topic: 'Explain plate tectonics and earthquakes' },
+  { icon: '🎲', label: 'Surprise me', desc: 'Surprise me with a creative idea or story', topic: 'Te me something surprising and interesting about science' },
+  { icon: '🧬', label: 'How DNA works', desc: 'Learn about DNA replication', topic: 'Explain how DNA replication works' },
+  { icon: '⚛️', label: 'Quantum computing', desc: 'Learn quantum computing basics', topic: 'Explain quantum computing in simple terms' },
+  { icon: '🧮', label: 'Calculus basics', desc: 'Understand derivatives', topic: 'Explain the concept of derivatives in calculus' },
+  { icon: '🧠', label: 'Machine learning', desc: 'How neural networks learn', topic: 'Explain how neural networks learn' },
+  { icon: '⚡', label: 'Electricity', desc: 'How circuits work', topic: 'Explain how electricity and circuits work' },
 ];
+
+const STORAGE_KEY = 'fenbot_conversations';
+
+function loadConversations(uid: string): Conversation[] {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY}_${uid}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveConversations(uid: string, convos: Conversation[]) {
+  localStorage.setItem(`${STORAGE_KEY}_${uid}`, JSON.stringify(convos));
+}
 
 function parseMarkdown(text: string) {
   const lines = text.split('\n');
@@ -162,28 +184,81 @@ function formatInline(text: string): string {
 
 export default function FenBot() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { user } = useAuth();
+  const uid = user?.uid || '';
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const activeConvo = conversations.find((c) => c.id === activeId);
+  const messages = activeConvo?.messages || [];
+  const isWelcome = !activeConvo || messages.length === 0;
+
+  useEffect(() => {
+    if (uid) setConversations(loadConversations(uid));
+  }, [uid]);
+
+  useEffect(() => {
+    if (uid) saveConversations(uid, conversations);
+  }, [conversations, uid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const createConversation = useCallback((): string => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const convo: Conversation = {
+      id,
+      title: 'New conversation',
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setConversations((prev) => [convo, ...prev]);
+    setActiveId(id);
+    setSidebarOpen(false);
+    return id;
+  }, []);
+
+  const deleteConversation = (id: string) => {
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeId === id) setActiveId(null);
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
+
+    let convoId = activeId;
+    if (!convoId) {
+      convoId = createConversation();
+    }
+
     const userMsg: Message = { role: 'user', content: text.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
     setInput('');
     setLoading(true);
 
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.id !== convoId) return c;
+        const newMessages = [...c.messages, userMsg];
+        const title = c.messages.length === 0 ? text.trim().slice(0, 50) : c.title;
+        return { ...c, messages: newMessages, title, updatedAt: Date.now() };
+      })
+    );
+
     try {
+      const convo = conversations.find((c) => c.id === convoId) || { messages: [] };
+      const allMessages = [...convo.messages, userMsg];
+
       const apiMessages = [
         { role: 'system', content: SYSTEM_PROMPT },
-        ...newMessages.map((m) => ({ role: m.role, content: m.content })),
+        ...allMessages.map((m) => ({ role: m.role, content: m.content })),
       ];
 
       const response = await fetch(getApiUrl(), {
@@ -204,9 +279,22 @@ export default function FenBot() {
       if (!data.choices?.[0]) throw new Error('No response');
 
       const reply = data.choices[0].message.content;
-      setMessages([...newMessages, { role: 'assistant', content: reply }]);
-    } catch (err) {
-      setMessages([...newMessages, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
+      const assistantMsg: Message = { role: 'assistant', content: reply };
+
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== convoId) return c;
+          return { ...c, messages: [...c.messages, assistantMsg], updatedAt: Date.now() };
+        })
+      );
+    } catch {
+      const errorMsg: Message = { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' };
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== convoId) return c;
+          return { ...c, messages: [...c.messages, errorMsg], updatedAt: Date.now() };
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -219,132 +307,239 @@ export default function FenBot() {
     }
   };
 
-  const isWelcome = messages.length === 0;
+  const timeAgo = (ts: number) => {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
 
   return (
-    <div className="h-full flex flex-col bg-gray-950 relative overflow-hidden">
-      {/* Logo Background */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
-        <div className="opacity-20 select-none pointer-events-none" style={{ animation: 'logoFloat 6s ease-in-out infinite' }}>
-          <FenBotLogo size={500} />
+    <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
+      {/* Sidebar */}
+      <div className={`absolute inset-y-0 left-0 z-40 w-[60px] flex flex-col items-center py-4 gap-3 bg-[#0d1220]/90 backdrop-blur-xl border-r border-white/5 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:relative lg:z-auto`}>
+        {/* Back */}
+        <button onClick={() => navigate('/')} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors mb-2">
+          <ArrowLeft className="w-4 h-4 text-white/50" />
+        </button>
+
+        {/* New chat */}
+        <button onClick={() => { createConversation(); setSidebarOpen(false); }} className="w-10 h-10 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 flex items-center justify-center transition-colors" title="New conversation">
+          <Plus className="w-4 h-4 text-indigo-400" />
+        </button>
+
+        {/* Divider */}
+        <div className="w-6 h-px bg-white/10" />
+
+        {/* Chat history */}
+        <div className="flex-1 overflow-y-auto w-full flex flex-col items-center gap-1.5 px-2 py-1 scrollbar-hide">
+          {conversations.slice(0, 20).map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setActiveId(c.id); setSidebarOpen(false); }}
+              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all group relative ${
+                activeId === c.id
+                  ? 'bg-indigo-500/30 ring-2 ring-indigo-500/50'
+                  : 'bg-white/5 hover:bg-white/10'
+              }`}
+              title={c.title}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-white/50" />
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500/80 items-center justify-center hidden group-hover:flex"
+              >
+                <Trash2 className="w-2.5 h-2.5 text-white" />
+              </button>
+            </button>
+          ))}
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-transparent to-gray-950" />
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-transparent to-gray-950" />
+
+        {/* Settings */}
+        <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors mt-auto">
+          <Settings className="w-4 h-4 text-white/40" />
+        </button>
+
+        {/* Profile */}
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+          {user?.photoURL ? (
+            <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+          ) : (
+            (user?.fullName || 'S').charAt(0).toUpperCase()
+          )}
+        </div>
       </div>
+
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Mobile sidebar toggle */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="absolute top-4 left-4 z-20 lg:hidden w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center"
+        >
+          <MessageSquare className="w-4 h-4 text-white/50" />
+        </button>
+
+        {/* Background gradient */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-indigo-600/5 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 left-1/4 w-[400px] h-[300px] bg-purple-600/5 rounded-full blur-[100px]" />
+        </div>
+
+        {/* Content area */}
+        <div className="relative z-10 flex-1 min-h-0 overflow-y-auto">
+          {isWelcome ? (
+            /* Welcome screen */
+            <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-20">
+              {/* Animated Logo */}
+              <div className="mb-6" style={{ animation: 'logoFloat 6s ease-in-out infinite' }}>
+                <FenBotLogo size={180} />
+              </div>
+
+              <h1 className="text-3xl font-bold text-white mb-1">
+                Hi, <span className="text-white/70">{user?.fullName || 'there'}</span>
+              </h1>
+              <h2 className="text-xl font-semibold text-white mb-2">How can I help today?</h2>
+              <p className="text-sm text-white/30 mb-8 max-w-md">
+                I'm here to help — from quick answers to smart recommendations.
+              </p>
+
+              {/* Input bar */}
+              <div className="w-full max-w-lg mb-6">
+                <div className="relative bg-[#141926] rounded-2xl border border-white/5 overflow-hidden shadow-2xl shadow-black/40">
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Ask me anything ..."
+                      className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2"
+                      disabled={loading}
+                    />
+                    <button
+                      onClick={() => sendMessage(input)}
+                      disabled={!input.trim() || loading}
+                      className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 pb-3">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/30 text-xs transition-colors">
+                      <span>📎</span> Import file
+                    </button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/30 text-xs transition-colors">
+                      <span>🛠</span> Tools
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Suggestion cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
+                {SUGGESTIONS.slice(0, 3).map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => sendMessage(s.topic)}
+                    className="flex flex-col items-start p-4 rounded-2xl bg-[#141926]/80 hover:bg-[#1a2030] border border-white/5 hover:border-indigo-500/20 transition-all text-left group"
+                  >
+                    <span className="text-lg mb-2">{s.icon}</span>
+                    <span className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">{s.label}</span>
+                    <span className="text-xs text-white/25 mt-0.5">{s.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Chat messages */
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] ${msg.role === 'user'
+                    ? 'bg-indigo-600/80 backdrop-blur rounded-2xl rounded-br-sm px-4 py-3 border border-indigo-500/20'
+                    : 'bg-[#141926] backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5'
+                  }`}>
+                    {msg.role === 'assistant' && (
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
+                      </div>
+                    )}
+                    <div className="text-sm leading-relaxed">
+                      {msg.role === 'assistant' ? (
+                        <div className="space-y-0">{parseMarkdown(msg.content)}</div>
+                      ) : (
+                        <TwemojiText className="text-white">{msg.content}</TwemojiText>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="bg-[#141926] backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-white/40">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Thinking...
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input bar (chat mode) */}
+        {!isWelcome && (
+          <div className="relative z-10 px-4 pb-4 pt-2 shrink-0">
+            <div className="max-w-3xl mx-auto">
+              <div className="relative bg-[#141926] rounded-2xl border border-white/5 overflow-hidden shadow-2xl shadow-black/40">
+                <div className="flex items-center gap-2 px-4 py-2">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask me anything ..."
+                    className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2"
+                    disabled={loading}
+                  />
+                  <button
+                    onClick={() => sendMessage(input)}
+                    disabled={!input.trim() || loading}
+                    className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <style>{`
         @keyframes logoFloat {
           0%, 100% { transform: scale(1) rotate(0deg); }
           50% { transform: scale(1.03) rotate(0.5deg); }
         }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-
-      {/* Header */}
-      <div className="relative z-10 backdrop-blur-xl bg-gray-900/70 border-b border-white/5 px-4 py-3 flex items-center gap-3 shrink-0">
-        <button onClick={() => navigate('/')} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-white/70" />
-        </button>
-        <FenBotIcon size={36} />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-bold text-white">FenBot</h1>
-          <p className="text-[11px] text-white/40">AI Tutor — Learn anything, step by step</p>
-        </div>
-        {messages.length > 0 && (
-          <button onClick={() => { setMessages([]); }} className="p-2 rounded-lg hover:bg-white/10 transition-colors" title="New conversation">
-            <RotateCcw className="w-4 h-4 text-white/50" />
-          </button>
-        )}
-      </div>
-
-      {/* Messages */}
-      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        {isWelcome ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="mb-5">
-              <FenBotLogo size={200} />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Hey! I'm FenBot</h2>
-            <p className="text-sm text-white/50 mb-8 max-w-sm leading-relaxed">
-              I break down any topic into simple, bite-sized levels with diagrams, examples, and quizzes. What would you like to learn?
-            </p>
-
-            <div className="grid grid-cols-2 gap-2.5 w-full max-w-sm">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => sendMessage(s.topic)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-indigo-500/30 transition-all text-left group"
-                >
-                  <span className="text-xl">{s.icon}</span>
-                  <span className="text-xs text-white/70 group-hover:text-white transition-colors font-medium">{s.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-2xl mx-auto space-y-5">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] ${msg.role === 'user'
-                  ? 'bg-indigo-600/80 backdrop-blur rounded-2xl rounded-br-sm px-4 py-3 border border-indigo-500/20'
-                  : 'bg-white/5 backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5'
-                }`}>
-                  {msg.role === 'assistant' && (
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                      <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
-                    </div>
-                  )}
-                  <div className="text-sm leading-relaxed">
-                    {msg.role === 'assistant' ? (
-                      <div className="space-y-0">{parseMarkdown(msg.content)}</div>
-                    ) : (
-                      <TwemojiText className="text-white">{msg.content}</TwemojiText>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-white/5 backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                    <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-white/40">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Thinking...
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
-
-      {/* Input */}
-      <div className="relative z-10 backdrop-blur-xl bg-gray-900/70 border-t border-white/5 px-4 py-3 shrink-0 safe-area-bottom">
-        <div className="max-w-2xl mx-auto flex items-center gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask me anything..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/30 transition-all"
-            disabled={loading}
-          />
-          <button
-            onClick={() => sendMessage(input)}
-            disabled={!input.trim() || loading}
-            className="p-2.5 bg-indigo-500 hover:bg-indigo-400 rounded-full transition-all shadow-lg shadow-indigo-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Send className="w-4 h-4 text-white" />}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
