@@ -514,7 +514,7 @@ export default function FenBot() {
         {/* Sidebar header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
           <div className="flex items-center gap-2">
-            <FenBotIcon size={24} />
+            <FenBotIcon size={32} />
             <span className="text-sm font-bold text-white">FenBot</span>
           </div>
           <div className="flex items-center gap-1">
