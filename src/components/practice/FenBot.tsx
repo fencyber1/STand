@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
@@ -174,6 +175,7 @@ function readFileContent(file: File): Promise<string> {
 }
 
 export default function FenBot() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const uid = user?.uid || '';
 
@@ -436,13 +438,18 @@ export default function FenBot() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Header bar */}
-        <div className="relative z-20 flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-[#0a0e1a]/80 backdrop-blur-xl shrink-0">
+        <div className="relative z-20 flex items-center gap-2 px-3 py-2.5 border-b border-white/10 bg-[#0d1220] shrink-0">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
             <Menu className="w-4 h-4 text-white/50" />
           </button>
           {!isWelcome && (
             <button onClick={() => setActiveId(null)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 text-xs font-medium transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" /> Back
+            </button>
+          )}
+          {isWelcome && (
+            <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 text-xs font-medium transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
             </button>
           )}
           {!isWelcome && activeConvo && (
@@ -459,7 +466,7 @@ export default function FenBot() {
         {/* Content */}
         <div className="relative z-10 flex-1 min-h-0 overflow-y-auto">
           {isWelcome ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-20">
+            <div className="flex flex-col items-center justify-center min-h-full text-center px-4 pb-20">
               <div className="mb-6" style={{ animation: 'logoFloat 6s ease-in-out infinite' }}>
                 <FenBotLogo size={180} />
               </div>
