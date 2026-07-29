@@ -2,9 +2,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Loader2, Sparkles, Plus, MessageSquare, Trash2, Settings, ArrowUp } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
-import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
 import { useAuth } from '../../contexts/AuthContext';
+import { loadFenBotConversations, saveFenBotConversation, deleteFenBotConversation } from '../../services/fenbotService';
 
 const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
 
@@ -94,19 +94,6 @@ const SUGGESTIONS = [
   { icon: '🧠', label: 'Machine learning', desc: 'How neural networks learn', topic: 'Explain how neural networks learn' },
   { icon: '⚡', label: 'Electricity', desc: 'How circuits work', topic: 'Explain how electricity and circuits work' },
 ];
-
-const STORAGE_KEY = 'fenbot_conversations';
-
-function loadConversations(uid: string): Conversation[] {
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}_${uid}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveConversations(uid: string, convos: Conversation[]) {
-  localStorage.setItem(`${STORAGE_KEY}_${uid}`, JSON.stringify(convos));
-}
 
 function parseMarkdown(text: string) {
   const lines = text.split('\n');
@@ -200,12 +187,10 @@ export default function FenBot() {
   const isWelcome = !activeConvo || messages.length === 0;
 
   useEffect(() => {
-    if (uid) setConversations(loadConversations(uid));
+    if (uid) {
+      loadFenBotConversations(uid).then((convos) => setConversations(convos));
+    }
   }, [uid]);
-
-  useEffect(() => {
-    if (uid) saveConversations(uid, conversations);
-  }, [conversations, uid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -223,13 +208,26 @@ export default function FenBot() {
     setConversations((prev) => [convo, ...prev]);
     setActiveId(id);
     setSidebarOpen(false);
+    saveFenBotConversation(uid, convo).catch(() => {});
     return id;
-  }, []);
+  }, [uid]);
 
   const deleteConversation = (id: string) => {
+    deleteFenBotConversation(id).catch(() => {});
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
   };
+
+  const updateAndSave = useCallback((updater: (prev: Conversation[]) => Conversation[]) => {
+    setConversations((prev) => {
+      const next = updater(prev);
+      const updated = next.find((c) => c.id === activeId);
+      if (updated) {
+        saveFenBotConversation(uid, updated).catch(() => {});
+      }
+      return next;
+    });
+  }, [activeId, uid]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
@@ -243,7 +241,7 @@ export default function FenBot() {
     setInput('');
     setLoading(true);
 
-    setConversations((prev) =>
+    updateAndSave((prev) =>
       prev.map((c) => {
         if (c.id !== convoId) return c;
         const newMessages = [...c.messages, userMsg];
@@ -281,7 +279,7 @@ export default function FenBot() {
       const reply = data.choices[0].message.content;
       const assistantMsg: Message = { role: 'assistant', content: reply };
 
-      setConversations((prev) =>
+      updateAndSave((prev) =>
         prev.map((c) => {
           if (c.id !== convoId) return c;
           return { ...c, messages: [...c.messages, assistantMsg], updatedAt: Date.now() };
@@ -289,7 +287,7 @@ export default function FenBot() {
       );
     } catch {
       const errorMsg: Message = { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' };
-      setConversations((prev) =>
+      updateAndSave((prev) =>
         prev.map((c) => {
           if (c.id !== convoId) return c;
           return { ...c, messages: [...c.messages, errorMsg], updatedAt: Date.now() };
