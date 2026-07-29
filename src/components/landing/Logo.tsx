@@ -1,3 +1,5 @@
+import Strands from '../effects/Strands';
+
 interface Props {
   size?: number;
   className?: string;
@@ -5,21 +7,30 @@ interface Props {
 
 export default function Logo({ size = 200, className = '' }: Props) {
   return (
-    <img
-      src="/stand-logo.png"
-      alt="STand"
-      width={size}
-      height={size}
-      className={`object-contain ${className}`}
-      onError={(e) => {
-        // Fallback to text if image fails to load
-        const target = e.target as HTMLImageElement;
-        target.style.display = 'none';
-        const fallback = document.createElement('span');
-        fallback.textContent = 'STand';
-        fallback.className = `text-2xl font-bold ${className}`;
-        target.parentNode?.insertBefore(fallback, target);
-      }}
-    />
+    <div
+      className={`relative inline-flex items-center justify-center rounded-full overflow-hidden ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <Strands
+        colors={['#f97316', '#7c3aed', '#06b6d4']}
+        count={6}
+        speed={0.6}
+        amplitude={2.3}
+        waviness={2.4}
+        thickness={3.2}
+        glow={0.8}
+        taper={3.1}
+        spread={3}
+        hueShift={0}
+        intensity={0.45}
+        saturation={1.55}
+        opacity={1}
+        scale={1.3}
+        glass={false}
+        refraction={0.55}
+        dispersion={1}
+        glassSize={0.98}
+      />
+    </div>
   );
 }
