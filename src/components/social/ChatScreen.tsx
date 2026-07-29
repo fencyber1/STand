@@ -12,14 +12,14 @@ import {
   setTyping,
 } from '../../services/socialService';
 import type { ChatRoom, ChatMessage, Presence } from '../../types';
-import { Send, ArrowLeft, MessageCircle, Loader2, Palette, Smile, Paperclip, Check, CheckCheck, Pencil, X } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, Loader2, Palette, Check, CheckCheck, Pencil, X } from 'lucide-react';
 import ChatThemePicker from './ChatThemePicker';
-import EmojiPicker from './EmojiPicker';
 import AttachmentMenu from './AttachmentMenu';
 import ContactForm from './ContactForm';
 import MediaMessage from './MediaMessage';
 import ChatProfileModal from './ChatProfileModal';
 import TwemojiText from './TwemojiText';
+import ChatInputBar from './ChatInputBar';
 
 function formatTime(dateStr: string): string {
   if (!dateStr) return '';
@@ -60,7 +60,6 @@ export default function ChatScreen() {
   const uid = user?.uid || '';
   const { theme, wallpaper } = useChatTheme();
   const [showThemePicker, setShowThemePicker] = useState(false);
-  const [showEmoji, setShowEmoji] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [profileModal, setProfileModal] = useState<{ uid: string; name: string; photo: string | null; online: boolean } | null>(null);
@@ -75,7 +74,6 @@ export default function ChatScreen() {
   const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingAttachRef = useRef<{ type: string; file?: File } | null>(null);
 
@@ -131,7 +129,6 @@ export default function ChatScreen() {
     if (!newMessage.trim()) return;
     const text = newMessage.trim();
     setNewMessage('');
-    setShowEmoji(false);
     await doSend(text);
   };
 
@@ -140,12 +137,6 @@ export default function ChatScreen() {
     await editChatMessage(editingMsg.id, editText.trim());
     setEditingMsg(null);
     setEditText('');
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    if (editingMsg) { setEditText((prev) => prev + emoji); return; }
-    setNewMessage((prev) => prev + emoji);
-    inputRef.current?.focus();
   };
 
   const readFile = (file: File): Promise<string> =>
@@ -300,7 +291,7 @@ export default function ChatScreen() {
       </div>
 
       {/* Messages */}
-      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-4" onClick={() => { if (showEmoji) setShowEmoji(false); }}>
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-4">
         <div className="space-y-3">
           {messages.map((msg, idx) => {
             const isOwn = msg.senderUid === uid;
@@ -366,36 +357,17 @@ export default function ChatScreen() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Emoji Picker */}
-      {showEmoji && (
-        <div className="absolute bottom-[60px] left-0 right-0 z-30 px-3">
-          <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />
-        </div>
-      )}
-
       {/* Input */}
       <div className={`relative z-10 ${theme.inputBg} px-3 py-2 shrink-0 safe-area-bottom`}>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { setShowEmoji(!showEmoji); setShowAttach(false); }} className={`p-2 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-            <Smile className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/60' : 'text-gray-400'}`} />
-          </button>
-          <button onClick={() => { setShowAttach(!showAttach); setShowEmoji(false); }} className={`p-2 rounded-full transition-colors ${showAttach ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-            <Paperclip className={`w-5 h-5 ${theme.textColor === 'text-white' ? 'text-white/60' : 'text-gray-400'}`} />
-          </button>
-          <input
-            ref={inputRef}
-            type="text"
-            value={newMessage}
-            onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-            placeholder="Type a message..."
-            className={`flex-1 ${theme.inputField} ${theme.textColor}`}
-            disabled={sending}
-          />
-          <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className={`p-2.5 ${theme.sendButton} disabled:opacity-50 disabled:cursor-not-allowed`}>
-            {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </button>
-        </div>
+        <ChatInputBar
+          userPhoto={user?.photoURL || null}
+          userName={user?.fullName || 'You'}
+          onSend={async (msg) => { setNewMessage(msg); await doSend(msg); }}
+          onSendMedia={async (type, mediaUrl, mediaType, fileName, fileSize) => { await doSend('', { type, mediaUrl, mediaType, fileName, fileSize }); }}
+          onAttach={() => setShowAttach(!showAttach)}
+          disabled={sending}
+          sending={sending}
+        />
       </div>
 
       {/* Hidden file input */}
