@@ -280,8 +280,29 @@ export async function gradeTheoryAnswer(params: {
   totalMarks?: number;
 }): Promise<{ score: number; feedback: string; tier1: number; tier2: number; tier3: number }> {
   const total = params.totalMarks || 20;
+  const wordCount = params.studentAnswer.trim().split(/\s+/).filter(Boolean).length;
 
-  const prompt = `You are an expert exam grader. Grade this student's theory answer using a 3-tier rubric.
+  // Short-circuit: trivial or empty answers get 0
+  if (wordCount < 3) {
+    return { score: 0, tier1: 0, tier2: 0, tier3: 0, feedback: 'Answer is too short to demonstrate any understanding.' };
+  }
+
+  const prompt = `You are a strict expert exam grader. Grade this student's theory answer using a 3-tier rubric. Be HARSH — only award marks for genuine, demonstrated understanding. A one-word or very short answer that doesn't explain anything should get 0.
+
+QUESTION: ${params.question}
+
+MODEL ANSWER: ${params.modelAnswer}
+
+STUDENT ANSWER: ${params.studentAnswer}
+
+TOTAL MARKS AVAILABLE: ${total}
+
+CRITICAL RULES:
+- If the answer is vague, nonsensical, or shows zero understanding → score 0
+- If the answer only restates part of the question without explaining → score 0-${Math.round(total * 0.1)}
+- Only award marks when there is CLEAR evidence the student understands the concept
+- Partial answers get partial marks proportional to what they actually demonstrate
+- Do NOT be generous. Be fair but strict.
 
 QUESTION: ${params.question}
 
@@ -342,13 +363,13 @@ Return ONLY valid JSON, no markdown:
     let overlap = 0;
     modelWords.forEach((w) => { if (userWords.has(w)) overlap++; });
     const ratio = modelWords.size > 0 ? overlap / modelWords.size : 0;
-    const score = Math.round(Math.min(total, Math.max(1, ratio * total)));
+    const score = ratio < 0.15 ? 0 : Math.round(Math.min(total, ratio * total));
     return {
       score,
       tier1: Math.round(score * 0.4),
       tier2: Math.round(score * 0.35),
       tier3: Math.round(score * 0.25),
-      feedback: 'Graded by word overlap (AI grading unavailable).',
+      feedback: score === 0 ? 'Answer does not demonstrate understanding of the topic.' : 'Graded by word overlap (AI grading unavailable).',
     };
   }
 }
