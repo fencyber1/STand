@@ -109,7 +109,13 @@ const SETTINGS_KEY = 'fenbot_settings';
 function loadSettings(): FenBotSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Reset if speed doesn't match any valid preset
+      const validSpeeds = SPEED_PRESETS.map((p) => p.value);
+      if (!validSpeeds.includes(parsed.speed)) parsed.speed = 80;
+      return parsed;
+    }
   } catch {}
   return { speed: 80, fontSize: 14, fontFamily: 'inherit' };
 }
