@@ -29,6 +29,7 @@ import FeedScreen from './components/social/FeedScreen';
 import ChatScreen from './components/social/ChatScreen';
 import GroupChatScreen from './components/social/GroupChatScreen';
 import GroupSettingsScreen from './components/social/GroupSettingsScreen';
+import FenBot from './components/practice/FenBot';
 
 function ProtectedLayout() {
   const { isLoggedIn } = useAuth();
@@ -67,6 +68,7 @@ export default function App() {
       <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
       <Route path="/groups-chat/:groupId" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
       <Route path="/groups-chat/:groupId/settings" element={<ProtectedFullScreen><GroupSettingsScreen /></ProtectedFullScreen>} />
+      <Route path="/fenbot" element={<ProtectedFullScreen><FenBot /></ProtectedFullScreen>} />
 
       {isLoggedIn ? (
         <Route path="/" element={<ProtectedLayout />}>

@@ -26,6 +26,7 @@ import {
   Rss,
   MessageSquare,
   MessageCircle,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,6 +35,7 @@ import Logo from '../landing/Logo';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/fenbot', label: 'FenBot', icon: Sparkles },
   { to: '/practice', label: 'Practice', icon: GraduationCap },
   { to: '/doc-quiz', label: 'Document Quiz', icon: FileText },
   { to: '/exam-setup', label: 'Exam Sim', icon: Shield },
