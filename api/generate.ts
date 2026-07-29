@@ -19,6 +19,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const isStreaming = req.body.stream === true;
+
     const response = await fetch(NVIDIA_API, {
       method: 'POST',
       headers: {
@@ -30,8 +32,31 @@ export default async function handler(req: any, res: any) {
         messages: req.body.messages,
         temperature: req.body.temperature || 0.7,
         max_tokens: req.body.max_tokens || 4096,
+        stream: isStreaming,
       }),
     });
+
+    if (isStreaming) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        return res.status(502).json({ error: 'No stream from NVIDIA' });
+      }
+
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        res.write(chunk);
+      }
+
+      return res.end();
+    }
 
     const text = await response.text();
 

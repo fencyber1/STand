@@ -175,6 +175,7 @@ export default function FenBot() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -189,7 +190,7 @@ export default function FenBot() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingContent]);
 
   useEffect(() => {
     if (!menuOpenId) return;
@@ -254,6 +255,7 @@ export default function FenBot() {
     const userMsg: Message = { role: 'user', content: finalText };
     setInput('');
     setLoading(true);
+    setStreamingContent('');
 
     updateAndSave((prev) =>
       prev.map((c) => {
@@ -275,22 +277,56 @@ export default function FenBot() {
       const response = await fetch(getApiUrl(), {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ model: 'meta/llama-3.1-8b-instruct', messages: apiMessages, temperature: 0.7, max_tokens: 4096 }),
+        body: JSON.stringify({ model: 'meta/llama-3.1-8b-instruct', messages: apiMessages, temperature: 0.7, max_tokens: 4096, stream: true }),
       });
 
-      const text2 = await response.text();
-      let data;
-      try { data = JSON.parse(text2); } catch { throw new Error('Invalid response'); }
-      if (!response.ok) throw new Error(data.error || 'API error');
-      if (!data.choices?.[0]) throw new Error('No response');
+      if (!response.ok) {
+        const errText = await response.text();
+        let errMsg = 'API error';
+        try { errMsg = JSON.parse(errText).error || errMsg; } catch {}
+        throw new Error(errMsg);
+      }
 
-      const reply = data.choices[0].message.content;
-      updateAndSave((prev) =>
-        prev.map((c) => {
-          if (c.id !== convoId) return c;
-          return { ...c, messages: [...c.messages, { role: 'assistant', content: reply }], updatedAt: Date.now() };
-        })
-      );
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No stream');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullReply = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullReply += delta;
+              setStreamingContent(fullReply);
+            }
+          } catch {}
+        }
+      }
+
+      if (fullReply) {
+        updateAndSave((prev) =>
+          prev.map((c) => {
+            if (c.id !== convoId) return c;
+            return { ...c, messages: [...c.messages, { role: 'assistant', content: fullReply }], updatedAt: Date.now() };
+          })
+        );
+      }
     } catch {
       updateAndSave((prev) =>
         prev.map((c) => {
@@ -300,6 +336,7 @@ export default function FenBot() {
       );
     } finally {
       setLoading(false);
+      setStreamingContent('');
     }
   };
 
@@ -537,12 +574,16 @@ export default function FenBot() {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-[#141926] backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5">
-                    <div className="flex items-center gap-1.5 mb-1">
+                  <div className="bg-[#141926] backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5 max-w-[80%]">
+                    <div className="flex items-center gap-1.5 mb-2">
                       <FenBotIcon size={18} />
                       <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-white/40"><Loader2 className="w-4 h-4 animate-spin" /> Thinking...</div>
+                    {streamingContent ? (
+                      <div className="text-sm leading-relaxed space-y-0">{parseMarkdown(streamingContent)}</div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-white/40"><Loader2 className="w-4 h-4 animate-spin" /> Thinking...</div>
+                    )}
                   </div>
                 </div>
               )}
