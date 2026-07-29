@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Loader2, Sparkles, RotateCcw } from 'lucide-react';
-import Logo from '../landing/Logo';
+import FenBotLogo from '../effects/FenBotLogo';
 import TwemojiText from '../social/TwemojiText';
 
 const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
@@ -224,8 +224,8 @@ export default function FenBot() {
     <div className="h-full flex flex-col bg-gray-950 relative overflow-hidden">
       {/* Logo Background */}
       <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
-        <div className="opacity-[0.03] select-none pointer-events-none" style={{ animation: 'logoFloat 8s ease-in-out infinite' }}>
-          <Logo size={600} className="text-indigo-400" />
+        <div className="opacity-20 select-none pointer-events-none" style={{ animation: 'logoFloat 6s ease-in-out infinite' }}>
+          <FenBotLogo size={500} />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-transparent to-gray-950" />
         <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-transparent to-gray-950" />
@@ -233,7 +233,7 @@ export default function FenBot() {
       <style>{`
         @keyframes logoFloat {
           0%, 100% { transform: scale(1) rotate(0deg); }
-          50% { transform: scale(1.05) rotate(1deg); }
+          50% { transform: scale(1.03) rotate(0.5deg); }
         }
       `}</style>
 
@@ -260,8 +260,8 @@ export default function FenBot() {
       <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 py-4">
         {isWelcome ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-5 shadow-2xl shadow-indigo-500/30">
-              <Sparkles className="w-10 h-10 text-white" />
+            <div className="mb-5">
+              <FenBotLogo size={200} />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Hey! I'm FenBot</h2>
             <p className="text-sm text-white/50 mb-8 max-w-sm leading-relaxed">
