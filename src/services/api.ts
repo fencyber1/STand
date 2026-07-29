@@ -141,13 +141,23 @@ STRICT RULES:
 - EVERY question MUST include an "imageQuery" field — this is REQUIRED, not optional.
 - The imageQuery MUST be a Wikipedia article title (e.g. "Mitosis", "Supply and demand", "Water cycle", "Python (programming language)") that has a relevant diagram or illustration.
 
-Format: ${questionFormat}${difficultyLine}
+CRITICAL QUESTION TYPE RULE — THIS IS THE MOST IMPORTANT RULE:
+You MUST generate ALL ${params.count} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
+${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ". Do NOT generate any Theory, TrueFalse, or FillBlank questions.' : ''}
+${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory". The correctAnswer MUST be a detailed model answer (2-4 sentences). Do NOT generate any MCQ, TrueFalse, or FillBlank questions.' : ''}
+${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse". The correctAnswer MUST be exactly "True" or "False". Do NOT generate any MCQ, Theory, or FillBlank questions.' : ''}
+${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___) in the question text where the answer goes. The "type" field MUST be "FillBlank". The correctAnswer MUST be the missing term. Do NOT generate any MCQ, Theory, or TrueFalse questions.' : ''}
+${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ, some Theory, some TrueFalse.' : ''}
+Do NOT deviate from this type. Do NOT mix types unless it is Mixed. Every single question must be the exact type specified above.
+${difficultyLine}
 
 Return ONLY a JSON array. Each object:
 {"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"exact Wikipedia article title for a related diagram"}
 
-For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
-For Theory: options can be omitted, correctAnswer is a model answer.
+For MCQ: type="MCQ", options MUST have exactly 4 items ["A. ...","B. ...","C. ...","D. ..."], correctAnswer MUST start with "A." "B." "C." or "D."
+For TrueFalse: type="TrueFalse", options=["True","False"], correctAnswer="True" or "False".
+For Theory: type="Theory", options can be omitted or empty array, correctAnswer is a model answer in 2-4 sentences.
+For FillBlank: type="FillBlank", question must contain "___" blank, correctAnswer is the missing term.
 The imageQuery is REQUIRED for every question. It MUST be a valid Wikipedia article title that has an image. Good examples: "Mitosis", "Photosynthesis", "Pythagorean theorem", "Supply and demand", "Newton's laws of motion", "Water cycle", "DNA".
 No markdown. No text outside the JSON array.`;
 
@@ -224,7 +234,14 @@ CRITICAL RULES:
 - The correct answer for every question must be explicitly stated or clearly implied in the document text
 - If the document covers a specific subject (e.g., biology, history, math), all questions must be about that subject's content as presented in the document
 
-QUESTION FORMAT: ${questionFormat}
+CRITICAL QUESTION TYPE RULE — THIS IS THE MOST IMPORTANT RULE:
+You MUST generate ALL ${params.questionCount} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
+${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ". Do NOT generate any Theory, TrueFalse, or FillBlank questions.' : ''}
+${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory". The correctAnswer MUST be a detailed model answer (2-4 sentences). Do NOT generate any MCQ, TrueFalse, or FillBlank questions.' : ''}
+${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse". The correctAnswer MUST be exactly "True" or "False". Do NOT generate any MCQ, Theory, or FillBlank questions.' : ''}
+${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___) in the question text where the answer goes. The "type" field MUST be "FillBlank". The correctAnswer MUST be the missing term. Do NOT generate any MCQ, Theory, or TrueFalse questions.' : ''}
+${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ, some Theory, some TrueFalse.' : ''}
+Do NOT deviate from this type. Do NOT mix types unless it is Mixed. Every single question must be the exact type specified above.
 ${difficultyLine}
 
 DOCUMENT TEXT:
@@ -239,9 +256,10 @@ STEP 3: Ensure every question can be answered correctly ONLY by someone who has 
 Return ONLY a JSON array. Each object must follow this exact structure:
 {"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"Explain why this answer is correct based on the document content","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"[The actual subtopic from the document, e.g. 'Mitosis phases' or 'French Revolution causes']"}
 
-For TrueFalse: options=["True","False"], correctAnswer="True" or "False".
-For Theory: options can be omitted, correctAnswer is a detailed model answer.
-For FillBlank: question should have a blank (___) where the answer goes, correctAnswer is the missing term.
+For MCQ: type="MCQ", options MUST have exactly 4 items ["A. ...","B. ...","C. ...","D. ..."], correctAnswer MUST start with "A." "B." "C." or "D."
+For TrueFalse: type="TrueFalse", options=["True","False"], correctAnswer="True" or "False".
+For Theory: type="Theory", options can be omitted or empty array, correctAnswer is a model answer in 2-4 sentences.
+For FillBlank: type="FillBlank", question must contain "___" blank, correctAnswer is the missing term.
 
 No markdown formatting. No text outside the JSON array.`;
 
