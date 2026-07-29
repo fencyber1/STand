@@ -295,7 +295,7 @@ export default function FenBot() {
       let fullReply = '';
       let pending = '';
       let lastUpdate = 0;
-      const THROTTLE_MS = 60;
+      const THROTTLE_MS = 150;
 
       const flushPending = () => {
         if (pending) {
