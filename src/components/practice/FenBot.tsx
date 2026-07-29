@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -80,6 +80,43 @@ const SUGGESTIONS = [
   { icon: '🧠', label: 'Machine learning', desc: 'How neural networks learn', topic: 'Explain how neural networks learn' },
   { icon: '⚡', label: 'Electricity', desc: 'How circuits work', topic: 'Explain how electricity and circuits work' },
 ];
+
+interface FenBotSettings {
+  speed: number;
+  fontSize: number;
+  fontFamily: string;
+}
+
+const SPEED_PRESETS = [
+  { label: 'Very slow', value: 300 },
+  { label: 'Slow', value: 200 },
+  { label: 'Medium', value: 120 },
+  { label: 'Fast', value: 60 },
+  { label: 'Very fast', value: 20 },
+];
+
+const FONT_SIZES = [12, 13, 14, 15, 16, 18, 20];
+
+const FONT_FAMILIES = [
+  { label: 'Default', value: 'inherit' },
+  { label: 'Serif', value: 'Georgia, serif' },
+  { label: 'Mono', value: 'ui-monospace, monospace' },
+  { label: 'Rounded', value: 'system-ui, -apple-system, sans-serif' },
+];
+
+const SETTINGS_KEY = 'fenbot_settings';
+
+function loadSettings(): FenBotSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { speed: 120, fontSize: 14, fontFamily: 'inherit' };
+}
+
+function saveSettings(s: FenBotSettings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
 
 function parseMarkdown(text: string) {
   const lines = text.split('\n');
@@ -176,6 +213,8 @@ export default function FenBot() {
   const [renameValue, setRenameValue] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
+  const [settings, setSettings] = useState<FenBotSettings>(loadSettings);
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,12 +224,30 @@ export default function FenBot() {
   const isWelcome = !activeConvo || messages.length === 0;
 
   useEffect(() => {
-    if (uid) loadFenBotConversations(uid).then((convos) => setConversations(convos));
+    if (!uid) return;
+    const localKey = `fenbot_convos_${uid}`;
+    // Load from localStorage first for instant display
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) setConversations(JSON.parse(raw));
+    } catch {}
+    // Then fetch from Firestore
+    loadFenBotConversations(uid).then((convos) => {
+      setConversations(convos);
+      localStorage.setItem(localKey, JSON.stringify(convos));
+    }).catch(() => {});
   }, [uid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
+
+  // Sync conversations to localStorage
+  useEffect(() => {
+    if (uid && conversations.length >= 0) {
+      localStorage.setItem(`fenbot_convos_${uid}`, JSON.stringify(conversations));
+    }
+  }, [conversations, uid]);
 
   useEffect(() => {
     if (!menuOpenId) return;
@@ -295,7 +352,7 @@ export default function FenBot() {
       let fullReply = '';
       let pending = '';
       let lastUpdate = 0;
-      const THROTTLE_MS = 150;
+      const THROTTLE_MS = settings.speed;
 
       const flushPending = () => {
         if (pending) {
@@ -388,6 +445,9 @@ export default function FenBot() {
             <span className="text-sm font-bold text-white">FenBot</span>
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={() => setShowSettings(true)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="Settings">
+              <Settings className="w-4 h-4 text-white/50" />
+            </button>
             <button onClick={() => { setActiveId(null); setSidebarOpen(false); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="New conversation">
               <Plus className="w-4 h-4 text-white/50" />
             </button>
@@ -572,7 +632,7 @@ export default function FenBot() {
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-5" style={{ fontSize: settings.fontSize, fontFamily: settings.fontFamily }}>
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] ${msg.role === 'user' ? 'bg-indigo-600/80 backdrop-blur rounded-2xl rounded-br-sm px-4 py-3 border border-indigo-500/20' : 'bg-[#141926] backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5'}`}>
@@ -633,6 +693,96 @@ export default function FenBot() {
       </div>
 
       <input ref={fileInputRef} type="file" accept=".txt,.pdf,.doc,.docx,.csv,.md,.json,.js,.ts,.py,.html,.css" className="hidden" onChange={handleFileImport} />
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowSettings(false)}>
+          <div className="bg-[#0d1220] border border-white/10 rounded-2xl w-[380px] max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-indigo-400" />
+                <span className="text-sm font-bold text-white">FenBot Settings</span>
+              </div>
+              <button onClick={() => setShowSettings(false)} className="p-1 rounded-lg hover:bg-white/10">
+                <X className="w-4 h-4 text-white/40" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-6">
+              {/* Speed */}
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 block">Word Rendering Speed</label>
+                <div className="flex gap-1.5">
+                  {SPEED_PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      onClick={() => { const s = { ...settings, speed: p.value }; setSettings(s); saveSettings(s); }}
+                      className={`flex-1 py-2 rounded-lg text-[11px] font-medium transition-all ${
+                        settings.speed === p.value
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Size */}
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 block">Font Size</label>
+                <div className="flex gap-1.5">
+                  {FONT_SIZES.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => { const s = { ...settings, fontSize: size }; setSettings(s); saveSettings(s); }}
+                      className={`flex-1 py-2 rounded-lg text-[11px] font-medium transition-all ${
+                        settings.fontSize === size
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Family */}
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 block">Font Style</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {FONT_FAMILIES.map((f) => (
+                    <button
+                      key={f.label}
+                      onClick={() => { const s = { ...settings, fontFamily: f.value }; setSettings(s); saveSettings(s); }}
+                      className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                        settings.fontFamily === f.value
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                      }`}
+                      style={{ fontFamily: f.value }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 block">Preview</label>
+                <div className="bg-[#141926] rounded-xl border border-white/5 p-4">
+                  <p className="text-white/70" style={{ fontSize: settings.fontSize, fontFamily: settings.fontFamily }}>
+                    This is how your chat text will look.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes logoFloat { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.03) rotate(0.5deg); } }
