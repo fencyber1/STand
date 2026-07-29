@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -181,7 +181,7 @@ export default function FenBot() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [showTools, setShowTools] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -336,7 +336,7 @@ export default function FenBot() {
   return (
     <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
       {/* Sidebar */}
-      <div className={`absolute inset-y-0 left-0 z-40 w-[260px] flex flex-col bg-[#0d1220]/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:relative lg:z-auto`}>
+      <div className={`absolute inset-y-0 left-0 z-40 w-[260px] flex flex-col bg-[#0d1220]/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:z-auto ${sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}>
         {/* Sidebar header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
           <div className="flex items-center gap-2">
@@ -431,14 +431,24 @@ export default function FenBot() {
       </div>
 
       {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Mobile toggle */}
-        <button onClick={() => setSidebarOpen(true)} className="absolute top-4 left-4 z-20 lg:hidden w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
-          <MessageSquare className="w-4 h-4 text-white/50" />
-        </button>
+        {/* Header bar */}
+        <div className="relative z-20 flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-[#0a0e1a]/80 backdrop-blur-xl shrink-0">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+            <Menu className="w-4 h-4 text-white/50" />
+          </button>
+          {!isWelcome && (
+            <button onClick={() => setActiveId(null)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/70 text-xs font-medium transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
+            </button>
+          )}
+          {!isWelcome && activeConvo && (
+            <span className="text-sm font-medium text-white/60 truncate">{activeConvo.title}</span>
+          )}
+        </div>
 
         {/* Background */}
         <div className="absolute inset-0 z-0">
@@ -581,8 +591,4 @@ export default function FenBot() {
       `}</style>
     </div>
   );
-}
-
-function MessageSquare(props: { className?: string }) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 }
