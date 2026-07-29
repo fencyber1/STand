@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Loader2, Sparkles, RotateCcw } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
+import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
 
 const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
@@ -242,9 +243,7 @@ export default function FenBot() {
         <button onClick={() => navigate('/')} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-5 h-5 text-white/70" />
         </button>
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
+        <FenBotIcon size={36} />
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-bold text-white">FenBot</h1>
           <p className="text-[11px] text-white/40">AI Tutor — Learn anything, step by step</p>
