@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
-import { getDeepExplanation } from '../../services/api';
+import { getDeepExplanation, gradeTheoryAnswer } from '../../services/api';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 import CalculatorPanel from './CalculatorPanel';
@@ -26,6 +26,7 @@ interface Result {
   correct: boolean | null;
   explanation: string;
   score?: number;
+  gradingFeedback?: string;
 }
 
 export default function QuizScreen() {
@@ -50,6 +51,7 @@ export default function QuizScreen() {
   const [deepLoading, setDeepLoading] = useState(false);
   const [deepExplanation, setDeepExplanation] = useState('');
   const [showDeep, setShowDeep] = useState(false);
+  const [grading, setGrading] = useState(false);
 
   const current = questions[currentIndex];
   const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
@@ -82,7 +84,7 @@ export default function QuizScreen() {
     }
   }, [current.id]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     recordTiming();
     let result: Result;
     const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
@@ -98,39 +100,40 @@ export default function QuizScreen() {
         explanation: current.explanation,
       };
     } else if (current.type === 'Theory') {
-      const normalize = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
-      const userNorm = normalize(textAnswer);
-      const correctNorm = normalize(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
-      let score: number;
-      let isCorrect: boolean;
-      if (!userNorm) {
-        score = 0;
-        isCorrect = false;
-      } else if (userNorm === correctNorm) {
-        score = 100;
-        isCorrect = true;
-      } else if (userNorm.includes(correctNorm)) {
-        score = 95;
-        isCorrect = true;
-      } else if (correctNorm.includes(userNorm)) {
-        score = 90;
-        isCorrect = true;
+      if (!textAnswer.trim()) {
+        result = { questionId: current.id, userAnswer: '', correct: false, explanation: current.explanation, score: 0 };
       } else {
-        const userWords = new Set(userNorm.split(/\s+/));
-        const correctWords = new Set(correctNorm.split(/\s+/));
-        let overlap = 0;
-        correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
-        const ratio = correctWords.size > 0 ? overlap / correctWords.size : 0;
-        score = Math.round(Math.min(100, Math.max(20, ratio * 100)));
-        isCorrect = ratio >= 0.6;
+        setGrading(true);
+        setShowResult(true);
+        const modelAnswer = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
+        try {
+          const graded = await gradeTheoryAnswer({
+            question: current.question,
+            studentAnswer: textAnswer,
+            modelAnswer,
+          });
+          result = {
+            questionId: current.id,
+            userAnswer: textAnswer,
+            correct: graded.score >= 50,
+            explanation: current.explanation,
+            score: graded.score,
+            gradingFeedback: graded.feedback,
+          };
+        } catch {
+          const normalize = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+          const userNorm = normalize(textAnswer);
+          const correctNorm = normalize(modelAnswer);
+          const userWords = new Set(userNorm.split(/\s+/));
+          const correctWords = new Set(correctNorm.split(/\s+/));
+          let overlap = 0;
+          correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
+          const ratio = correctWords.size > 0 ? overlap / correctWords.size : 0;
+          const score = Math.round(Math.min(100, Math.max(20, ratio * 100)));
+          result = { questionId: current.id, userAnswer: textAnswer, correct: ratio >= 0.6, explanation: current.explanation, score };
+        }
+        setGrading(false);
       }
-      result = {
-        questionId: current.id,
-        userAnswer: textAnswer,
-        correct: isCorrect,
-        explanation: current.explanation,
-        score,
-      };
     } else if (current.type === 'TrueFalse') {
       const correctStr = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
       const userAns = Array.isArray(selectedAnswer) ? selectedAnswer[0] : (selectedAnswer || '');
@@ -541,10 +544,20 @@ export default function QuizScreen() {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             )}
-            {current.type === 'Theory' && results[results.length - 1]?.score != null && (
-              <p className="mt-2 font-semibold text-primary-700 dark:text-primary-300">
-                Score: {results[results.length - 1].score}/100
-              </p>
+            {current.type === 'Theory' && grading && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-indigo-400">
+                <Loader2 className="w-4 h-4 animate-spin" /> Grading your answer...
+              </div>
+            )}
+            {current.type === 'Theory' && !grading && results[results.length - 1]?.score != null && (
+              <>
+                <p className="mt-2 font-semibold text-primary-700 dark:text-primary-300">
+                  Score: {results[results.length - 1].score}/100
+                </p>
+                {results[results.length - 1].gradingFeedback && (
+                  <p className="mt-1 text-xs text-white/50 italic">{results[results.length - 1].gradingFeedback}</p>
+                )}
+              </>
             )}
             {current.correctAnswer && current.type !== 'Theory' && (
               <p className="mt-2 text-sm text-green-700 dark:text-green-400 font-medium">
@@ -578,7 +591,7 @@ export default function QuizScreen() {
           {!showResult ? (
             <button
               onClick={handleSubmit}
-              disabled={((current.type === 'MCQ' || current.type === 'TrueFalse') && !selectedAnswer) || (current.type === 'Theory' && !textAnswer.trim())}
+              disabled={grading || ((current.type === 'MCQ' || current.type === 'TrueFalse') && !selectedAnswer) || (current.type === 'Theory' && !textAnswer.trim())}
               className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />

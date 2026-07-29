@@ -272,3 +272,83 @@ No markdown formatting. No text outside the JSON array.`;
 
   return { questions };
 }
+
+export async function gradeTheoryAnswer(params: {
+  question: string;
+  studentAnswer: string;
+  modelAnswer: string;
+  totalMarks?: number;
+}): Promise<{ score: number; feedback: string; tier1: number; tier2: number; tier3: number }> {
+  const total = params.totalMarks || 20;
+
+  const prompt = `You are an expert exam grader. Grade this student's theory answer using a 3-tier rubric.
+
+QUESTION: ${params.question}
+
+MODEL ANSWER: ${params.modelAnswer}
+
+STUDENT ANSWER: ${params.studentAnswer}
+
+TOTAL MARKS AVAILABLE: ${total}
+
+Grade using this rubric:
+
+Tier 1 - Core Understanding (${Math.round(total * 0.4)} marks):
+- Does the student understand the fundamental question?
+- Are key definitions/concepts correctly identified?
+- Is the explanation clear and logical?
+Score: 0 (no understanding), ${Math.round(total * 0.1)} (minimal), ${Math.round(total * 0.2)} (basic), ${Math.round(total * 0.3)} (good), ${Math.round(total * 0.4)} (excellent)
+
+Tier 2 - Specific Knowledge & Details (${Math.round(total * 0.35)} marks):
+- Does the answer include specific mechanisms or processes?
+- Are relevant examples provided?
+- Are technical terms used correctly?
+Score: 0 (none), ${Math.round(total * 0.1)} (minimal), ${Math.round(total * 0.2)} (some), ${Math.round(total * 0.3)} (good), ${Math.round(total * 0.35)} (comprehensive)
+
+Tier 3 - Critical Analysis & Connections (${Math.round(total * 0.25)} marks):
+- Does the answer show connections between ideas?
+- Is there evaluation or critical thinking?
+- Does the answer address "why" and "how," not just "what"?
+Score: 0 (none), ${Math.round(total * 0.05)} (vague), ${Math.round(total * 0.1)} (some), ${Math.round(total * 0.15)} (good), ${Math.round(total * 0.25)} (excellent)
+
+IMPORTANT RULES:
+- Look for evidence of understanding, not exact wording
+- Accept alternative explanations if academically valid
+- Give credit for partial understanding
+- Deduct only for genuine errors, not wording differences
+- The total score must be out of ${total}
+
+Return ONLY valid JSON, no markdown:
+{"score": <number 0-${total}>,"tier1": <number>,"tier2": <number>,"tier3": <number>,"feedback": "<2-3 sentence explanation of the score>"}`;
+
+  const raw = await callAI(prompt);
+
+  try {
+    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON found');
+    const data = JSON.parse(match[0]);
+    const score = Math.round(Math.min(total, Math.max(0, Number(data.score) || 0)));
+    return {
+      score,
+      tier1: Number(data.tier1) || 0,
+      tier2: Number(data.tier2) || 0,
+      tier3: Number(data.tier3) || 0,
+      feedback: String(data.feedback || ''),
+    };
+  } catch {
+    const userWords = new Set(params.studentAnswer.toLowerCase().split(/\s+/));
+    const modelWords = new Set(params.modelAnswer.toLowerCase().split(/\s+/));
+    let overlap = 0;
+    modelWords.forEach((w) => { if (userWords.has(w)) overlap++; });
+    const ratio = modelWords.size > 0 ? overlap / modelWords.size : 0;
+    const score = Math.round(Math.min(total, Math.max(1, ratio * total)));
+    return {
+      score,
+      tier1: Math.round(score * 0.4),
+      tier2: Math.round(score * 0.35),
+      tier3: Math.round(score * 0.25),
+      feedback: 'Graded by word overlap (AI grading unavailable).',
+    };
+  }
+}
