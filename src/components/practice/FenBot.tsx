@@ -402,69 +402,68 @@ export default function FenBot() {
       let fullReply = '';
       const tokenQueue: string[] = [];
       let streamDone = false;
-      const displayedRef = { current: '' };
+      let renderTimer: ReturnType<typeof setInterval> | null = null;
 
-      const renderTimer = setInterval(() => {
+      renderTimer = setInterval(() => {
         if (settings.speed === 0) {
-          // Very fast — render everything instantly
           if (tokenQueue.length > 0) {
             const batch = tokenQueue.splice(0).join('');
             fullReply += batch;
-            displayedRef.current = fullReply;
             setStreamingContent(fullReply);
           }
         } else {
-          // Render one token per tick
           if (tokenQueue.length > 0) {
             const token = tokenQueue.shift()!;
             fullReply += token;
-            displayedRef.current = fullReply;
             setStreamingContent(fullReply);
           } else if (streamDone) {
-            clearInterval(renderTimer);
-            setStreamingContent('');
+            if (renderTimer) clearInterval(renderTimer);
+            renderTimer = null;
           }
         }
       }, settings.speed);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
-          const data = trimmed.slice(6);
-          if (data === '[DONE]') continue;
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            const data = trimmed.slice(6);
+            if (data === '[DONE]') continue;
 
-          try {
-            const json = JSON.parse(data);
-            const delta = json.choices?.[0]?.delta?.content;
-            if (delta) {
-              // Split into individual characters for granular rendering
-              for (const ch of delta) {
-                tokenQueue.push(ch);
+            try {
+              const json = JSON.parse(data);
+              const delta = json.choices?.[0]?.delta?.content;
+              if (delta) {
+                for (const ch of delta) {
+                  tokenQueue.push(ch);
+                }
               }
-            }
-          } catch {}
+            } catch {}
+          }
         }
+      } catch (streamErr) {
+        // Stream interrupted — keep whatever was rendered so far
       }
 
       streamDone = true;
 
-      // Wait for queue to drain (or for very fast, it's already drained)
+      // Wait for queue to drain
       await new Promise<void>((resolve) => {
         const check = setInterval(() => {
-          if (tokenQueue.length === 0) { clearInterval(check); resolve(); }
+          if (tokenQueue.length === 0 || !renderTimer) { clearInterval(check); resolve(); }
         }, 50);
-        // Safety timeout
         setTimeout(() => { clearInterval(check); resolve(); }, 30000);
       });
 
+      // Save whatever we got (even partial)
       if (fullReply) {
         updateAndSave((prev) =>
           prev.map((c) => {
@@ -474,6 +473,7 @@ export default function FenBot() {
         );
       }
     } catch {
+      // Only show error if we have no partial content
       updateAndSave((prev) =>
         prev.map((c) => {
           if (c.id !== convoId) return c;
@@ -482,7 +482,9 @@ export default function FenBot() {
       );
     } finally {
       setLoading(false);
-      setStreamingContent('');
+      // Don't clear streamingContent here — let the render timer handle it
+      // If timer is gone, clear immediately
+      setTimeout(() => setStreamingContent(''), 100);
     }
   };
 

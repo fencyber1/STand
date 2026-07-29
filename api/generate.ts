@@ -1,6 +1,10 @@
 const API_KEY = process.env.NVIDIA_API_KEY || '';
 const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
+export const config = {
+  maxDuration: 60,
+};
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -48,11 +52,15 @@ export default async function handler(req: any, res: any) {
 
       const decoder = new TextDecoder();
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        res.write(chunk);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          res.write(chunk);
+        }
+      } catch (streamErr) {
+        // Stream interrupted — send what we have and end
       }
 
       return res.end();
