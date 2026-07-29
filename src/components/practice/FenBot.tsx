@@ -88,11 +88,11 @@ interface FenBotSettings {
 }
 
 const SPEED_PRESETS = [
-  { label: 'Very slow', value: 300 },
+  { label: 'Very slow', value: 400 },
   { label: 'Slow', value: 200 },
-  { label: 'Medium', value: 120 },
-  { label: 'Fast', value: 60 },
-  { label: 'Very fast', value: 20 },
+  { label: 'Medium', value: 80 },
+  { label: 'Fast', value: 30 },
+  { label: 'Very fast', value: 0 },
 ];
 
 const FONT_SIZES = [12, 13, 14, 15, 16, 18, 20];
@@ -111,7 +111,7 @@ function loadSettings(): FenBotSettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { speed: 120, fontSize: 14, fontFamily: 'inherit' };
+  return { speed: 80, fontSize: 14, fontFamily: 'inherit' };
 }
 
 function saveSettings(s: FenBotSettings) {
@@ -350,18 +350,32 @@ export default function FenBot() {
       const decoder = new TextDecoder();
       let buffer = '';
       let fullReply = '';
-      let pending = '';
-      let lastUpdate = 0;
-      const THROTTLE_MS = settings.speed;
+      const tokenQueue: string[] = [];
+      let streamDone = false;
+      const displayedRef = { current: '' };
 
-      const flushPending = () => {
-        if (pending) {
-          fullReply += pending;
-          pending = '';
-          setStreamingContent(fullReply);
-          lastUpdate = Date.now();
+      const renderTimer = setInterval(() => {
+        if (settings.speed === 0) {
+          // Very fast — render everything instantly
+          if (tokenQueue.length > 0) {
+            const batch = tokenQueue.splice(0).join('');
+            fullReply += batch;
+            displayedRef.current = fullReply;
+            setStreamingContent(fullReply);
+          }
+        } else {
+          // Render one token per tick
+          if (tokenQueue.length > 0) {
+            const token = tokenQueue.shift()!;
+            fullReply += token;
+            displayedRef.current = fullReply;
+            setStreamingContent(fullReply);
+          } else if (streamDone) {
+            clearInterval(renderTimer);
+            setStreamingContent('');
+          }
         }
-      };
+      }, settings.speed);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -381,16 +395,25 @@ export default function FenBot() {
             const json = JSON.parse(data);
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
-              pending += delta;
-              if (Date.now() - lastUpdate >= THROTTLE_MS) {
-                flushPending();
+              // Split into individual characters for granular rendering
+              for (const ch of delta) {
+                tokenQueue.push(ch);
               }
             }
           } catch {}
         }
       }
 
-      flushPending();
+      streamDone = true;
+
+      // Wait for queue to drain (or for very fast, it's already drained)
+      await new Promise<void>((resolve) => {
+        const check = setInterval(() => {
+          if (tokenQueue.length === 0) { clearInterval(check); resolve(); }
+        }, 50);
+        // Safety timeout
+        setTimeout(() => { clearInterval(check); resolve(); }, 30000);
+      });
 
       if (fullReply) {
         updateAndSave((prev) =>
