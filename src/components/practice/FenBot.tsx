@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, Plus, MessageSquare, Trash2, Settings, ArrowUp } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Plus, MessageSquare, Trash2, Settings, ArrowUp, X } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -318,8 +318,11 @@ export default function FenBot() {
     <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
       {/* Sidebar */}
       <div className={`absolute inset-y-0 left-0 z-40 w-[60px] flex flex-col items-center py-4 gap-3 bg-[#0d1220]/90 backdrop-blur-xl border-r border-white/5 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:relative lg:z-auto`}>
-        {/* Back */}
-        <button onClick={() => navigate('/')} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors mb-2">
+        {/* Close (mobile) / Back (desktop) */}
+        <button onClick={() => setSidebarOpen(false)} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors mb-2 lg:hidden">
+          <X className="w-4 h-4 text-white/50" />
+        </button>
+        <button onClick={() => navigate('/')} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 items-center justify-center transition-colors mb-2 hidden lg:flex">
           <ArrowLeft className="w-4 h-4 text-white/50" />
         </button>
 
