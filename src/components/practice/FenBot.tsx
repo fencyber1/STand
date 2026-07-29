@@ -293,6 +293,18 @@ export default function FenBot() {
       const decoder = new TextDecoder();
       let buffer = '';
       let fullReply = '';
+      let pending = '';
+      let lastUpdate = 0;
+      const THROTTLE_MS = 60;
+
+      const flushPending = () => {
+        if (pending) {
+          fullReply += pending;
+          pending = '';
+          setStreamingContent(fullReply);
+          lastUpdate = Date.now();
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -312,12 +324,16 @@ export default function FenBot() {
             const json = JSON.parse(data);
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
-              fullReply += delta;
-              setStreamingContent(fullReply);
+              pending += delta;
+              if (Date.now() - lastUpdate >= THROTTLE_MS) {
+                flushPending();
+              }
             }
           } catch {}
         }
       }
+
+      flushPending();
 
       if (fullReply) {
         updateAndSave((prev) =>
