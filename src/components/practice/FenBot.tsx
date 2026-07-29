@@ -115,11 +115,11 @@ function loadSettings(): FenBotSettings {
       const parsed = JSON.parse(raw);
       // Reset if speed doesn't match any valid preset
       const validSpeeds = SPEED_PRESETS.map((p) => p.value);
-      if (!validSpeeds.includes(parsed.speed)) parsed.speed = 80;
+      if (!validSpeeds.includes(parsed.speed)) parsed.speed = 30;
       return parsed;
     }
   } catch {}
-  return { speed: 80, fontSize: 14, fontFamily: 'inherit' };
+  return { speed: 30, fontSize: 14, fontFamily: 'inherit' };
 }
 
 function saveSettings(s: FenBotSettings) {
