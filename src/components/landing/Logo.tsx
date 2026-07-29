@@ -8,10 +8,9 @@ export default function Logo({ size = 200, className = '' }: Props) {
     <img
       src="/stand-logo.webp"
       alt="STand"
-      width={size}
-      height={size * 0.68}
-      className={`object-contain ${className}`}
-      style={{ mixBlendMode: 'screen' }}
+      draggable={false}
+      className={`block ${className}`}
+      style={{ width: size, height: 'auto', objectFit: 'contain', objectPosition: 'center 35%' }}
     />
   );
 }
