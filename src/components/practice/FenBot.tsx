@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, Sparkles, Plus, MessageSquare, Trash2, Settings, ArrowUp } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Plus, MessageSquare, Trash2, Settings, ArrowUp } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
+import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
 import { useAuth } from '../../contexts/AuthContext';
 import { loadFenBotConversations, saveFenBotConversation, deleteFenBotConversation } from '../../services/fenbotService';
@@ -467,7 +468,7 @@ export default function FenBot() {
                   }`}>
                     {msg.role === 'assistant' && (
                       <div className="flex items-center gap-1.5 mb-2">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                        <FenBotIcon size={18} />
                         <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
                       </div>
                     )}
@@ -484,10 +485,10 @@ export default function FenBot() {
               {loading && (
                 <div className="flex justify-start">
                   <div className="bg-[#141926] backdrop-blur rounded-2xl rounded-bl-sm px-4 py-3 border border-white/5">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                      <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
-                    </div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <FenBotIcon size={18} />
+                    <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
+                  </div>
                     <div className="flex items-center gap-2 text-sm text-white/40">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Thinking...
