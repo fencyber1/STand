@@ -183,7 +183,7 @@ export default function FenBot() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -337,8 +337,11 @@ export default function FenBot() {
 
   return (
     <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
+      {/* Overlay */}
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setSidebarOpen(false)} />}
+
       {/* Sidebar */}
-      <div className={`absolute inset-y-0 left-0 z-40 w-[260px] flex flex-col bg-[#0d1220]/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:z-auto ${sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-40 w-[260px] flex flex-col bg-[#0d1220]/95 backdrop-blur-xl border-r border-white/5 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Sidebar header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
           <div className="flex items-center gap-2">
@@ -349,7 +352,7 @@ export default function FenBot() {
             <button onClick={() => { setActiveId(null); setSidebarOpen(false); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="New conversation">
               <Plus className="w-4 h-4 text-white/50" />
             </button>
-            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors lg:hidden">
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
               <X className="w-4 h-4 text-white/50" />
             </button>
           </div>
@@ -431,9 +434,6 @@ export default function FenBot() {
           </div>
         </div>
       </div>
-
-      {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 relative">
