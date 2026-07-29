@@ -102,7 +102,7 @@ export default function Layout() {
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <div className="text-primary-600 dark:text-primary-400">
-            <Logo size={100} />
+            <Logo size={130} />
           </div>
           <button
             className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
