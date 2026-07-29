@@ -8,7 +8,7 @@ export default function LandingScreen() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 transition-colors">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 py-8 transition-colors overflow-y-auto">
         <div className="absolute top-4 right-4">
           <button
             onClick={toggleTheme}
