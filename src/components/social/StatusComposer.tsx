@@ -109,10 +109,10 @@ export default function StatusComposer() {
         </div>
       )}
 
-      {/* Center content */}
-      <div className="flex-1 flex items-center justify-center px-6 min-h-0 overflow-y-auto">
+      {/* Textarea — takes remaining space, scrolls when long */}
+      <div className="flex-1 flex items-end min-h-0 px-6 pt-4 pb-2 overflow-y-auto">
         {imagePreview ? (
-          <div className="relative w-full max-w-sm">
+          <div className="relative w-full max-w-sm mx-auto">
             <img src={imagePreview} alt="" className="w-full rounded-2xl shadow-xl" />
             <button
               onClick={() => setImagePreview(null)}
@@ -127,20 +127,21 @@ export default function StatusComposer() {
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a status"
             autoFocus
-            className={`w-full bg-transparent text-center outline-none resize-none placeholder-white/30 leading-relaxed ${FONT_STYLES[fontIndex].size}`}
+            className="w-full bg-transparent outline-none resize-none placeholder-white/30 leading-relaxed"
             style={{
               color: textColor,
               fontFamily: FONT_STYLES[fontIndex].css,
               fontWeight: FONT_STYLES[fontIndex].weight,
+              fontSize: FONT_STYLES[fontIndex].label === 'Bold' || FONT_STYLES[fontIndex].label === 'Script' ? '2.25rem' : '1.875rem',
+              minHeight: '4rem',
             }}
-            rows={5}
+            rows={1}
           />
         )}
       </div>
 
-      {/* Bottom bar */}
-      <div className="flex items-center justify-end p-4 shrink-0 safe-area-bottom" style={{ color: textColor }}>
-        {/* Send button */}
+      {/* Send button — always above keyboard */}
+      <div className="flex justify-end p-4 shrink-0 safe-area-bottom">
         <button
           onClick={handlePost}
           disabled={loading || !canPost}
