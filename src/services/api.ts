@@ -115,6 +115,7 @@ export async function generateQuestions(params: {
   questionType: string;
   count: number;
   difficulty?: string;
+  studentAge?: number;
 }): Promise<{ questions: Question[] }> {
   const typeMap: Record<string, string> = {
     MCQ: 'multiple choice with 4 options',
@@ -128,6 +129,16 @@ export async function generateQuestions(params: {
   const questionFormat = typeMap[params.questionType] || typeMap['MCQ'];
   const difficultyLine = params.difficulty && params.difficulty !== 'all'
     ? `\nAll questions must be difficulty level: ${params.difficulty}.`
+    : '';
+
+  const ageLine = params.studentAge && params.level === 'PRIMARY/BASIC'
+    ? `\nThe student is ${params.studentAge} years old (PRIMARY/BASIC level). Adjust accordingly:
+- Use very simple, everyday language a ${params.studentAge}-year-old can understand
+- Questions should be age-appropriate and relate to things a child this age would know
+- Avoid complex terminology — use words and examples from daily life (family, school, animals, colors, numbers, simple science)
+- MCQ options should be short and clear
+- Explanations should be simple and encouraging
+- Topics should match what a ${params.studentAge}-year-old is learning in school`
     : '';
 
   const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${params.count} exam questions.
@@ -150,6 +161,7 @@ ${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___) in th
 ${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ, some Theory, some TrueFalse.' : ''}
 Do NOT deviate from this type. Do NOT mix types unless it is Mixed. Every single question must be the exact type specified above.
 ${difficultyLine}
+${ageLine}
 
 Return ONLY a JSON array. Each object:
 {"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"exact Wikipedia article title for a related diagram"}
@@ -318,7 +330,32 @@ export async function gradeTheoryAnswer(params: {
 
   let strictness = '';
 
-  if (level.includes('jss') || level.includes('bece')) {
+  if (level.includes('primary') || level.includes('basic')) {
+    // Primary/basic — very lenient
+    if (difficulty === 'easy') {
+      strictness = `GRADING STRICTNESS: VERY LENIENT (PRIMARY/BASIC Level, Easy Difficulty)
+- This is a very young student (primary school age). Be extremely encouraging and lenient.
+- Reward ANY attempt to answer. Even a partially correct idea deserves generous marks.
+- Accept simple, everyday language — this is a child. No technical terminology expected.
+- If the student shows even basic awareness of the topic, give credit.
+- A reasonable attempt in simple words should score at least ${Math.round(total * 0.5)}.
+- Be warm and supportive in feedback. Encourage the child to keep learning.`;
+    } else if (difficulty === 'hard') {
+      strictness = `GRADING STRICTNESS: LENIENT (PRIMARY/BASIC Level, Hard Difficulty)
+- This is a young student attempting a harder question. Be very encouraging.
+- Reward effort and any correct ideas, even if incomplete.
+- Simple language is perfectly fine — this is a child.
+- Accept examples from everyday life.
+- A good attempt should score well. Don't penalize heavily for being young.`;
+    } else {
+      strictness = `GRADING STRICTNESS: VERY LENIENT (PRIMARY/BASIC Level, Medium Difficulty)
+- This is a young primary school student. Be encouraging and supportive.
+- Accept simple language and everyday examples.
+- If the student shows understanding of the basic concept, give good marks.
+- Don't require precise definitions — this is a child learning.
+- Warm, encouraging feedback is important.`;
+    }
+  } else if (level.includes('jss') || level.includes('bece')) {
     // Junior secondary — lenient
     if (difficulty === 'easy') {
       strictness = `GRADING STRICTNESS: LENIENT (JSS/BECE Level, Easy Difficulty)

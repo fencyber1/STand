@@ -14,9 +14,11 @@ export const SECTORS = [
   'Biology',
   'Chemistry',
   'Physics',
+  'Other',
 ];
 
 export const LEVELS = [
+  'PRIMARY/BASIC',
   'JSS/BECE',
   'SSS/WAEC',
   'SSS/NECO',
