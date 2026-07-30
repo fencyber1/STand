@@ -168,26 +168,30 @@ export async function getSuggestedUsers(uid: string, limit: number = 10): Promis
 export async function sendFriendRequest(from: { uid: string; name: string; photo: string | null }, to: { uid: string; name: string; photo: string | null }): Promise<{ success: boolean; error?: string }> {
   if (from.uid === to.uid) return { success: false, error: "You can't add yourself." };
 
-  const existing = await getDocs(query(
-    collection(db, 'friendRequests'),
-    where('from', '==', from.uid),
-    where('to', '==', to.uid),
-  ));
-  if (!existing.empty) return { success: false, error: 'Request already sent.' };
+  try {
+    const existing = await getDocs(query(
+      collection(db, 'friendRequests'),
+      where('from', '==', from.uid),
+      where('to', '==', to.uid),
+    ));
+    if (!existing.empty) return { success: false, error: 'Request already sent.' };
 
-  const reverse = await getDocs(query(
-    collection(db, 'friendRequests'),
-    where('from', '==', to.uid),
-    where('to', '==', from.uid),
-  ));
-  if (!reverse.empty) {
-    const doc = reverse.docs[0];
-    const data = doc.data();
-    if (data.status === 'pending') {
-      await updateDoc(doc.ref, { status: 'accepted' });
-      return { success: true };
+    const reverse = await getDocs(query(
+      collection(db, 'friendRequests'),
+      where('from', '==', to.uid),
+      where('to', '==', from.uid),
+    ));
+    if (!reverse.empty) {
+      const doc = reverse.docs[0];
+      const data = doc.data();
+      if (data.status === 'pending') {
+        await updateDoc(doc.ref, { status: 'accepted' });
+        return { success: true };
+      }
+      return { success: false, error: 'They already sent you a request.' };
     }
-    return { success: false, error: 'They already sent you a request.' };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Failed to check existing requests.' };
   }
 
   await setDoc(doc(collection(db, 'friendRequests')), sanitize({

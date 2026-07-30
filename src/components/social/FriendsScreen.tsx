@@ -25,6 +25,7 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Friend {
@@ -82,6 +83,25 @@ export default function FriendsScreen() {
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [presenceMap, setPresenceMap] = useState<Record<string, Presence>>({});
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // Sync sentRequests with actual outgoing requests from Firestore
+  useEffect(() => {
+    if (outgoingRequests.length > 0) {
+      setSentRequests((prev) => {
+        const next = new Set(prev);
+        outgoingRequests.forEach((r) => next.add(r.to));
+        return next;
+      });
+    }
+  }, [outgoingRequests]);
 
   useEffect(() => {
     if (!uid) return;
@@ -133,7 +153,12 @@ export default function FriendsScreen() {
       );
       if (result.success) {
         setSentRequests((prev) => new Set(prev).add(target.uid));
+        setToast({ type: 'success', message: `Friend request sent to ${target.displayName}` });
+      } else if (result.error) {
+        setToast({ type: 'error', message: result.error });
       }
+    } catch {
+      setToast({ type: 'error', message: 'Something went wrong. Please try again.' });
     } finally {
       setLoadingAction(null);
     }
@@ -204,7 +229,17 @@ export default function FriendsScreen() {
 
   const renderAddButton = (profile: UserProfile) => {
     const sent = sentRequests.has(profile.uid);
+    const alreadyFriend = friends.some((f) => f.uid === profile.uid);
     const loading = loadingAction === `send-${profile.uid}`;
+
+    if (alreadyFriend) {
+      return (
+        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium flex-shrink-0">
+          <Check className="w-3.5 h-3.5" />
+          Friends
+        </span>
+      );
+    }
     if (sent) {
       return (
         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium flex-shrink-0">
@@ -233,6 +268,18 @@ export default function FriendsScreen() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 max-w-2xl mx-auto">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          toast.type === 'error'
+            ? 'bg-red-500 text-white'
+            : 'bg-green-500 text-white'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
+          {toast.message}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         <Users className="w-6 h-6 text-indigo-500" />
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Friends</h1>
