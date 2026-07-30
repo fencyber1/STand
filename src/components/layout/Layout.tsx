@@ -13,8 +13,6 @@ import {
   LogOut,
   Menu,
   X,
-  Sun,
-  Moon,
   Award,
   Upload,
   Target,
@@ -27,7 +25,6 @@ import {
   MessageSquare,
   MessageCircle,
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
 import Logo from '../landing/Logo';
@@ -66,7 +63,6 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(0);
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
   const displayPhoto = storage.getProfilePhoto() || user?.photoURL || null;
@@ -163,13 +159,6 @@ export default function Layout() {
             </div>
           )}
           <NotificationBell />
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
