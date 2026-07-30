@@ -1,14 +1,25 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
+import { Trophy, Target, Clock, TrendingUp, Play, Flame, Sparkles } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import BorderGlow from '../ui/BorderGlow';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const history = useMemo(() => storage.getHistory(), []);
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
+  const firstName = (user?.fullName || 'Student').split(' ')[0];
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -33,6 +44,16 @@ export default function DashboardScreen() {
     return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(1), streak };
   }, [history]);
 
+  const motivationalLine = useMemo(() => {
+    if (stats.streak >= 7) return "You're on fire! Keep the streak going.";
+    if (stats.streak >= 3) return "Nice consistency! Keep building that streak.";
+    if (stats.total === 0) return "Ready to start your learning journey?";
+    const avg = parseFloat(stats.avgScore);
+    if (avg >= 80) return "Excellent performance! You're exam-ready.";
+    if (avg >= 60) return "Great progress! A bit more practice will get you there.";
+    return "Every question brings you closer to mastery.";
+  }, [stats]);
+
   const chartData = useMemo(() => {
     const subjectMap: Record<string, { total: number; count: number }> = {};
     history.forEach((h) => {
@@ -51,10 +72,31 @@ export default function DashboardScreen() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400">Track your exam practice progress</p>
-      </div>
+      <BorderGlow
+        backgroundColor={theme === 'dark' ? '#1e1b4b' : '#eef2ff'}
+        borderRadius={16}
+        glowColor="250 80 70"
+        glowRadius={30}
+        glowIntensity={0.6}
+        edgeSensitivity={40}
+        colors={['#6366f1', '#a855f7', '#ec4899']}
+      >
+        <div className="p-6 sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <Sparkles size={22} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
+                {greeting}, {firstName}
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm sm:text-base">
+                {motivationalLine}
+              </p>
+            </div>
+          </div>
+        </div>
+      </BorderGlow>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
