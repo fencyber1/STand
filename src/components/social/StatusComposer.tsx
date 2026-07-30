@@ -124,14 +124,8 @@ export default function StatusComposer() {
         )}
       </div>
 
-      {/* Bottom bar — WhatsApp style */}
-      <div className="flex items-center justify-between p-4 shrink-0 safe-area-bottom" style={{ color: textColor }}>
-        {/* Audience selector */}
-        <button className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 hover:bg-white/15 transition-colors text-sm font-medium">
-          <span className="text-base">🌍</span>
-          Status (Contacts)
-        </button>
-
+      {/* Bottom bar */}
+      <div className="flex items-center justify-end p-4 shrink-0 safe-area-bottom" style={{ color: textColor }}>
         {/* Send button */}
         <button
           onClick={handlePost}
