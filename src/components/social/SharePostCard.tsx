@@ -238,7 +238,7 @@ export default function SharePostCard({ post, isOpen, onClose }: SharePostCardPr
   const isDark = document.documentElement.classList.contains('dark');
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !displayRef.current) return;
     setGenerating(true);
 
     const timer = setTimeout(() => {
@@ -257,7 +257,7 @@ export default function SharePostCard({ post, isOpen, onClose }: SharePostCardPr
         console.error('Share card render failed:', err);
       }
       setGenerating(false);
-    }, 50);
+    }, 60);
 
     return () => clearTimeout(timer);
   }, [isOpen, post, isDark]);
@@ -305,17 +305,16 @@ export default function SharePostCard({ post, isOpen, onClose }: SharePostCardPr
           </button>
         </div>
 
-        <div className="p-4 flex justify-center">
-          {generating ? (
-            <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl" style={{ width: '100%', aspectRatio: `${W}/${H}` }}>
+        <div className="p-4 flex justify-center relative">
+          <canvas
+            ref={displayRef}
+            style={{ width: '100%', borderRadius: 16, display: 'block' }}
+            className="border border-gray-200 dark:border-gray-700 shadow-lg"
+          />
+          {generating && (
+            <div className="absolute inset-4 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl">
               <Loader2 size={28} className="animate-spin text-indigo-400" />
             </div>
-          ) : (
-            <canvas
-              ref={displayRef}
-              style={{ width: '100%', borderRadius: 16, display: 'block' }}
-              className="border border-gray-200 dark:border-gray-700 shadow-lg"
-            />
           )}
         </div>
 
