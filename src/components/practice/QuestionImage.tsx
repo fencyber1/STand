@@ -42,16 +42,7 @@ export default function QuestionImage({ query }: Props) {
     return () => { cancelled = true; };
   }, [query]);
 
-  if (failed) {
-    return (
-      <div className="mb-5 flex justify-center">
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-6 py-4 flex items-center gap-2 text-gray-400 dark:text-gray-500 text-sm">
-          <ImageIcon size={16} />
-          <span>{query}</span>
-        </div>
-      </div>
-    );
-  }
+  if (failed) return null;
 
   return (
     <div className="mb-5 flex justify-center">
