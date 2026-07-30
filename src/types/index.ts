@@ -355,3 +355,19 @@ export interface SavedDocument {
   wordCount: number;
   createdAt: string;
 }
+
+// ── Notifications ──
+
+export interface Notification {
+  id: string;
+  uid: string;
+  type: 'friend_request' | 'message' | 'group_message' | 'achievement' | 'post_like' | 'post_comment';
+  title: string;
+  body: string;
+  link: string;
+  fromUid: string;
+  fromName: string;
+  fromPhoto: string;
+  read: boolean;
+  createdAt: string;
+}

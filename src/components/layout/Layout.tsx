@@ -32,6 +32,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
 import Logo from '../landing/Logo';
 import FenBotIcon from '../effects/FenBotIcon';
+import NotificationBell from '../notifications/NotificationBell';
 
 function FenBotNavIcon({ size }: { size: number }) {
   return <FenBotIcon size={size} />;
@@ -161,6 +162,7 @@ export default function Layout() {
               <span className="text-sm text-gray-500 dark:text-gray-400">{displayName}</span>
             </div>
           )}
+          <NotificationBell />
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

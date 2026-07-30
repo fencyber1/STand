@@ -4,6 +4,8 @@ import { storage } from '../../services/storage';
 import { useEffect, useMemo, useState } from 'react';
 import { ACHIEVEMENTS } from '../../constants/achievements';
 import { getTopicFunFact } from '../../services/api';
+import { createNotification } from '../../services/notificationService';
+import { useAuth } from '../../contexts/AuthContext';
 import type { QuestionTiming, AchievementStats } from '../../types';
 
 interface ResultsState {
@@ -39,6 +41,7 @@ export default function ResultsScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ResultsState | null;
+  const { user } = useAuth();
   const [funFact, setFunFact] = useState('');
   const [funFactLoading, setFunFactLoading] = useState(true);
 
@@ -103,7 +106,18 @@ export default function ResultsScreen() {
 
       for (const ach of ACHIEVEMENTS) {
         if (ach.condition(stats)) {
-          storage.unlockAchievement(ach.id);
+          const isNew = storage.unlockAchievement(ach.id);
+          if (isNew && user?.uid) {
+            createNotification(user.uid, {
+              type: 'achievement',
+              title: 'Achievement Unlocked!',
+              body: `${ach.icon} ${ach.name} — ${ach.description}`,
+              link: '/achievements',
+              fromUid: '',
+              fromName: '',
+              fromPhoto: '',
+            }).catch(() => {});
+          }
         }
       }
     }

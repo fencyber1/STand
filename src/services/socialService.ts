@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
+import { createNotification } from './notificationService';
 import type { UserProfile, FriendRequest, Friend, Post, PostComment, ChatRoom, ChatMessage, ChatGroup, GroupMessage, Presence } from '../types';
 
 function sanitize(obj: any): any {
@@ -199,6 +200,15 @@ export async function sendFriendRequest(from: { uid: string; name: string; photo
     status: 'pending',
     createdAt: ts(),
   }));
+  createNotification(to.uid, {
+    type: 'friend_request',
+    title: 'New Friend Request',
+    body: `${from.name} sent you a friend request`,
+    link: '/friends',
+    fromUid: from.uid,
+    fromName: from.name,
+    fromPhoto: from.photo || '',
+  }).catch(() => {});
   return { success: true };
 }
 
@@ -372,6 +382,19 @@ export async function toggleLike(postId: string, uid: string, liked: boolean): P
   const likes: string[] = snap.data().likes || [];
   if (liked && !likes.includes(uid)) {
     await updateDoc(ref, { likes: [...likes, uid] });
+    // Notify post author
+    const authorUid = snap.data().authorUid;
+    if (authorUid && authorUid !== uid) {
+      createNotification(authorUid, {
+        type: 'post_like',
+        title: 'New Like',
+        body: `Someone liked your post`,
+        link: '/feed',
+        fromUid: uid,
+        fromName: '',
+        fromPhoto: '',
+      }).catch(() => {});
+    }
   } else if (!liked) {
     await updateDoc(ref, { likes: likes.filter((l) => l !== uid) });
   }
@@ -384,6 +407,19 @@ export async function likePost(postId: string, uid: string): Promise<void> {
   const likes: string[] = snap.data().likes || [];
   if (!likes.includes(uid)) {
     await updateDoc(ref, { likes: [...likes, uid] });
+    // Notify post author
+    const authorUid = snap.data().authorUid;
+    if (authorUid && authorUid !== uid) {
+      createNotification(authorUid, {
+        type: 'post_like',
+        title: 'New Like',
+        body: `Someone liked your post`,
+        link: '/feed',
+        fromUid: uid,
+        fromName: '',
+        fromPhoto: '',
+      }).catch(() => {});
+    }
   }
 }
 
@@ -434,6 +470,19 @@ export async function addComment(postId: string, author: { uid: string; name: st
   const postSnap = await getDoc(postRef);
   if (postSnap.exists()) {
     await updateDoc(postRef, { commentCount: (postSnap.data().commentCount || 0) + 1 });
+    // Notify post author
+    const postAuthorUid = postSnap.data().authorUid;
+    if (postAuthorUid && postAuthorUid !== author.uid) {
+      createNotification(postAuthorUid, {
+        type: 'post_comment',
+        title: `${author.name} commented on your post`,
+        body: content.length > 80 ? content.slice(0, 80) + '...' : content,
+        link: '/feed',
+        fromUid: author.uid,
+        fromName: author.name,
+        fromPhoto: author.photo || '',
+      }).catch(() => {});
+    }
   }
   return ref.id;
 }
@@ -537,6 +586,25 @@ export async function sendChatMessage(chatId: string, sender: { uid: string; nam
     lastMessageBy: sender.uid,
     lastMessageAt: ts(),
   }));
+  // Notify other member
+  try {
+    const roomSnap = await getDoc(doc(db, 'chatRooms', chatId));
+    if (roomSnap.exists()) {
+      const members: string[] = roomSnap.data().members || [];
+      const otherUid = members.find((m) => m !== sender.uid);
+      if (otherUid) {
+        createNotification(otherUid, {
+          type: 'message',
+          title: sender.name,
+          body: preview.length > 80 ? preview.slice(0, 80) + '...' : preview,
+          link: `/chat/${chatId}`,
+          fromUid: sender.uid,
+          fromName: sender.name,
+          fromPhoto: sender.photo || '',
+        }).catch(() => {});
+      }
+    }
+  } catch { /* best effort */ }
 }
 
 export async function markChatRead(chatId: string, uid: string): Promise<void> {
@@ -696,6 +764,26 @@ export async function sendGroupMessage(groupId: string, sender: { uid: string; n
     lastMessageBy: sender.uid,
     lastMessageAt: ts(),
   }));
+  // Notify other group members
+  try {
+    const groupSnap = await getDoc(doc(db, 'chatGroups', groupId));
+    if (groupSnap.exists()) {
+      const memberUids: string[] = groupSnap.data().memberUids || [];
+      const groupName: string = groupSnap.data().name || 'Group';
+      const otherUids = memberUids.filter((m) => m !== sender.uid);
+      otherUids.forEach((uid) => {
+        createNotification(uid, {
+          type: 'group_message',
+          title: groupName,
+          body: `${sender.name}: ${preview.length > 60 ? preview.slice(0, 60) + '...' : preview}`,
+          link: `/groups-chat/${groupId}`,
+          fromUid: sender.uid,
+          fromName: sender.name,
+          fromPhoto: sender.photo || '',
+        }).catch(() => {});
+      });
+    }
+  } catch { /* best effort */ }
 }
 
 export async function markGroupRead(groupId: string, uid: string): Promise<void> {
