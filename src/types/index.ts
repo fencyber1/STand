@@ -383,7 +383,18 @@ export interface Status {
   content: string;
   backgroundColor: string;
   textColor: string;
+  likes: string[];
   viewedBy: string[];
   createdAt: string;
   expiresAt: string;
+}
+
+export interface StatusComment {
+  id: string;
+  statusId: string;
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  text: string;
+  createdAt: string;
 }

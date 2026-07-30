@@ -1,9 +1,9 @@
 import {
-  collection, doc, setDoc, getDocs, updateDoc, deleteDoc,
+  collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
   onSnapshot, query, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Status } from '../types';
+import type { Status, StatusComment } from '../types';
 
 function ts(): string {
   return new Date().toISOString();
@@ -18,7 +18,7 @@ function sanitize(obj: any): any {
   return clean;
 }
 
-const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export async function postStatus(
   user: { uid: string; displayName: string; photoURL: string | null },
@@ -38,6 +38,7 @@ export async function postStatus(
     content,
     backgroundColor,
     textColor,
+    likes: [],
     viewedBy: [],
     createdAt: ts(),
     expiresAt,
@@ -61,15 +62,13 @@ export function subscribeToStatuses(uid: string, cb: (statuses: Status[]) => voi
           content: data.content || '',
           backgroundColor: data.backgroundColor || '#6366f1',
           textColor: data.textColor || '#ffffff',
+          likes: data.likes || [],
           viewedBy: data.viewedBy || [],
           createdAt: data.createdAt || '',
           expiresAt: data.expiresAt || '',
         } as Status;
       })
-      .filter((s) => {
-        const expires = new Date(s.expiresAt).getTime();
-        return expires > now;
-      })
+      .filter((s) => new Date(s.expiresAt).getTime() > now)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     cb(items);
   });
@@ -77,7 +76,7 @@ export function subscribeToStatuses(uid: string, cb: (statuses: Status[]) => voi
 
 export async function markStatusViewed(statusId: string, viewerUid: string): Promise<void> {
   const ref = doc(db, 'statuses', statusId);
-  const snap = await import('firebase/firestore').then((m) => m.getDoc(ref));
+  const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const viewedBy: string[] = snap.data().viewedBy || [];
   if (!viewedBy.includes(viewerUid)) {
@@ -85,8 +84,62 @@ export async function markStatusViewed(statusId: string, viewerUid: string): Pro
   }
 }
 
+export async function toggleStatusLike(statusId: string, uid: string): Promise<void> {
+  const ref = doc(db, 'statuses', statusId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const likes: string[] = snap.data().likes || [];
+  if (likes.includes(uid)) {
+    await updateDoc(ref, { likes: likes.filter((l) => l !== uid) });
+  } else {
+    await updateDoc(ref, { likes: [...likes, uid] });
+  }
+}
+
+export async function addStatusComment(
+  statusId: string,
+  user: { uid: string; displayName: string; photoURL: string | null },
+  text: string
+): Promise<string> {
+  const ref = doc(collection(db, 'statusComments'));
+  await setDoc(ref, sanitize({
+    statusId,
+    uid: user.uid,
+    displayName: user.displayName,
+    photoURL: user.photoURL || '',
+    text,
+    createdAt: ts(),
+  }));
+  return ref.id;
+}
+
+export function subscribeToStatusComments(statusId: string, cb: (comments: StatusComment[]) => void): () => void {
+  const q = query(collection(db, 'statusComments'), where('statusId', '==', statusId));
+  return onSnapshot(q, (snap) => {
+    const items = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        statusId: data.statusId,
+        uid: data.uid,
+        displayName: data.displayName || '',
+        photoURL: data.photoURL || null,
+        text: data.text || '',
+        createdAt: data.createdAt || '',
+      } as StatusComment;
+    }).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    cb(items);
+  });
+}
+
 export async function deleteStatus(statusId: string): Promise<void> {
   await deleteDoc(doc(db, 'statuses', statusId));
+  // Also delete comments
+  const q = query(collection(db, 'statusComments'), where('statusId', '==', statusId));
+  const snap = await getDocs(q);
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
 }
 
 export async function deleteExpiredStatuses(): Promise<void> {

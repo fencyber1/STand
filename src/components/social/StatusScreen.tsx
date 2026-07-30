@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Heart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
 import { subscribeToStatuses } from '../../services/statusService';
@@ -180,15 +180,22 @@ export default function StatusScreen() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{g.displayName}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {g.statuses.length} update{g.statuses.length !== 1 ? 's' : ''} · {(() => {
+                  <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                    <span>{g.statuses.length} update{g.statuses.length !== 1 ? 's' : ''}</span>
+                    {g.statuses.reduce((sum, s) => sum + s.likes.length, 0) > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <Heart size={10} className="fill-pink-400 text-pink-400" />
+                        {g.statuses.reduce((sum, s) => sum + s.likes.length, 0)}
+                      </span>
+                    )}
+                    <span>· {(() => {
                       const diff = Math.floor((Date.now() - new Date(g.statuses[g.statuses.length - 1].createdAt).getTime()) / 1000);
                       if (diff < 60) return 'Just now';
                       if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
                       if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
                       return `${Math.floor(diff / 86400)}d ago`;
-                    })()}
-                  </p>
+                    })()}</span>
+                  </div>
                 </div>
                 <div className={`w-2 h-2 rounded-full shrink-0 ${g.hasUnread ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
               </button>
@@ -203,6 +210,7 @@ export default function StatusScreen() {
           statuses={statuses}
           startIndex={viewIndex}
           onClose={() => setViewIndex(null)}
+          onStatusUpdate={(updated) => setStatuses((prev) => prev.map((s) => s.id === updated.id ? updated : s))}
         />
       )}
     </div>
