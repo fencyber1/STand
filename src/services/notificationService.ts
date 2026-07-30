@@ -1,6 +1,6 @@
 import {
   collection, doc, setDoc, getDocs, updateDoc, query,
-  where, orderBy, onSnapshot, writeBatch, limit,
+  where, onSnapshot, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Notification } from '../types';
@@ -41,8 +41,6 @@ export function subscribeToNotifications(uid: string, cb: (notifications: Notifi
   const q = query(
     collection(db, 'notifications'),
     where('uid', '==', uid),
-    orderBy('createdAt', 'desc'),
-    limit(100),
   );
   return onSnapshot(q, (snap) => {
     const items = snap.docs.map((d) => {
@@ -60,8 +58,11 @@ export function subscribeToNotifications(uid: string, cb: (notifications: Notifi
         read: data.read ?? false,
         createdAt: data.createdAt,
       } as Notification;
-    });
+    }).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100);
     cb(items);
+  }, (err) => {
+    console.error('Notification listener error:', err);
+    cb([]);
   });
 }
 
@@ -70,10 +71,12 @@ export async function markAsRead(notificationId: string): Promise<void> {
 }
 
 export async function markAllAsRead(uid: string): Promise<void> {
-  const q = query(collection(db, 'notifications'), where('uid', '==', uid), where('read', '==', false));
+  const q = query(collection(db, 'notifications'), where('uid', '==', uid));
   const snap = await getDocs(q);
   const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
+  snap.docs.forEach((d) => {
+    if (!d.data().read) batch.update(d.ref, { read: true });
+  });
   await batch.commit();
 }
 
