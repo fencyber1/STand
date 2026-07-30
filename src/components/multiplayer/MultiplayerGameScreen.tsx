@@ -23,6 +23,7 @@ export default function MultiplayerGameScreen() {
   const [copiedCode, setCopiedCode] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const prevStatusRef = useRef<string>('waiting');
 
   const uid = user?.uid || '';
 
@@ -32,13 +33,25 @@ export default function MultiplayerGameScreen() {
     return unsub;
   }, [roomCode]);
 
+  // Detect game start and initialize timer
+  useEffect(() => {
+    if (room?.status === 'playing' && prevStatusRef.current === 'waiting') {
+      setStartTime(Date.now());
+      setCurrentQ(0);
+      setSelected('');
+      setSubmitted(false);
+      setElapsed(0);
+    }
+    prevStatusRef.current = room?.status || 'waiting';
+  }, [room?.status]);
+
   const isHost = room?.createdBy === uid;
   const me = room?.players.find((p) => p.uid === uid);
   const opponent = room?.players.find((p) => p.uid !== uid);
 
   // Timer
   useEffect(() => {
-    if (room?.status !== 'playing' || me?.finished) return;
+    if (room?.status !== 'playing' || me?.finished || startTime === 0) return;
     timerRef.current = setInterval(() => {
       setElapsed(Date.now() - startTime);
     }, 100);

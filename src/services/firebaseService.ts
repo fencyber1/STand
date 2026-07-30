@@ -10,8 +10,6 @@ import {
   query,
   where,
   serverTimestamp,
-  arrayUnion,
-  arrayRemove,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -255,9 +253,9 @@ export async function joinQuizRoom(
     finished: false,
   };
 
-  await updateDoc(doc(db, 'quizRooms', roomDoc.id), {
-    players: arrayUnion(sanitizeForFirestore(newPlayer)),
-  });
+  // Read-modify-write instead of arrayUnion (unreliable with objects)
+  const updatedPlayers = [...players, sanitizeForFirestore(newPlayer)];
+  await updateDoc(doc(db, 'quizRooms', roomDoc.id), { players: updatedPlayers });
 
   return { success: true, roomId: roomDoc.id };
 }
@@ -291,7 +289,7 @@ export async function submitAnswer(
 
 export async function finishPlayer(roomId: string, uid: string, players: QuizPlayer[]): Promise<void> {
   const updated = players.map((p) => p.uid === uid ? { ...p, finished: true } : p);
-  const allFinished = updated.every((p) => p.finished || p.uid !== uid);
+  const allFinished = updated.every((p) => p.finished);
   const update: any = { players: updated };
   if (allFinished || updated.filter((p) => p.finished).length >= 2) {
     update.status = 'finished';
