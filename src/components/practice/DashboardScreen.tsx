@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trophy, Target, Clock, TrendingUp, Play, Flame, Sparkles } from 'lucide-react';
+import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import BorderGlow from '../ui/BorderGlow';
+import FenBotIcon from '../effects/FenBotIcon';
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -20,6 +21,15 @@ export default function DashboardScreen() {
   }, []);
 
   const firstName = (user?.fullName || 'Student').split(' ')[0];
+
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -83,9 +93,7 @@ export default function DashboardScreen() {
       >
         <div className="p-6 sm:p-8">
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-              <Sparkles size={22} className="text-white" />
-            </div>
+            <FenBotIcon size={48} />
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
                 {greeting}, {firstName}
@@ -93,6 +101,11 @@ export default function DashboardScreen() {
               <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm sm:text-base">
                 {motivationalLine}
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                <span className="font-medium tracking-wide">{dateStr}</span>
+                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+                <span className="font-mono tabular-nums">{timeStr}</span>
+              </div>
             </div>
           </div>
         </div>
