@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -87,6 +87,7 @@ interface FenBotSettings {
   speed: number;
   fontSize: number;
   fontFamily: string;
+  tts: boolean;
 }
 
 const SPEED_PRESETS = [
@@ -113,13 +114,13 @@ function loadSettings(): FenBotSettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Reset if speed doesn't match any valid preset
       const validSpeeds = SPEED_PRESETS.map((p) => p.value);
       if (!validSpeeds.includes(parsed.speed)) parsed.speed = 30;
+      if (typeof parsed.tts !== 'boolean') parsed.tts = true;
       return parsed;
     }
   } catch {}
-  return { speed: 30, fontSize: 14, fontFamily: 'inherit' };
+  return { speed: 30, fontSize: 14, fontFamily: 'inherit', tts: true };
 }
 
 function saveSettings(s: FenBotSettings) {
@@ -310,6 +311,11 @@ export default function FenBot() {
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpenId]);
 
+  // Stop speech on unmount
+  useEffect(() => {
+    return () => { window.speechSynthesis?.cancel(); };
+  }, []);
+
   const createConversation = useCallback((): string => {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const convo: Conversation = { id, title: 'New conversation', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
@@ -349,6 +355,7 @@ export default function FenBot() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
+    window.speechSynthesis?.cancel();
 
     let convoId = activeId;
     if (!convoId) convoId = createConversation();
@@ -403,6 +410,10 @@ export default function FenBot() {
       const tokenQueue: string[] = [];
       let streamDone = false;
       let renderTimer: ReturnType<typeof setInterval> | null = null;
+      let ttsBuffer = '';
+
+      // Cancel any ongoing speech when new message starts
+      if (settings.tts) window.speechSynthesis?.cancel();
 
       renderTimer = setInterval(() => {
         if (settings.speed === 0) {
@@ -410,13 +421,51 @@ export default function FenBot() {
             const batch = tokenQueue.splice(0).join('');
             fullReply += batch;
             setStreamingContent(fullReply);
+            // TTS: accumulate and speak sentences
+            if (settings.tts) {
+              ttsBuffer += batch;
+              const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
+              if (sentences) {
+                const speakText = sentences.join(' ').trim();
+                if (speakText.length > 3) {
+                  const utt = new SpeechSynthesisUtterance(speakText);
+                  utt.rate = 1.0;
+                  utt.pitch = 1.0;
+                  window.speechSynthesis?.speak(utt);
+                }
+                ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
+              }
+            }
           }
         } else {
           if (tokenQueue.length > 0) {
             const token = tokenQueue.shift()!;
             fullReply += token;
             setStreamingContent(fullReply);
+            // TTS: accumulate and speak sentences
+            if (settings.tts) {
+              ttsBuffer += token;
+              const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
+              if (sentences) {
+                const speakText = sentences.join(' ').trim();
+                if (speakText.length > 3) {
+                  const utt = new SpeechSynthesisUtterance(speakText);
+                  utt.rate = 1.0;
+                  utt.pitch = 1.0;
+                  window.speechSynthesis?.speak(utt);
+                }
+                ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
+              }
+            }
           } else if (streamDone) {
+            // Speak any remaining buffer
+            if (settings.tts && ttsBuffer.trim().length > 3) {
+              const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
+              utt.rate = 1.0;
+              utt.pitch = 1.0;
+              window.speechSynthesis?.speak(utt);
+              ttsBuffer = '';
+            }
             if (renderTimer) clearInterval(renderTimer);
             renderTimer = null;
           }
@@ -520,6 +569,18 @@ export default function FenBot() {
             <span className="text-sm font-bold text-white">FenBot</span>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const s = { ...settings, tts: !settings.tts };
+                setSettings(s);
+                saveSettings(s);
+                if (!s.tts) window.speechSynthesis?.cancel();
+              }}
+              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              title={settings.tts ? 'Disable voice' : 'Enable voice'}
+            >
+              {settings.tts ? <Volume2 className="w-4 h-4 text-indigo-400" /> : <VolumeX className="w-4 h-4 text-white/30" />}
+            </button>
             <button onClick={() => setShowSettings(true)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="Settings">
               <Settings className="w-4 h-4 text-white/50" />
             </button>
@@ -843,6 +904,34 @@ export default function FenBot() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Text-to-Speech */}
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3 block">Voice (Text-to-Speech)</label>
+                <button
+                  onClick={() => {
+                    const s = { ...settings, tts: !settings.tts };
+                    setSettings(s);
+                    saveSettings(s);
+                    if (!s.tts) window.speechSynthesis?.cancel();
+                  }}
+                  className={`flex items-center gap-3 w-full py-3 px-4 rounded-xl text-sm font-medium transition-all ${
+                    settings.tts
+                      ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-300'
+                      : 'bg-white/5 border border-white/10 text-white/40'
+                  }`}
+                >
+                  {settings.tts ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                  <div className="text-left">
+                    <p className={settings.tts ? 'text-indigo-200' : 'text-white/50'}>
+                      {settings.tts ? 'Voice is ON' : 'Voice is OFF'}
+                    </p>
+                    <p className="text-[11px] opacity-60">
+                      {settings.tts ? 'FenBot speaks responses aloud' : 'Click to enable voice'}
+                    </p>
+                  </div>
+                </button>
               </div>
 
               {/* Preview */}
