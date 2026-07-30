@@ -169,23 +169,22 @@ export async function sendFriendRequest(from: { uid: string; name: string; photo
   if (from.uid === to.uid) return { success: false, error: "You can't add yourself." };
 
   try {
-    const existing = await getDocs(query(
+    const existingSnap = await getDocs(query(
       collection(db, 'friendRequests'),
       where('from', '==', from.uid),
-      where('to', '==', to.uid),
     ));
-    if (!existing.empty) return { success: false, error: 'Request already sent.' };
+    const alreadySent = existingSnap.docs.some((d) => d.data().to === to.uid && d.data().status === 'pending');
+    if (alreadySent) return { success: false, error: 'Request already sent.' };
 
-    const reverse = await getDocs(query(
+    const reverseSnap = await getDocs(query(
       collection(db, 'friendRequests'),
       where('from', '==', to.uid),
-      where('to', '==', from.uid),
     ));
-    if (!reverse.empty) {
-      const doc = reverse.docs[0];
-      const data = doc.data();
+    const reverseDoc = reverseSnap.docs.find((d) => d.data().to === from.uid);
+    if (reverseDoc) {
+      const data = reverseDoc.data();
       if (data.status === 'pending') {
-        await updateDoc(doc.ref, { status: 'accepted' });
+        await updateDoc(reverseDoc.ref, { status: 'accepted' });
         return { success: true };
       }
       return { success: false, error: 'They already sent you a request.' };
@@ -225,40 +224,49 @@ export async function rejectFriendRequest(requestId: string): Promise<void> {
 }
 
 export async function removeFriend(myUid: string, friendUid: string): Promise<void> {
-  const snap1 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', myUid), where('to', '==', friendUid)));
-  const snap2 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', friendUid), where('to', '==', myUid)));
+  const snap1 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', myUid)));
+  const snap2 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', friendUid)));
   const batch = writeBatch(db);
-  snap1.docs.forEach((d) => batch.update(d.ref, { status: 'rejected' }));
-  snap2.docs.forEach((d) => batch.update(d.ref, { status: 'rejected' }));
+  snap1.docs.forEach((d) => {
+    if (d.data().to === friendUid) batch.update(d.ref, { status: 'rejected' });
+  });
+  snap2.docs.forEach((d) => {
+    if (d.data().to === myUid) batch.update(d.ref, { status: 'rejected' });
+  });
   await batch.commit();
 }
 
 export function subscribeToFriendRequests(uid: string, cb: (requests: FriendRequest[]) => void): () => void {
-  const q1 = query(collection(db, 'friendRequests'), where('to', '==', uid), where('status', '==', 'pending'));
-  const q2 = query(collection(db, 'friendRequests'), where('from', '==', uid), where('status', '==', 'pending'));
+  const q1 = query(collection(db, 'friendRequests'), where('to', '==', uid));
+  const q2 = query(collection(db, 'friendRequests'), where('from', '==', uid));
   let incoming: FriendRequest[] = [];
   let outgoing: FriendRequest[] = [];
   const emit = () => cb([...incoming, ...outgoing]);
   const u1 = onSnapshot(q1, (snap) => {
-    incoming = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FriendRequest));
+    incoming = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as FriendRequest))
+      .filter((r) => r.status === 'pending');
     emit();
   });
   const u2 = onSnapshot(q2, (snap) => {
-    outgoing = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FriendRequest));
+    outgoing = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as FriendRequest))
+      .filter((r) => r.status === 'pending');
     emit();
   });
   return () => { u1(); u2(); };
 }
 
 export function subscribeToFriends(uid: string, cb: (friends: Friend[]) => void): () => void {
-  const q1 = query(collection(db, 'friendRequests'), where('from', '==', uid), where('status', '==', 'accepted'));
-  const q2 = query(collection(db, 'friendRequests'), where('to', '==', uid), where('status', '==', 'accepted'));
+  const q1 = query(collection(db, 'friendRequests'), where('from', '==', uid));
+  const q2 = query(collection(db, 'friendRequests'), where('to', '==', uid));
   let friendUids = new Set<string>();
   let friendData: Record<string, Friend> = {};
   const emit = () => cb(Array.from(friendUids).map((uid) => friendData[uid]).filter(Boolean));
   const processDocs = (snap: any, isFrom: boolean) => {
     snap.docChanges().forEach((change: any) => {
       const d = change.doc.data();
+      if (d.status !== 'accepted') return;
       const otherUid = isFrom ? d.to : d.from;
       const otherName = isFrom ? d.toName : d.fromName;
       const otherPhoto = isFrom ? d.toPhoto : d.fromPhoto;
@@ -285,11 +293,11 @@ export function subscribeToFriends(uid: string, cb: (friends: Friend[]) => void)
 }
 
 export async function getFriendUids(uid: string): Promise<string[]> {
-  const snap1 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', uid), where('status', '==', 'accepted')));
-  const snap2 = await getDocs(query(collection(db, 'friendRequests'), where('to', '==', uid), where('status', '==', 'accepted')));
+  const snap1 = await getDocs(query(collection(db, 'friendRequests'), where('from', '==', uid)));
+  const snap2 = await getDocs(query(collection(db, 'friendRequests'), where('to', '==', uid)));
   const uids = new Set<string>();
-  snap1.docs.forEach((d) => uids.add(d.data().to));
-  snap2.docs.forEach((d) => uids.add(d.data().from));
+  snap1.docs.forEach((d) => { if (d.data().status === 'accepted') uids.add(d.data().to); });
+  snap2.docs.forEach((d) => { if (d.data().status === 'accepted') uids.add(d.data().from); });
   return Array.from(uids);
 }
 

@@ -155,6 +155,9 @@ export default function FriendsScreen() {
         setSentRequests((prev) => new Set(prev).add(target.uid));
         setToast({ type: 'success', message: `Friend request sent to ${target.displayName}` });
       } else if (result.error) {
+        if (result.error === 'Request already sent.' || result.error === 'They already sent you a request.') {
+          setSentRequests((prev) => new Set(prev).add(target.uid));
+        }
         setToast({ type: 'error', message: result.error });
       }
     } catch {
