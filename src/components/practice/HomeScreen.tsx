@@ -30,7 +30,8 @@ export default function HomeScreen() {
   const [sector, setSector] = useState(SECTORS[0]);
   const [customSector, setCustomSector] = useState('');
   const [level, setLevel] = useState(LEVELS[0]);
-  const [studentAge, setStudentAge] = useState(8);
+  const [studentAge, setStudentAge] = useState('8');
+  const [ageError, setAgeError] = useState('');
   const [questionType, setQuestionType] = useState(QUESTION_TYPES[0]);
   const [count, setCount] = useState(COUNT_OPTIONS[2]);
   const [timerH, setTimerH] = useState(0);
@@ -73,6 +74,7 @@ export default function HomeScreen() {
     setLoading(true);
     try {
       const actualSector = sector === 'Other' ? (customSector.trim() || 'General') : sector;
+      const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
       const result = await generateQuestions({
         topic,
         sector: actualSector,
@@ -80,7 +82,7 @@ export default function HomeScreen() {
         questionType: questionType.split(' ')[0],
         count,
         difficulty,
-        studentAge: level === 'PRIMARY/BASIC' ? studentAge : undefined,
+        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
       });
       let questions = result.questions;
       if (shuffle) {
@@ -163,16 +165,26 @@ export default function HomeScreen() {
             </select>
             {level === 'PRIMARY/BASIC' && (
               <div className="mt-2">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Student's Age</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Student's Age (4–12)</label>
                 <input
                   type="number"
                   min={4}
                   max={12}
                   value={studentAge}
-                  onChange={(e) => setStudentAge(Math.min(12, Math.max(4, Number(e.target.value))))}
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                  onChange={(e) => { setStudentAge(e.target.value); setAgeError(''); }}
+                  onBlur={() => {
+                    const n = Number(studentAge);
+                    if (!studentAge || isNaN(n)) { setStudentAge('8'); setAgeError(''); return; }
+                    if (n < 4 || n > 12) { setAgeError('Age must be between 4 and 12'); setStudentAge(studentAge); return; }
+                    setAgeError('');
+                  }}
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition ${ageError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
                 />
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Questions will be tailored to this age group</p>
+                {ageError ? (
+                  <p className="text-xs text-red-500 dark:text-red-400 mt-1">{ageError}</p>
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Questions will be tailored to this age group</p>
+                )}
               </div>
             )}
           </div>

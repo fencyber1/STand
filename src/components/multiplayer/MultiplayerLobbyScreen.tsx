@@ -20,7 +20,8 @@ export default function MultiplayerLobbyScreen() {
   const [questionCount, setQuestionCount] = useState(5);
   const [difficulty, setDifficulty] = useState<string>('medium');
   const [level, setLevel] = useState<string>(LEVELS[0]);
-  const [studentAge, setStudentAge] = useState(8);
+  const [studentAge, setStudentAge] = useState('8');
+  const [ageError, setAgeError] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,10 +35,15 @@ export default function MultiplayerLobbyScreen() {
   const handleCreate = async () => {
     if (!topic.trim()) { setError('Enter a topic'); return; }
     if (subject === 'Other' && !customSubject.trim()) { setError('Enter your course name'); return; }
+    if (level === 'PRIMARY/BASIC') {
+      const n = Number(studentAge);
+      if (!studentAge || isNaN(n) || n < 4 || n > 12) { setAgeError('Age must be between 4 and 12'); return; }
+    }
     setLoading(true);
     setError('');
     try {
       const actualSubject = subject === 'Other' ? (customSubject.trim() || 'General') : (subject || 'General');
+      const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
       const { questions } = await generateQuestions({
         topic: topic.trim(),
         sector: actualSubject,
@@ -45,7 +51,7 @@ export default function MultiplayerLobbyScreen() {
         questionType: 'MCQ',
         count: questionCount,
         difficulty,
-        studentAge: level === 'PRIMARY/BASIC' ? studentAge : undefined,
+        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
       });
       const code = await createQuizRoom(userObj, { topic: topic.trim(), subject: actualSubject, level, difficulty, questionCount }, questions);
       navigate(`/multiplayer/${code}`);
@@ -153,16 +159,26 @@ export default function MultiplayerLobbyScreen() {
               </select>
               {level === 'PRIMARY/BASIC' && (
                 <div className="mt-2">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Student's Age</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Student's Age (4–12)</label>
                   <input
                     type="number"
                     min={4}
                     max={12}
                     value={studentAge}
-                    onChange={(e) => setStudentAge(Math.min(12, Math.max(4, Number(e.target.value))))}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none"
+                    onChange={(e) => { setStudentAge(e.target.value); setAgeError(''); }}
+                    onBlur={() => {
+                      const n = Number(studentAge);
+                      if (!studentAge || isNaN(n)) { setStudentAge('8'); setAgeError(''); return; }
+                      if (n < 4 || n > 12) { setAgeError('Age must be between 4 and 12'); setStudentAge(studentAge); return; }
+                      setAgeError('');
+                    }}
+                    className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none transition ${ageError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
                   />
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Questions tailored for this age</p>
+                  {ageError ? (
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">{ageError}</p>
+                  ) : (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Questions tailored for this age</p>
+                  )}
                 </div>
               )}
             </div>
