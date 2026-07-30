@@ -16,8 +16,9 @@ import {
 import type { Post, PostComment } from '../../types';
 import {
   Heart, MessageCircle, Send, Trash2, Plus, X, Loader2,
-  BookOpen, User, Repeat2, Share2, Bookmark, MoreHorizontal, Hash,
+  BookOpen, User, Repeat2, Share2, Bookmark, MoreHorizontal, Hash, Image as ImageIcon, Link as LinkIcon,
 } from 'lucide-react';
+import SharePostCard from './SharePostCard';
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -39,7 +40,7 @@ function formatCaption(text: string) {
   );
 }
 
-function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, comments, expandedComments, toggleComments, commentInputs, setCommentInputs, submittingComment, getAvatar }: {
+function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, onShareImage, comments, expandedComments, toggleComments, commentInputs, setCommentInputs, submittingComment, getAvatar }: {
   post: Post;
   uid: string;
   onLike: (p: Post) => void;
@@ -47,6 +48,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
   onComment: (id: string) => void;
   onRepost: (id: string) => void;
   onShare: (id: string) => void;
+  onShareImage: (post: Post) => void;
   comments: PostComment[];
   expandedComments: boolean;
   toggleComments: (id: string) => void;
@@ -57,6 +59,17 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
 }) {
   const isLiked = post.likes.includes(uid);
   const [saved, setSaved] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showShareMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) setShowShareMenu(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showShareMenu]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
@@ -100,8 +113,24 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, c
         <button onClick={() => toggleComments(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
           <MessageCircle className="w-5 h-5 text-gray-400 dark:text-gray-300 group-hover:scale-110 transition-transform" />
         </button>
-        <button onClick={() => onShare(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
+        <button onClick={() => setShowShareMenu(!showShareMenu)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group relative">
           <Share2 className="w-5 h-5 text-gray-400 dark:text-gray-300 group-hover:scale-110 transition-transform" />
+          {showShareMenu && (
+            <div ref={shareMenuRef} className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden z-50 w-44">
+              <button
+                onClick={() => { setShowShareMenu(false); onShareImage(post); }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+              >
+                <ImageIcon size={16} className="text-indigo-500" /> Share as Image
+              </button>
+              <button
+                onClick={() => { setShowShareMenu(false); onShare(post.id); }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+              >
+                <LinkIcon size={16} className="text-gray-400" /> Share Link
+              </button>
+            </div>
+          )}
         </button>
         <div className="flex-1" />
         <button onClick={() => onRepost(post.id)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition group">
@@ -208,6 +237,7 @@ export default function FeedScreen() {
   const [submittingComment, setSubmittingComment] = useState<string | null>(null);
   const [showRepost, setShowRepost] = useState<string | null>(null);
   const [repostCaption, setRepostCaption] = useState('');
+  const [shareCardPost, setShareCardPost] = useState<Post | null>(null);
 
   const commentUnsubs = useRef<Record<string, () => void>>({});
 
@@ -388,6 +418,7 @@ export default function FeedScreen() {
               onComment={handleAddComment}
               onRepost={(id) => setShowRepost(id)}
               onShare={handleShare}
+              onShareImage={(p) => setShareCardPost(p)}
               comments={comments[post.id] || []}
               expandedComments={expandedComments.has(post.id)}
               toggleComments={toggleComments}
@@ -399,6 +430,13 @@ export default function FeedScreen() {
           ))}
         </div>
       )}
+
+      {/* Share as Image card */}
+      <SharePostCard
+        post={shareCardPost || { id: '', authorUid: '', authorName: '', authorPhoto: null, content: '', type: 'text', mediaUrl: '', mediaType: '', likes: [], commentCount: 0, reposts: [], shares: 0, createdAt: '' }}
+        isOpen={!!shareCardPost}
+        onClose={() => setShareCardPost(null)}
+      />
     </div>
   );
 }
