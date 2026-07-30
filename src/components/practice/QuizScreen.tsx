@@ -429,7 +429,7 @@ export default function QuizScreen() {
         </div>
 
         <div className="flex items-start gap-2 mb-4">
-          <p className="text-gray-800 dark:text-gray-100 text-lg leading-relaxed flex-1">{current.question}</p>
+          <p className="text-lg leading-relaxed flex-1 text-gray-100">{current.question}</p>
           <button
             onClick={handleSpeak}
             className="shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
