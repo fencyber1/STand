@@ -157,6 +157,15 @@ export default function FriendsScreen() {
     }
   };
 
+  const handleCancelRequest = async (requestId: string) => {
+    setLoadingAction(`cancel-${requestId}`);
+    try {
+      await rejectFriendRequest(requestId);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const handleRemove = async (friendUid: string) => {
     setLoadingAction(`remove-${friendUid}`);
     try {
@@ -404,6 +413,18 @@ export default function FriendsScreen() {
                         <Clock className="w-3 h-3" /> Request pending
                       </p>
                     </div>
+                    <button
+                      onClick={() => handleCancelRequest(req.id)}
+                      disabled={loadingAction === `cancel-${req.id}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors text-xs font-medium disabled:opacity-50 flex-shrink-0"
+                    >
+                      {loadingAction === `cancel-${req.id}` ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <X className="w-3.5 h-3.5" />
+                      )}
+                      Remove
+                    </button>
                   </div>
                 ))}
               </div>
