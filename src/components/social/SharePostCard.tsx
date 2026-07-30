@@ -8,8 +8,9 @@ interface SharePostCardProps {
   onClose: () => void;
 }
 
-const W = 540;
-const H = 680;
+const CARD_W = 540;
+const PAD = 28;
+const CONTENT_W = CARD_W - PAD * 2;
 
 function timeAgoShort(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -20,7 +21,7 @@ function timeAgoShort(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -34,35 +35,39 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   ctx.closePath();
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number, maxLines: number): number {
-  if (!text || !text.trim()) return y;
+function measureWrappedText(ctx: CanvasRenderingContext2D, text: string, maxW: number, lineH: number, maxLines: number): { lines: string[]; height: number } {
+  if (!text || !text.trim()) return { lines: [], height: 0 };
   const words = text.trim().split(/\s+/);
+  const result: string[] = [];
   let line = '';
-  let linesUsed = 0;
   for (let i = 0; i < words.length; i++) {
     const test = line ? line + ' ' + words[i] : words[i];
     if (ctx.measureText(test).width > maxW && line) {
-      linesUsed++;
-      if (linesUsed >= maxLines) {
-        ctx.fillText(line.slice(0, -3) + '...', x, y);
-        return y + lineH;
+      if (result.length >= maxLines) {
+        result[result.length - 1] = result[result.length - 1].slice(0, -3) + '...';
+        break;
       }
-      ctx.fillText(line, x, y);
+      result.push(line);
       line = words[i];
-      y += lineH;
     } else {
       line = test;
     }
   }
   if (line) {
-    linesUsed++;
-    if (linesUsed >= maxLines) {
-      ctx.fillText(line.slice(0, -3) + '...', x, y);
+    if (result.length >= maxLines) {
+      result[result.length - 1] = result[result.length - 1].slice(0, -3) + '...';
     } else {
-      ctx.fillText(line, x, y);
+      result.push(line);
     }
   }
-  return y + lineH;
+  return { lines: result, height: result.length * lineH };
+}
+
+function drawWrappedText(ctx: CanvasRenderingContext2D, lines: string[], x: number, y: number, lineH: number) {
+  for (const line of lines) {
+    ctx.fillText(line, x, y);
+    y += lineH;
+  }
 }
 
 function drawIcons(ctx: CanvasRenderingContext2D, x: number, y: number) {
@@ -72,25 +77,21 @@ function drawIcons(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  // Heart
   ctx.beginPath();
   ctx.moveTo(x, y + s * 0.3);
   ctx.bezierCurveTo(x - s * 0.5, y - s * 0.15, x - s * 0.5, y - s * 0.5, x, y - s * 0.25);
   ctx.bezierCurveTo(x + s * 0.5, y - s * 0.5, x + s * 0.5, y - s * 0.15, x, y + s * 0.3);
   ctx.stroke();
 
-  // Comment bubble
   const cx2 = x + 44;
   const rr = s * 0.42;
-  ctx.beginPath();
-  roundedRect(ctx, cx2 - rr, y - rr * 0.8, rr * 2, rr * 1.5, rr * 0.4);
+  rrect(ctx, cx2 - rr, y - rr * 0.8, rr * 2, rr * 1.5, rr * 0.4);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(cx2 - rr * 0.3, y + rr * 0.7);
   ctx.lineTo(cx2 - rr * 0.6, y + rr * 1.15);
   ctx.stroke();
 
-  // Share arrow
   const cx3 = x + 88;
   ctx.beginPath();
   ctx.moveTo(cx3, y - s * 0.35);
@@ -98,10 +99,8 @@ function drawIcons(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.lineTo(cx3, y + s * 0.35);
   ctx.stroke();
 
-  // Bookmark (far right)
-  const bx = W - 30;
-  const bw = s * 0.55;
-  const bh = s * 0.7;
+  const bx = CARD_W - 30;
+  const bw = s * 0.55, bh = s * 0.7;
   ctx.beginPath();
   ctx.moveTo(bx - bw / 2, y - bh / 2);
   ctx.lineTo(bx + bw / 2, y - bh / 2);
@@ -113,11 +112,8 @@ function drawIcons(ctx: CanvasRenderingContext2D, x: number, y: number) {
 }
 
 function buildCard(post: Post, isDark: boolean): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = W * 2;
-  canvas.height = H * 2;
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(2, 2);
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d')!;
 
   const bg = isDark ? '#1A1A2E' : '#FFFFFF';
   const textPri = isDark ? '#F1F5F9' : '#111827';
@@ -125,8 +121,40 @@ function buildCard(post: Post, isDark: boolean): HTMLCanvasElement {
   const border = isDark ? '#334155' : '#E5E7EB';
   const caption = isDark ? '#CBD5E1' : '#1F2937';
 
-  // ── Card background ──
-  roundedRect(ctx, 0, 0, W, H, 22);
+  // ── Measure content to determine height ──
+  ctx.font = '400 15px -apple-system, BlinkMacSystemFont, sans-serif';
+  const contentMeasurement = measureWrappedText(ctx, post.content, CONTENT_W, 22, 50);
+
+  // Caption lines (name + content truncated to 2 lines)
+  ctx.font = '600 13px -apple-system, BlinkMacSystemFont, sans-serif';
+  const nameW = ctx.measureText(post.authorName + ' ').width;
+  ctx.font = '400 13px -apple-system, BlinkMacSystemFont, sans-serif';
+  const captionMeasurement = measureWrappedText(ctx, post.content, CONTENT_W - nameW, 18, 2);
+
+  // ── Calculate total height ──
+  const HEADER_H = 70;
+  const CONTENT_PAD_TOP = 18;
+  const CONTENT_PAD_BOTTOM = 14;
+  const ICONS_H = 34;
+  const ICONS_GAP = 26;
+  const LIKES_H = 22;
+  const CAPTION_GAP = 6;
+  const CAPTION_H = captionMeasurement.height || 18;
+  const COMMENTS_TS_H = post.commentCount > 0 ? 48 : 22;
+  const WATERMARK_H = 32;
+  const BOTTOM_PAD = 14;
+
+  const contentH = contentMeasurement.height || 0;
+  const totalH = HEADER_H + CONTENT_PAD_TOP + contentH + CONTENT_PAD_BOTTOM + ICONS_GAP + ICONS_H + LIKES_H + CAPTION_GAP + CAPTION_H + COMMENTS_TS_H + WATERMARK_H + BOTTOM_PAD;
+
+  const CARD_H = Math.max(totalH, 200);
+
+  c.width = CARD_W * 2;
+  c.height = CARD_H * 2;
+  ctx.scale(2, 2);
+
+  // ── Background ──
+  rrect(ctx, 0, 0, CARD_W, CARD_H, 22);
   ctx.fillStyle = bg;
   ctx.fill();
   ctx.strokeStyle = border;
@@ -134,9 +162,7 @@ function buildCard(post: Post, isDark: boolean): HTMLCanvasElement {
   ctx.stroke();
 
   // ── HEADER ──
-  const hx = 28, hy = 34, ar = 20;
-
-  // Gradient ring
+  const hx = PAD, hy = 34, ar = 20;
   const g = ctx.createLinearGradient(hx - ar, hy - ar, hx + ar, hy + ar);
   g.addColorStop(0, '#F472B6');
   g.addColorStop(0.5, '#C084FC');
@@ -146,7 +172,6 @@ function buildCard(post: Post, isDark: boolean): HTMLCanvasElement {
   ctx.fillStyle = g;
   ctx.fill();
 
-  // Avatar fill (initial)
   ctx.beginPath();
   ctx.arc(hx, hy, ar, 0, Math.PI * 2);
   ctx.fillStyle = isDark ? '#4C1D95' : '#6366F1';
@@ -157,79 +182,83 @@ function buildCard(post: Post, isDark: boolean): HTMLCanvasElement {
   ctx.textBaseline = 'middle';
   ctx.fillText((post.authorName || '?')[0].toUpperCase(), hx, hy + 1);
 
-  // Name
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = textPri;
   ctx.font = '600 15px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.fillText(post.authorName, hx + ar + 14, hy - 3);
 
-  // Time
   ctx.fillStyle = textSec;
   ctx.font = '400 11px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.fillText(timeAgoShort(post.createdAt), hx + ar + 14, hy + 15);
 
-  // Three dots
   ctx.fillStyle = textSec;
   for (let i = 0; i < 3; i++) {
     ctx.beginPath();
-    ctx.arc(W - 28, hy - 10 + i * 10, 2, 0, Math.PI * 2);
+    ctx.arc(CARD_W - 28, hy - 10 + i * 10, 2, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // ── DIVIDER ──
+  // ── Divider ──
   ctx.strokeStyle = border;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
-  ctx.moveTo(28, 62);
-  ctx.lineTo(W - 28, 62);
+  ctx.moveTo(PAD, HEADER_H - 8);
+  ctx.lineTo(CARD_W - PAD, HEADER_H - 8);
   ctx.stroke();
 
-  // ── POST CONTENT ──
-  const cx = 28, cy = 80, cw = W - 56;
+  // ── Content ──
+  let y = HEADER_H + CONTENT_PAD_TOP;
   ctx.fillStyle = textPri;
   ctx.font = '400 15px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  const bottom = wrapText(ctx, post.content, cx, cy, cw, 22, 14);
+  if (contentMeasurement.lines.length > 0) {
+    drawWrappedText(ctx, contentMeasurement.lines, PAD, y, 22);
+  }
+  y += contentH + CONTENT_PAD_BOTTOM;
 
-  // ── ICONS ──
-  const iy = Math.max(bottom + 26, 460);
-  drawIcons(ctx, cx + 18, iy);
+  // ── Icons ──
+  y += ICONS_GAP;
+  drawIcons(ctx, PAD + 18, y);
+  y += ICONS_H;
 
-  // ── LIKES ──
-  const ly = iy + 34;
+  // ── Likes ──
   ctx.fillStyle = textPri;
   ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.textBaseline = 'top';
-  ctx.fillText(`${post.likes.length.toLocaleString()} ${post.likes.length === 1 ? 'like' : 'likes'}`, cx, ly);
+  const likesText = `${post.likes.length.toLocaleString()} ${post.likes.length === 1 ? 'like' : 'likes'}`;
+  ctx.fillText(likesText, PAD, y);
+  y += LIKES_H + CAPTION_GAP;
 
-  // ── CAPTION ──
-  const capY = ly + 24;
+  // ── Caption ──
   ctx.font = '600 13px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.fillStyle = caption;
   const nw = ctx.measureText(post.authorName + ' ').width;
-  ctx.fillText(post.authorName + ' ', cx, capY);
+  ctx.fillText(post.authorName + ' ', PAD, y);
   ctx.font = '400 13px -apple-system, BlinkMacSystemFont, sans-serif';
-  wrapText(ctx, post.content, cx + nw, capY, cw - nw, 18, 2);
+  if (captionMeasurement.lines.length > 0) {
+    drawWrappedText(ctx, captionMeasurement.lines, PAD + nw, y, 18);
+  }
+  y += CAPTION_H + 4;
 
-  // ── COMMENTS ──
-  const comY = capY + 40;
+  // ── Comments / timestamp ──
   ctx.fillStyle = textSec;
   ctx.font = '400 12px -apple-system, BlinkMacSystemFont, sans-serif';
   if (post.commentCount > 0) {
-    ctx.fillText(`View all ${post.commentCount} comment${post.commentCount !== 1 ? 's' : ''}`, cx, comY);
+    ctx.fillText(`View all ${post.commentCount} comment${post.commentCount !== 1 ? 's' : ''}`, PAD, y);
+    y += 22;
   }
+  ctx.fillText(timeAgoShort(post.createdAt).toUpperCase(), PAD, y);
+  y += 22;
 
-  // ── TIMESTAMP ──
-  ctx.fillText(timeAgoShort(post.createdAt).toUpperCase(), cx, comY + 22);
-
-  // ── WATERMARK ──
+  // ── Watermark ──
   ctx.fillStyle = textSec;
   ctx.font = '500 9px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Made with STand', W / 2, H - 16);
+  ctx.fillText('Made with STand', CARD_W / 2, CARD_H - 14);
 
-  return canvas;
+  return c;
 }
 
 export default function SharePostCard({ post, isOpen, onClose }: SharePostCardProps) {
@@ -249,9 +278,7 @@ export default function SharePostCard({ post, isOpen, onClose }: SharePostCardPr
           dest.width = offscreen.width;
           dest.height = offscreen.height;
           const dCtx = dest.getContext('2d');
-          if (dCtx) {
-            dCtx.drawImage(offscreen, 0, 0);
-          }
+          if (dCtx) dCtx.drawImage(offscreen, 0, 0);
         }
       } catch (err) {
         console.error('Share card render failed:', err);
