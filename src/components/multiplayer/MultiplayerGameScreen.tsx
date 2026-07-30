@@ -125,6 +125,16 @@ export default function MultiplayerGameScreen() {
             {copiedCode ? <CheckCircle size={16} /> : <Copy size={16} />}
           </button>
 
+          <div className="flex flex-wrap justify-center gap-2 mt-4">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium">{room?.subject || 'General'}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              room?.difficulty === 'easy' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
+              room?.difficulty === 'hard' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
+              'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+            }`}>{room?.difficulty || 'medium'}</span>
+            {room?.level && <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium">{room.level}</span>}
+          </div>
+
           <div className="mt-6 space-y-2">
             {room?.players.map((p) => (
               <div key={p.uid} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -169,7 +179,7 @@ export default function MultiplayerGameScreen() {
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
             {winner.uid === uid ? 'You Won!' : `${winner.name} Won!`}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{room.topic} • {room.subject}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{room.topic} • {room.subject} • {room.difficulty || 'medium'} • {room.level || ''}</p>
 
           <div className="space-y-3">
             {sorted.map((p, i) => (

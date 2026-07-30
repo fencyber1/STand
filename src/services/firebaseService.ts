@@ -58,6 +58,8 @@ export interface QuizRoom {
   hostName: string;
   topic: string;
   subject: string;
+  level: string;
+  difficulty: string;
   questionCount: number;
   status: 'waiting' | 'playing' | 'finished';
   questions: Question[];
@@ -195,7 +197,7 @@ export async function updateMemberStats(groupId: string, members: GroupMember[])
 
 export async function createQuizRoom(
   creator: { uid: string; name: string; photoURL: string | null },
-  config: { topic: string; subject: string; questionCount: number },
+  config: { topic: string; subject: string; level: string; difficulty: string; questionCount: number },
   questions: Question[]
 ): Promise<string> {
   const code = generateCode();
@@ -214,6 +216,8 @@ export async function createQuizRoom(
     hostName: creator.name,
     topic: config.topic,
     subject: config.subject,
+    level: config.level,
+    difficulty: config.difficulty,
     questionCount: config.questionCount,
     status: 'waiting',
     questions,
@@ -327,6 +331,8 @@ export function subscribeToQuizRoom(roomCode: string, callback: (room: QuizRoom 
         hostName: d.hostName,
         topic: d.topic,
         subject: d.subject,
+        level: d.level || '',
+        difficulty: d.difficulty || 'medium',
         questionCount: d.questionCount,
         status: d.status,
         questions: d.questions || [],

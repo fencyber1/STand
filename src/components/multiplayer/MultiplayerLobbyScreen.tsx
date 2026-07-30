@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
 import { createQuizRoom, joinQuizRoom, type QuizRoom } from '../../services/firebaseService';
 import { generateQuestions } from '../../services/api';
-import { SECTORS, LEVELS } from '../../constants';
+import { SECTORS, LEVELS, DIFFICULTY_LEVELS } from '../../constants';
 import BorderGlow from '../ui/BorderGlow';
 
 export default function MultiplayerLobbyScreen() {
@@ -17,6 +17,8 @@ export default function MultiplayerLobbyScreen() {
   const [topic, setTopic] = useState('');
   const [subject, setSubject] = useState('');
   const [questionCount, setQuestionCount] = useState(5);
+  const [difficulty, setDifficulty] = useState<string>('medium');
+  const [level, setLevel] = useState<string>(LEVELS[0]);
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -35,11 +37,12 @@ export default function MultiplayerLobbyScreen() {
       const { questions } = await generateQuestions({
         topic: topic.trim(),
         sector: subject || 'General',
-        level: 'intermediate',
+        level,
         questionType: 'MCQ',
         count: questionCount,
+        difficulty,
       });
-      const code = await createQuizRoom(userObj, { topic: topic.trim(), subject: subject || 'General', questionCount }, questions);
+      const code = await createQuizRoom(userObj, { topic: topic.trim(), subject: subject || 'General', level, difficulty, questionCount }, questions);
       navigate(`/multiplayer/${code}`);
     } catch (e: any) {
       setError(e.message || 'Failed to create room');
@@ -123,6 +126,36 @@ export default function MultiplayerLobbyScreen() {
                 <option value="">General</option>
                 {SECTORS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Education Level</label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none"
+              >
+                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
+              <div className="flex gap-2">
+                {DIFFICULTY_LEVELS.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDifficulty(d)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold capitalize transition ${
+                      difficulty === d
+                        ? d === 'easy' ? 'bg-green-500 text-white' : d === 'hard' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
