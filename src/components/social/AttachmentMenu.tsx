@@ -6,11 +6,11 @@ interface Props {
 }
 
 const ITEMS = [
-  { type: 'image', label: 'Photo', icon: Image, gradient: 'linear-gradient(135deg, #a855f7, #ec4899)', shadow: 'rgba(168,85,247,0.4)' },
-  { type: 'audio', label: 'Audio', icon: Music, gradient: 'linear-gradient(135deg, #f97316, #ef4444)', shadow: 'rgba(249,115,22,0.4)' },
-  { type: 'document', label: 'Document', icon: FileText, gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)', shadow: 'rgba(59,130,246,0.4)' },
-  { type: 'contact', label: 'Contact', icon: User, gradient: 'linear-gradient(135deg, #22c55e, #10b981)', shadow: 'rgba(34,197,94,0.4)' },
-  { type: 'location', label: 'Location', icon: MapPin, gradient: 'linear-gradient(135deg, #ef4444, #f43f5e)', shadow: 'rgba(239,68,68,0.4)' },
+  { type: 'image', label: 'Photo', icon: Image, glow: '#a855f7' },
+  { type: 'audio', label: 'Audio', icon: Music, glow: '#f97316' },
+  { type: 'document', label: 'Document', icon: FileText, glow: '#3b82f6' },
+  { type: 'contact', label: 'Contact', icon: User, glow: '#22c55e' },
+  { type: 'location', label: 'Location', icon: MapPin, glow: '#ef4444' },
 ];
 
 export default function AttachmentMenu({ onSelect, onClose }: Props) {
@@ -39,23 +39,44 @@ export default function AttachmentMenu({ onSelect, onClose }: Props) {
                 onClick={() => { onSelect(item.type); onClose(); }}
                 className="group flex flex-col items-center gap-2.5"
               >
-                {/* Icon circle */}
-                <div
-                  className="relative w-[52px] h-[52px] rounded-[18px] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1"
-                  style={{
-                    background: item.gradient,
-                    boxShadow: `0 4px 20px ${item.shadow}, 0 0 0 1px rgba(255,255,255,0.08) inset`,
-                  }}
-                >
-                  {/* Shine overlay */}
+                {/* App-icon style container */}
+                <div className="relative w-[56px] h-[56px] group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+                  {/* Outer glow */}
                   <div
-                    className="absolute inset-0 rounded-[18px] opacity-40"
-                    style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 50%)' }}
+                    className="absolute -inset-1 rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
+                    style={{ background: item.glow }}
                   />
-                  <Icon className="w-[22px] h-[22px] text-white relative z-10 drop-shadow-sm" />
+                  {/* Base — dark rounded square */}
+                  <div
+                    className="relative w-full h-full rounded-[16px] overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(180deg, #1a1a2e 0%, #0d0d15 100%)',
+                      boxShadow: `0 2px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06) inset`,
+                    }}
+                  >
+                    {/* Bottom color glow */}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-1/2 rounded-b-[16px] opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: `linear-gradient(180deg, transparent 0%, ${item.glow}40 60%, ${item.glow}90 100%)` }}
+                    />
+                    {/* Top shine / glass highlight */}
+                    <div
+                      className="absolute top-0 left-0 right-0 h-[45%] rounded-t-[16px]"
+                      style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 40%, transparent 100%)' }}
+                    />
+                    {/* Inner border highlight */}
+                    <div
+                      className="absolute inset-0 rounded-[16px]"
+                      style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.08) inset, 0 -1px 0 0 rgba(0,0,0,0.3) inset' }}
+                    />
+                    {/* Icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Icon className="w-[24px] h-[24px] text-white/90 drop-shadow-sm relative z-10" />
+                    </div>
+                  </div>
                 </div>
                 {/* Label */}
-                <span className="text-[10px] text-white/40 font-medium tracking-wide group-hover:text-white/70 transition-colors duration-200">
+                <span className="text-[10px] text-white/35 font-medium tracking-wide group-hover:text-white/65 transition-colors duration-200">
                   {item.label}
                 </span>
               </button>
