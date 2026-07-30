@@ -219,8 +219,17 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
             style={{ backgroundColor: current.backgroundColor }}
           >
             <p
-              className="text-2xl sm:text-3xl md:text-4xl font-bold text-center leading-relaxed break-words max-w-lg"
-              style={{ color: current.textColor }}
+              className="text-center leading-relaxed break-words max-w-lg"
+              style={{
+                color: current.textColor,
+                fontFamily: current.fontStyle === 'serif' ? "'Georgia', 'Times New Roman', serif"
+                  : current.fontStyle === 'mono' ? "'SF Mono', 'Fira Code', 'Courier New', monospace"
+                  : current.fontStyle === 'bold' ? "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                  : current.fontStyle === 'script' ? "'Brush Script MT', 'Segoe Script', cursive"
+                  : "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                fontWeight: current.fontStyle === 'bold' ? '800' : '300',
+                fontSize: current.fontStyle === 'bold' || current.fontStyle === 'script' ? '2.25rem' : '1.875rem',
+              }}
             >
               {current.content}
             </p>

@@ -25,7 +25,8 @@ export async function postStatus(
   type: 'text' | 'image',
   content: string,
   backgroundColor: string = '#6366f1',
-  textColor: string = '#ffffff'
+  textColor: string = '#ffffff',
+  fontStyle: string = 'sans'
 ): Promise<string> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + EXPIRY_MS).toISOString();
@@ -38,6 +39,7 @@ export async function postStatus(
     content,
     backgroundColor,
     textColor,
+    fontStyle,
     likes: [],
     viewedBy: [],
     createdAt: ts(),
@@ -62,6 +64,7 @@ export function subscribeToStatuses(uid: string, cb: (statuses: Status[]) => voi
           content: data.content || '',
           backgroundColor: data.backgroundColor || '#6366f1',
           textColor: data.textColor || '#ffffff',
+          fontStyle: data.fontStyle || 'sans',
           likes: data.likes || [],
           viewedBy: data.viewedBy || [],
           createdAt: data.createdAt || '',

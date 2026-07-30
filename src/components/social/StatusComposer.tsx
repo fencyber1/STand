@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Send, Image, Palette, Type } from 'lucide-react';
+import { X, Send, Image, Palette } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { postStatus } from '../../services/statusService';
 
@@ -12,6 +12,14 @@ const BG_COLORS = [
 
 const TEXT_COLORS = ['#ffffff', '#000000', '#f8fafc', '#1e293b'];
 
+const FONT_STYLES = [
+  { label: 'Sans', css: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", weight: '300', size: 'text-3xl' },
+  { label: 'Serif', css: "'Georgia', 'Times New Roman', serif", weight: '400', size: 'text-3xl' },
+  { label: 'Mono', css: "'SF Mono', 'Fira Code', 'Courier New', monospace", weight: '400', size: 'text-2xl' },
+  { label: 'Bold', css: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", weight: '800', size: 'text-4xl' },
+  { label: 'Script', css: "'Brush Script MT', 'Segoe Script', cursive", weight: '400', size: 'text-4xl' },
+];
+
 export default function StatusComposer() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -19,6 +27,7 @@ export default function StatusComposer() {
   const [bgColor, setBgColor] = useState('#6366f1');
   const [textColor, setTextColor] = useState('#ffffff');
   const [showColors, setShowColors] = useState(false);
+  const [fontIndex, setFontIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -38,9 +47,9 @@ export default function StatusComposer() {
     setLoading(true);
     try {
       if (imagePreview) {
-        await postStatus({ uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, 'image', imagePreview, bgColor, textColor);
+        await postStatus({ uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, 'image', imagePreview, bgColor, textColor, FONT_STYLES[fontIndex].label.toLowerCase());
       } else {
-        await postStatus({ uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, 'text', text.trim(), bgColor, textColor);
+        await postStatus({ uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, 'text', text.trim(), bgColor, textColor, FONT_STYLES[fontIndex].label.toLowerCase());
       }
       navigate('/statuses');
     } catch {
@@ -62,10 +71,11 @@ export default function StatusComposer() {
         </button>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {}}
-            className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            onClick={() => setFontIndex((i) => (i + 1) % FONT_STYLES.length)}
+            className="px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors text-sm font-bold"
+            title={FONT_STYLES[fontIndex].label}
           >
-            <Type size={22} />
+            T
           </button>
           <button
             onClick={() => setShowColors(!showColors)}
@@ -117,8 +127,12 @@ export default function StatusComposer() {
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a status"
             autoFocus
-            className="w-full bg-transparent text-center text-3xl font-light outline-none resize-none placeholder-white/30 leading-relaxed"
-            style={{ color: textColor }}
+            className={`w-full bg-transparent text-center outline-none resize-none placeholder-white/30 leading-relaxed ${FONT_STYLES[fontIndex].size}`}
+            style={{
+              color: textColor,
+              fontFamily: FONT_STYLES[fontIndex].css,
+              fontWeight: FONT_STYLES[fontIndex].weight,
+            }}
             rows={5}
           />
         )}

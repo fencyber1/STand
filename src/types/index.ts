@@ -383,6 +383,7 @@ export interface Status {
   content: string;
   backgroundColor: string;
   textColor: string;
+  fontStyle: string;
   likes: string[];
   viewedBy: string[];
   createdAt: string;
