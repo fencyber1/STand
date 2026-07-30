@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -266,9 +266,13 @@ export default function FenBot() {
   const [streamingContent, setStreamingContent] = useState('');
   const [settings, setSettings] = useState<FenBotSettings>(loadSettings);
   const [showSettings, setShowSettings] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeConvo = conversations.find((c) => c.id === activeId);
   const messages = activeConvo?.messages || [];
@@ -313,7 +317,74 @@ export default function FenBot() {
 
   // Stop speech on unmount
   useEffect(() => {
-    return () => { window.speechSynthesis?.cancel(); };
+    return () => {
+      window.speechSynthesis?.cancel();
+      recognitionRef.current?.abort();
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    };
+  }, []);
+
+  // Voice recognition setup
+  const SpeechRecognitionAPI = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
+  const voiceSupported = !!SpeechRecognitionAPI;
+
+  const startListening = useCallback(() => {
+    if (!SpeechRecognitionAPI || loading) return;
+    if (settings.tts) window.speechSynthesis?.cancel();
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let finalText = '';
+      let interimText = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += t;
+        else interimText += t;
+      }
+      const combined = (finalText || interimText).trim();
+      setTranscript(combined);
+      setInput(combined);
+
+      // Reset silence timer on any speech
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (finalText) {
+        // After final result, wait 3s of silence then auto-send
+        silenceTimerRef.current = setTimeout(() => {
+          recognition.stop();
+        }, 3000);
+      }
+    };
+
+    recognition.onerror = () => {
+      setListening(false);
+      setTranscript('');
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      // Auto-send if we have text
+      setInput((prev) => {
+        if (prev.trim()) {
+          setTimeout(() => sendMessage(prev), 100);
+        }
+        return prev;
+      });
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+    setTranscript('');
+  }, [SpeechRecognitionAPI, loading, settings.tts]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
   }, []);
 
   const createConversation = useCallback((): string => {
@@ -722,7 +793,31 @@ export default function FenBot() {
                     </div>
                   )}
                   <div className="flex items-center gap-2 px-4 py-2">
-                    <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2" disabled={loading} />
+                    {listening && (
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                          <div className="absolute inset-0 w-3 h-3 rounded-full bg-red-500 animate-ping opacity-40" />
+                        </div>
+                        <span className="text-xs text-red-400 animate-pulse">{transcript || 'Listening...'}</span>
+                      </div>
+                    )}
+                    {!listening && (
+                      <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2" disabled={loading} />
+                    )}
+                    {voiceSupported && (
+                      <button
+                        onClick={listening ? stopListening : startListening}
+                        disabled={loading}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                          listening
+                            ? 'bg-red-500 hover:bg-red-400 shadow-lg shadow-red-500/30'
+                            : 'bg-white/10 hover:bg-white/20'
+                        } disabled:opacity-30 disabled:cursor-not-allowed`}
+                      >
+                        <Mic className={`w-4 h-4 ${listening ? 'text-white animate-pulse' : 'text-white/60'}`} />
+                      </button>
+                    )}
                     <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading} className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
                       {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
                     </button>
@@ -817,7 +912,31 @@ export default function FenBot() {
                   </div>
                 )}
                 <div className="flex items-center gap-2 px-4 py-2">
-                  <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2" disabled={loading} />
+                  {listening && (
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                        <div className="absolute inset-0 w-3 h-3 rounded-full bg-red-500 animate-ping opacity-40" />
+                      </div>
+                      <span className="text-xs text-red-400 animate-pulse">{transcript || 'Listening...'}</span>
+                    </div>
+                  )}
+                  {!listening && (
+                    <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2" disabled={loading} />
+                  )}
+                  {voiceSupported && (
+                    <button
+                      onClick={listening ? stopListening : startListening}
+                      disabled={loading}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                        listening
+                          ? 'bg-red-500 hover:bg-red-400 shadow-lg shadow-red-500/30'
+                          : 'bg-white/10 hover:bg-white/20'
+                      } disabled:opacity-30 disabled:cursor-not-allowed`}
+                    >
+                      <Mic className={`w-4 h-4 ${listening ? 'text-white animate-pulse' : 'text-white/60'}`} />
+                    </button>
+                  )}
                   <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading} className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
                     {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
                   </button>
