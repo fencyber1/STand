@@ -27,6 +27,7 @@ export default function DocumentQuizScreen() {
   const [difficulty, setDifficulty] = useState('all');
 
   const [generating, setGenerating] = useState(false);
+  const [parsing, setParsing] = useState(false);
 
   const [savedDocs, setSavedDocs] = useState<SavedDocument[]>(() => storage.getSavedDocuments());
 
@@ -34,12 +35,16 @@ export default function DocumentQuizScreen() {
     setError('');
     setFileName(file.name);
     setSaved(false);
+    setParsing(true);
     const ext = file.name.split('.').pop()?.toLowerCase();
 
     try {
       if (ext === 'pdf') {
         const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+          'pdfjs-dist/build/pdf.worker.min.mjs',
+          import.meta.url,
+        ).toString();
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let text = '';
@@ -48,18 +53,29 @@ export default function DocumentQuizScreen() {
           const content = await page.getTextContent();
           text += content.items.map((item: any) => item.str).join(' ') + '\n';
         }
+        if (text.trim().length < 20) {
+          setError('PDF appears to have no readable text (may be scanned/image-based). Try a different file.');
+          setParsing(false);
+          return;
+        }
         setDocText(text);
         setStep('preview');
       } else if (ext === 'docx') {
         const mammoth = await import('mammoth');
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
+        if (result.value.trim().length < 20) {
+          setError('Document appears to be empty. Try a different file.');
+          setParsing(false);
+          return;
+        }
         setDocText(result.value);
         setStep('preview');
       } else {
         const text = await file.text();
         if (text.trim().length < 20) {
           setError('File appears to be empty or not text-readable. Try a different file.');
+          setParsing(false);
           return;
         }
         setDocText(text);
@@ -68,6 +84,7 @@ export default function DocumentQuizScreen() {
     } catch (e: any) {
       setError(`Failed to read file: ${e.message}`);
     }
+    setParsing(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -206,16 +223,33 @@ export default function DocumentQuizScreen() {
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
-                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-primary-400 dark:hover:border-primary-500 transition cursor-pointer"
-                onClick={() => fileRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer ${
+                  parsing
+                    ? 'border-primary-400 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500'
+                }`}
+                onClick={() => !parsing && fileRef.current?.click()}
               >
-                <Upload size={36} className="mx-auto text-gray-400 dark:text-gray-500 mb-3" />
-                <p className="text-gray-700 dark:text-gray-300 font-medium">Drop a document here or click to browse</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Supports PDF, DOCX, TXT, HTML, CSV, and more</p>
+                {parsing ? (
+                  <Loader2 size={36} className="mx-auto text-primary-500 mb-3 animate-spin" />
+                ) : (
+                  <Upload size={36} className="mx-auto text-gray-400 dark:text-gray-500 mb-3" />
+                )}
+                <p className="text-gray-700 dark:text-gray-300 font-medium">
+                  {parsing ? 'Reading document...' : 'Drop a document here or click to browse'}
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                  {parsing ? 'This may take a moment for large files' : 'Supports PDF, DOCX, TXT, HTML, CSV, and more'}
+                </p>
                 <input
                   ref={fileRef}
                   type="file"
-                  onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                  accept=".pdf,.docx,.doc,.txt,.html,.htm,.csv,.json,.md,.rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFile(file);
+                    e.target.value = '';
+                  }}
                   className="hidden"
                 />
               </div>
