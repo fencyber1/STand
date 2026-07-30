@@ -21,7 +21,7 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
   const [recordTime, setRecordTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -36,6 +36,7 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
     onSend(text.trim());
     setText('');
     setShowEmoji(false);
+    if (inputRef.current) inputRef.current.style.height = 'auto';
   }, [text, disabled, sending, onSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -166,7 +167,7 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
 
       {/* Recording state */}
       {recording ? (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl ${theme.inputBg}`} style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' }}>
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl max-w-xl mx-auto ${theme.inputBg}`} style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' }}>
           <button onClick={cancelRecording} className="p-2 rounded-full hover:bg-white/10 transition-colors">
             <X className="w-5 h-5 text-red-400" />
           </button>
@@ -180,7 +181,7 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
           </button>
         </div>
       ) : audioBlob ? (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl ${theme.inputBg}`} style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' }}>
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl max-w-xl mx-auto ${theme.inputBg}`} style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' }}>
           <button onClick={cancelRecording} className="p-2 rounded-full hover:bg-white/10 transition-colors">
             <X className="w-5 h-5 text-red-400" />
           </button>
@@ -195,7 +196,7 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
       ) : (
         /* Normal input */
         <div
-          className="flex items-center gap-2 px-2 py-2 rounded-2xl"
+          className="flex items-end gap-2 px-2 py-2 rounded-2xl max-w-xl mx-auto"
           style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           {/* Avatar */}
@@ -208,34 +209,49 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
           </div>
 
           {/* Attach */}
-          <button onClick={onAttach} className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
+          <button onClick={onAttach} className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 self-end">
             <Paperclip className={`w-5 h-5 ${tc('text-gray-400', 'text-white/50')}`} />
           </button>
 
           {/* Input */}
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onChange={(e) => {
+              setText(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            onInput={(e) => {
+              const t = e.currentTarget;
+              t.style.height = 'auto';
+              t.style.height = Math.min(t.scrollHeight, 120) + 'px';
+            }}
             placeholder="Message"
-            className={`flex-1 bg-transparent text-sm ${theme.textColor} placeholder-white/25 outline-none min-w-0`}
+            rows={1}
+            className={`flex-1 bg-transparent text-sm ${theme.textColor} placeholder-white/25 outline-none min-w-0 resize-none leading-relaxed py-1`}
+            style={{ maxHeight: '120px' }}
             disabled={disabled || sending}
           />
 
           {/* Emoji */}
-          <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 rounded-full transition-colors flex-shrink-0 ${showEmoji ? 'bg-white/15' : 'hover:bg-white/10'}`}>
+          <button onClick={() => setShowEmoji(!showEmoji)} className={`p-2 rounded-full transition-colors flex-shrink-0 self-end ${showEmoji ? 'bg-white/15' : 'hover:bg-white/10'}`}>
             <Smile className={`w-5 h-5 ${tc('text-gray-400', 'text-white/50')}`} />
           </button>
 
           {/* Send or Mic */}
           {hasText ? (
-            <button onClick={handleSend} disabled={sending} className="p-2.5 bg-indigo-500 rounded-full hover:bg-indigo-400 transition-all shadow-lg shadow-indigo-500/30 flex-shrink-0 disabled:opacity-50">
+            <button onClick={handleSend} disabled={sending} className="p-2.5 bg-indigo-500 rounded-full hover:bg-indigo-400 transition-all shadow-lg shadow-indigo-500/30 flex-shrink-0 disabled:opacity-50 self-end">
               {sending ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Send className="w-4 h-4 text-white" />}
             </button>
           ) : (
-            <button onClick={startRecording} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-all flex-shrink-0">
+            <button onClick={startRecording} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-all flex-shrink-0 self-end">
               <Mic className={`w-4 h-4 ${tc('text-gray-400', 'text-white/60')}`} />
             </button>
           )}
