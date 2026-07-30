@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { markStatusViewed, toggleStatusLike, addStatusComment, subscribeToStatusComments, deleteStatus } from '../../services/statusService';
+import { getUserProfile } from '../../services/socialService';
 import type { Status, StatusComment } from '../../types';
 
 interface Props {
@@ -24,6 +25,9 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
   const [likeCount, setLikeCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const [viewedByProfiles, setViewedByProfiles] = useState<{ uid: string; displayName: string; photoURL: string | null }[]>([]);
+  const [showViewedBy, setShowViewedBy] = useState(false);
+  const [loadingViewers, setLoadingViewers] = useState(false);
 
   const current = statuses[currentIdx];
   const isOwner = current?.uid === user?.uid;
@@ -45,6 +49,7 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
 
   const goNext = useCallback(() => {
     setShowComments(false);
+    setShowViewedBy(false);
     if (currentIdx < statuses.length - 1) {
       setCurrentIdx((i) => i + 1);
       setProgress(0);
@@ -55,6 +60,7 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
 
   const goPrev = useCallback(() => {
     setShowComments(false);
+    setShowViewedBy(false);
     if (currentIdx > 0) {
       setCurrentIdx((i) => i - 1);
       setProgress(0);
@@ -68,9 +74,9 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
     }
   }, [current, user?.uid]);
 
-  // Progress timer — pause when comments open
+  // Progress timer — pause when comments or viewed-by open
   useEffect(() => {
-    if (showComments) { if (timerRef.current) clearInterval(timerRef.current); return; }
+    if (showComments || showViewedBy) { if (timerRef.current) clearInterval(timerRef.current); return; }
     setProgress(0);
     const start = Date.now();
     timerRef.current = setInterval(() => {
@@ -83,11 +89,11 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
       }
     }, 50);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [currentIdx, goNext, showComments]);
+  }, [currentIdx, goNext, showComments, showViewedBy]);
 
   // Tap zones
   const handleTap = (e: React.MouseEvent) => {
-    if (showComments) return;
+    if (showComments || showViewedBy) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width / 3) goPrev();
@@ -98,14 +104,14 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
   // Keyboard
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (showComments) return;
+      if (showComments || showViewedBy) return;
       if (e.key === 'ArrowRight' || e.key === ' ') goNext();
       else if (e.key === 'ArrowLeft') goPrev();
       else if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [goNext, goPrev, onClose, showComments]);
+  }, [goNext, goPrev, onClose, showComments, showViewedBy]);
 
   const handleLike = async () => {
     if (!current || !user?.uid) return;
@@ -131,6 +137,25 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
     if (statuses.length <= 1) onClose();
     else if (currentIdx >= statuses.length - 1) setCurrentIdx((i) => i - 1);
   };
+
+  // Fetch viewer profiles when panel opens
+  useEffect(() => {
+    if (!showViewedBy || !current?.viewedBy.length) { setViewedByProfiles([]); return; }
+    let cancelled = false;
+    setLoadingViewers(true);
+    Promise.all(
+      current.viewedBy.map((uid) => getUserProfile(uid).catch(() => null))
+    ).then((profiles) => {
+      if (cancelled) return;
+      setViewedByProfiles(
+        profiles
+          .filter(Boolean)
+          .map((p) => ({ uid: p!.uid, displayName: p!.displayName, photoURL: p!.photoURL }))
+      );
+      setLoadingViewers(false);
+    });
+    return () => { cancelled = true; };
+  }, [showViewedBy, current?.id]);
 
   if (!current) return null;
 
@@ -224,11 +249,14 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
         </button>
 
         {/* View count (owner) */}
-        {isOwner && showInfo && (
-          <div className="flex items-center gap-1.5 ml-auto text-white/50 text-sm">
-            <Eye size={16} />
+        {isOwner && showInfo && current.viewedBy.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowViewedBy(true); }}
+            className="flex items-center gap-1.5 ml-auto text-white/70 hover:text-white text-sm bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition-colors"
+          >
+            <Eye size={15} />
             <span>{current.viewedBy.length}</span>
-          </div>
+          </button>
         )}
       </div>
 
@@ -300,6 +328,57 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
             >
               <Send size={16} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Viewed By Panel */}
+      {showViewedBy && (
+        <div
+          className="absolute inset-x-0 bottom-0 z-10 bg-gray-900/95 backdrop-blur-sm rounded-t-2xl max-h-[55vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <Eye size={16} className="text-white/60" />
+              <p className="text-white font-semibold text-sm">
+                Viewed by {current.viewedBy.length}
+              </p>
+            </div>
+            <button onClick={() => setShowViewedBy(false)} className="p-1 text-white/50 hover:text-white">
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Viewer list */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {loadingViewers ? (
+              <div className="flex justify-center py-8">
+                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : viewedByProfiles.length === 0 ? (
+              <p className="text-white/30 text-center text-sm py-8">No views yet</p>
+            ) : (
+              viewedByProfiles.map((viewer) => (
+                <div key={viewer.uid} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors">
+                  {viewer.photoURL ? (
+                    <img src={viewer.photoURL} alt="" className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {viewer.displayName?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{viewer.displayName}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-white/40">
+                    <Check size={14} />
+                    <span className="text-xs">Viewed</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
