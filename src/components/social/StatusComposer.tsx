@@ -55,9 +55,9 @@ export default function StatusComposer() {
   const isDark = ['#1e1b4b', '#0f172a', '#18181b', '#000000'].includes(bgColor);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: bgColor }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: bgColor }}>
       {/* Header */}
-      <div className="flex items-center gap-3 p-4" style={{ color: textColor }}>
+      <div className="flex items-center gap-3 p-4 shrink-0" style={{ color: textColor }}>
         <button onClick={() => navigate(-1)} className="p-1 rounded-lg hover:bg-white/10">
           <ArrowLeft size={22} />
         </button>
@@ -72,7 +72,7 @@ export default function StatusComposer() {
 
       {/* Color Picker */}
       {showColors && (
-        <div className="px-4 pb-3 flex gap-2 flex-wrap">
+        <div className="px-4 pb-3 flex gap-2 flex-wrap shrink-0">
           {BG_COLORS.map((c) => (
             <button
               key={c}
@@ -93,8 +93,8 @@ export default function StatusComposer() {
         </div>
       )}
 
-      {/* Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      {/* Content — scrollable */}
+      <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto min-h-0">
         {imagePreview ? (
           <div className="relative w-full max-w-sm">
             <img src={imagePreview} alt="" className="w-full rounded-2xl shadow-xl" />
@@ -118,8 +118,8 @@ export default function StatusComposer() {
         )}
       </div>
 
-      {/* Bottom Actions */}
-      <div className="flex items-center gap-3 p-4" style={{ color: textColor }}>
+      {/* Bottom Actions — always visible */}
+      <div className="flex items-center gap-3 p-4 shrink-0" style={{ color: textColor }}>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
         <button
           onClick={() => fileRef.current?.click()}
