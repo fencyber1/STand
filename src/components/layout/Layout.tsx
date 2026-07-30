@@ -24,6 +24,8 @@ import {
   Rss,
   MessageSquare,
   MessageCircle,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
@@ -35,29 +37,104 @@ function FenBotNavIcon({ size }: { size: number }) {
   return <FenBotIcon size={size} />;
 }
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/fenbot', label: 'FenBot', icon: FenBotNavIcon },
-  { to: '/practice', label: 'Practice', icon: GraduationCap },
-  { to: '/doc-quiz', label: 'Document Quiz', icon: FileText },
-  { to: '/exam-setup', label: 'Exam Sim', icon: Shield },
-  { to: '/history', label: 'History', icon: Clock },
-  { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
-  { to: '/search', label: 'Search', icon: Search },
-  { to: '/progress', label: 'Progress', icon: TrendingUp },
-  { to: '/achievements', label: 'Achievements', icon: Award },
-  { to: '/weak-areas', label: 'Weak Areas', icon: Target },
-  { to: '/compare', label: 'Compare', icon: ArrowRightLeft },
-  { to: '/import', label: 'Import', icon: Upload },
-  { to: '/groups', label: 'Study Groups', icon: Users },
-  { to: '/multiplayer', label: 'Multiplayer', icon: Swords },
-  { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
-  { to: '/profile', label: 'Profile', icon: User },
-  { to: '/feed', label: 'Feed', icon: Rss },
-  { to: '/friends', label: 'Friends', icon: UserPlus },
-  { to: '/chat', label: 'Chat', icon: MessageSquare },
-  { to: '/groups-chat', label: 'Group Chat', icon: MessageCircle },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: any;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'Practice',
+    items: [
+      { to: '/practice', label: 'Practice', icon: GraduationCap },
+      { to: '/doc-quiz', label: 'Document Quiz', icon: FileText },
+      { to: '/exam-setup', label: 'Exam Sim', icon: Shield },
+    ],
+  },
+  {
+    label: 'Review',
+    items: [
+      { to: '/history', label: 'History', icon: Clock },
+      { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
+      { to: '/search', label: 'Search', icon: Search },
+    ],
+  },
+  {
+    label: 'Progress',
+    items: [
+      { to: '/progress', label: 'Progress', icon: TrendingUp },
+      { to: '/achievements', label: 'Achievements', icon: Award },
+      { to: '/weak-areas', label: 'Weak Areas', icon: Target },
+      { to: '/compare', label: 'Compare', icon: ArrowRightLeft },
+    ],
+  },
+  {
+    label: 'Study',
+    items: [
+      { to: '/groups', label: 'Study Groups', icon: Users },
+      { to: '/multiplayer', label: 'Multiplayer', icon: Swords },
+      { to: '/study-plans', label: 'Study Plans', icon: CalendarDays },
+    ],
+  },
+  {
+    label: 'Social',
+    items: [
+      { to: '/feed', label: 'Feed', icon: Rss },
+      { to: '/friends', label: 'Friends', icon: UserPlus },
+      { to: '/chat', label: 'Chat', icon: MessageSquare },
+      { to: '/groups-chat', label: 'Group Chat', icon: MessageCircle },
+    ],
+  },
 ];
+
+const bottomItems: NavItem[] = [
+  { to: '/profile', label: 'Profile', icon: User },
+  { to: '/import', label: 'Import', icon: Upload },
+];
+
+function NavGroupSection({ group, defaultOpen, onNavigate }: { group: NavGroup; defaultOpen: boolean; onNavigate: () => void }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const Icon = open ? ChevronDown : ChevronRight;
+
+  return (
+    <div className="mb-1">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+      >
+        {group.label}
+        <Icon size={12} />
+      </button>
+      {open && (
+        <div className="space-y-0.5">
+          {group.items.map(({ to, label, icon: ItemIcon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+                }`
+              }
+            >
+              <ItemIcon size={16} />
+              <span className="truncate">{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -83,12 +160,14 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors overflow-hidden">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
@@ -103,31 +182,76 @@ export default function Layout() {
           </div>
           <button
             className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            onClick={() => setSidebarOpen(false)}
+            onClick={closeSidebar}
           >
             <X size={20} />
           </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <Icon size={16} />
-              <span className="truncate">{label}</span>
-            </NavLink>
-          ))}
+          {/* Top-level items */}
+          <NavLink
+            to="/"
+            end
+            onClick={closeSidebar}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+              }`
+            }
+          >
+            <LayoutDashboard size={16} />
+            <span className="truncate">Dashboard</span>
+          </NavLink>
+          <NavLink
+            to="/fenbot"
+            onClick={closeSidebar}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+              }`
+            }
+          >
+            <FenBotNavIcon size={16} />
+            <span className="truncate">FenBot</span>
+          </NavLink>
+
+          {/* Grouped sections */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 mt-2">
+            {navGroups.map((group, i) => (
+              <NavGroupSection
+                key={group.label}
+                group={group}
+                defaultOpen={i < 2}
+                onNavigate={closeSidebar}
+              />
+            ))}
+          </div>
+
+          {/* Bottom-level items */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 mt-2 space-y-0.5">
+            {bottomItems.map(({ to, label, icon: ItemIcon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={closeSidebar}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`
+                }
+              >
+                <ItemIcon size={16} />
+                <span className="truncate">{label}</span>
+              </NavLink>
+            ))}
+          </div>
         </nav>
 
         <div className="shrink-0 p-3 border-t border-gray-200 dark:border-gray-700">
