@@ -1,10 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { getMotivationalLines } from '../../services/api';
 import BorderGlow from '../ui/BorderGlow';
 import FenBotIcon from '../effects/FenBotIcon';
 
@@ -54,15 +55,56 @@ export default function DashboardScreen() {
     return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(1), streak };
   }, [history]);
 
-  const motivationalLine = useMemo(() => {
-    if (stats.streak >= 7) return "You're on fire! Keep the streak going.";
-    if (stats.streak >= 3) return "Nice consistency! Keep building that streak.";
-    if (stats.total === 0) return "Ready to start your learning journey?";
-    const avg = parseFloat(stats.avgScore);
-    if (avg >= 80) return "Excellent performance! You're exam-ready.";
-    if (avg >= 60) return "Great progress! A bit more practice will get you there.";
-    return "Every question brings you closer to mastery.";
-  }, [stats]);
+  const [motivationalLine, setMotivationalLine] = useState(() => {
+    return localStorage.getItem('stand_motivational_line') || "Every question brings you closer to mastery.";
+  });
+
+  const fetchLines = useCallback(async () => {
+    try {
+      const lines = await getMotivationalLines(firstName, {
+        totalSessions: stats.total,
+        avgScore: parseFloat(stats.avgScore),
+        streak: stats.streak,
+      });
+      if (lines.length > 0) {
+        localStorage.setItem('stand_motivational_lines', JSON.stringify(lines));
+        const idx = Math.floor(Math.random() * lines.length);
+        setMotivationalLine(lines[idx]);
+        localStorage.setItem('stand_motivational_line', lines[idx]);
+      }
+    } catch {
+      // keep current line
+    }
+  }, [firstName, stats.total, stats.avgScore, stats.streak]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('stand_motivational_lines');
+    let lines: string[] = [];
+    try { lines = stored ? JSON.parse(stored) : []; } catch { lines = []; }
+
+    if (lines.length > 0) {
+      const idx = Math.floor(Math.random() * lines.length);
+      setMotivationalLine(lines[idx]);
+      localStorage.setItem('stand_motivational_line', lines[idx]);
+    } else {
+      fetchLines();
+    }
+
+    const interval = setInterval(() => {
+      let currentLines: string[] = [];
+      try { currentLines = JSON.parse(localStorage.getItem('stand_motivational_lines') || '[]'); } catch { currentLines = []; }
+      if (currentLines.length > 0) {
+        const next = currentLines[Math.floor(Math.random() * currentLines.length)];
+        setMotivationalLine(next);
+        localStorage.setItem('stand_motivational_line', next);
+      }
+    }, 60_000);
+
+    // Refresh from API every 10 minutes
+    const refresh = setInterval(fetchLines, 600_000);
+
+    return () => { clearInterval(interval); clearInterval(refresh); };
+  }, []);
 
   const chartData = useMemo(() => {
     const subjectMap: Record<string, { total: number; count: number }> = {};

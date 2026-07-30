@@ -203,6 +203,27 @@ Write only the fact itself, 1-2 sentences max. No preamble, no "Did you know", n
   return await callAI(prompt);
 }
 
+export async function getMotivationalLines(userName: string, stats: { totalSessions: number; avgScore: number; streak: number }): Promise<string[]> {
+  const prompt = `Generate exactly 10 short, unique motivational lines for a student named "${userName}" who has completed ${stats.totalSessions} practice sessions, averages ${stats.avgScore}% score, and has a ${stats.streak}-day streak.
+
+Rules:
+- Each line must be different in tone (encouraging, playful, confident, inspiring, warm)
+- Reference their stats naturally when relevant (streak, score, sessions)
+- Keep each line under 15 words
+- No greetings, no emojis, no markdown, no quotation marks
+- Return ONLY the 10 lines, one per line, nothing else`;
+
+  const raw = await callAI(prompt);
+  const lines = raw.split('\n').map((l) => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter((l) => l.length > 5);
+  return lines.length >= 5 ? lines.slice(0, 10) : [
+    "Every question brings you closer to mastery.",
+    "Small steps lead to big results.",
+    "Your consistency is building something great.",
+    "Keep going — you're doing better than you think.",
+    "Growth happens one practice at a time.",
+  ];
+}
+
 export async function getDocumentQuestions(params: {
   documentText: string;
   questionCount: number;
