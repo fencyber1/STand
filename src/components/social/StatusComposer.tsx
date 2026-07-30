@@ -55,7 +55,7 @@ export default function StatusComposer() {
   const isDark = ['#1e1b4b', '#0f172a', '#18181b', '#000000'].includes(bgColor);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: bgColor }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: bgColor }}>
       {/* Header */}
       <div className="flex items-center gap-3 p-4 shrink-0" style={{ color: textColor }}>
         <button onClick={() => navigate(-1)} className="p-1 rounded-lg hover:bg-white/10">
@@ -118,8 +118,8 @@ export default function StatusComposer() {
         )}
       </div>
 
-      {/* Bottom Actions — always visible */}
-      <div className="flex items-center gap-3 p-4 shrink-0" style={{ color: textColor }}>
+      {/* Bottom Actions — always pinned to bottom */}
+      <div className="flex items-center gap-3 p-4 shrink-0 safe-area-bottom" style={{ color: textColor }}>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
         <button
           onClick={() => fileRef.current?.click()}
