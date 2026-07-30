@@ -16,7 +16,7 @@ import {
 import type { Post, PostComment } from '../../types';
 import {
   Heart, MessageCircle, Send, Trash2, Plus, X, Loader2,
-  BookOpen, User, Repeat2, Share2, Bookmark, MoreHorizontal, Hash, Image as ImageIcon, Link as LinkIcon,
+  BookOpen, User, Repeat2, Share2, Bookmark, MoreHorizontal, Image as ImageIcon, Link as LinkIcon,
 } from 'lucide-react';
 import SharePostCard from './SharePostCard';
 
@@ -29,15 +29,6 @@ function timeAgo(dateStr: string): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
   return new Date(dateStr).toLocaleDateString();
-}
-
-function formatCaption(text: string) {
-  const parts = text.split(/(#\w+)/g);
-  return parts.map((part, i) =>
-    part.startsWith('#')
-      ? <span key={i} className="text-indigo-500 dark:text-indigo-400 hover:underline cursor-pointer">{part}</span>
-      : <span key={i}>{part}</span>
-  );
 }
 
 function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, onShareImage, comments, expandedComments, toggleComments, commentInputs, setCommentInputs, submittingComment, getAvatar }: {
@@ -147,16 +138,6 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
           {post.likes.length > 0 && (
             <p className="text-sm font-bold text-gray-800 dark:text-white">{post.likes.length.toLocaleString()} {post.likes.length === 1 ? 'like' : 'likes'}</p>
           )}
-        </div>
-      )}
-
-      {/* Caption */}
-      {post.content && (
-        <div className="px-4 pb-1">
-          <p className="text-sm text-gray-700 dark:text-gray-200">
-            <span className="font-bold text-gray-900 dark:text-white mr-1.5">{post.authorName}</span>
-            {formatCaption(post.content)}
-          </p>
         </div>
       )}
 
