@@ -29,6 +29,8 @@ import FeedScreen from './components/social/FeedScreen';
 import ChatScreen from './components/social/ChatScreen';
 import GroupChatScreen from './components/social/GroupChatScreen';
 import GroupSettingsScreen from './components/social/GroupSettingsScreen';
+import StatusScreen from './components/social/StatusScreen';
+import StatusComposer from './components/social/StatusComposer';
 import FenBot from './components/practice/FenBot';
 
 function ProtectedLayout() {
@@ -94,6 +96,8 @@ export default function App() {
           <Route path="profile" element={<ProfileScreen />} />
           <Route path="friends" element={<FriendsScreen />} />
           <Route path="feed" element={<FeedScreen />} />
+          <Route path="statuses" element={<StatusScreen />} />
+          <Route path="statuses/new" element={<StatusComposer />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       ) : (

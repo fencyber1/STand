@@ -24,6 +24,7 @@ import {
   Rss,
   MessageSquare,
   MessageCircle,
+  Circle,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -85,6 +86,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Social',
     items: [
+      { to: '/statuses', label: 'Status', icon: Circle },
       { to: '/feed', label: 'Feed', icon: Rss },
       { to: '/friends', label: 'Friends', icon: UserPlus },
       { to: '/chat', label: 'Chat', icon: MessageSquare },

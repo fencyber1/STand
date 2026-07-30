@@ -371,3 +371,19 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+// ── Status ──
+
+export interface Status {
+  id: string;
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  type: 'text' | 'image';
+  content: string;
+  backgroundColor: string;
+  textColor: string;
+  viewedBy: string[];
+  createdAt: string;
+  expiresAt: string;
+}
