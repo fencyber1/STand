@@ -126,21 +126,35 @@ export default function MultiplayerLobbyScreen() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Questions</label>
-              <div className="flex gap-2">
-                {[3, 5, 7, 10].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setQuestionCount(n)}
-                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
-                      questionCount === n
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Questions: <span className="text-purple-600 dark:text-purple-400 font-bold">{questionCount}</span>
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={50}
+                value={questionCount}
+                onChange={(e) => setQuestionCount(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
+              />
+              <div className="flex justify-between items-center mt-1.5">
+                <span className="text-xs text-gray-400">1</span>
+                <div className="flex gap-1.5">
+                  {[5, 10, 15, 20, 30, 50].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setQuestionCount(n)}
+                      className={`px-2 py-0.5 rounded text-[11px] font-medium transition ${
+                        questionCount === n
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-xs text-gray-400">50</span>
               </div>
             </div>
 
