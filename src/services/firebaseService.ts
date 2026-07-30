@@ -290,34 +290,59 @@ export async function submitAnswer(
 export async function finishPlayer(roomId: string, uid: string, players: QuizPlayer[]): Promise<void> {
   const updated = players.map((p) => p.uid === uid ? { ...p, finished: true } : p);
   const allFinished = updated.every((p) => p.finished);
+  const finishedCount = updated.filter((p) => p.finished).length;
   const update: any = { players: updated };
-  if (allFinished || updated.filter((p) => p.finished).length >= 2) {
+  if (allFinished || (finishedCount >= 2 && finishedCount === updated.length)) {
     update.status = 'finished';
     update.finishedAt = serverTimestamp();
   }
   await updateDoc(doc(db, 'quizRooms', roomId), sanitizeForFirestore(update));
 }
 
-export function subscribeToQuizRoom(roomId: string, callback: (room: QuizRoom | null) => void): () => void {
-  return onSnapshot(doc(db, 'quizRooms', roomId), (snap) => {
-    if (!snap.exists()) { callback(null); return; }
-    const d = snap.data();
-    callback({
-      id: snap.id,
-      code: d.code,
-      createdBy: d.createdBy,
-      hostName: d.hostName,
-      topic: d.topic,
-      subject: d.subject,
-      questionCount: d.questionCount,
-      status: d.status,
-      questions: d.questions || [],
-      players: d.players || [],
-      createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-      startedAt: d.startedAt?.toDate?.()?.toISOString?.() || null,
-      finishedAt: d.finishedAt?.toDate?.()?.toISOString?.() || null,
+export async function getQuizRoomByCode(code: string): Promise<string | null> {
+  const q = query(collection(db, 'quizRooms'), where('code', '==', code));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return snap.docs[0].id;
+}
+
+export function subscribeToQuizRoom(roomCode: string, callback: (room: QuizRoom | null) => void): () => void {
+  // First resolve code to document ID, then subscribe
+  let unsub: (() => void) | null = null;
+  let resolved = false;
+
+  const resolveAndSubscribe = async () => {
+    const q = query(collection(db, 'quizRooms'), where('code', '==', roomCode));
+    const snap = await getDocs(q);
+    if (snap.empty) { callback(null); return; }
+    const docId = snap.docs[0].id;
+    resolved = true;
+    unsub = onSnapshot(doc(db, 'quizRooms', docId), (snap) => {
+      if (!snap.exists()) { callback(null); return; }
+      const d = snap.data();
+      callback({
+        id: snap.id,
+        code: d.code,
+        createdBy: d.createdBy,
+        hostName: d.hostName,
+        topic: d.topic,
+        subject: d.subject,
+        questionCount: d.questionCount,
+        status: d.status,
+        questions: d.questions || [],
+        players: d.players || [],
+        createdAt: d.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+        startedAt: d.startedAt?.toDate?.()?.toISOString?.() || null,
+        finishedAt: d.finishedAt?.toDate?.()?.toISOString?.() || null,
+      });
     });
-  });
+  };
+
+  resolveAndSubscribe().catch(() => callback(null));
+
+  return () => {
+    if (unsub) unsub();
+  };
 }
 
 export async function getUserGroups(uid: string): Promise<StudyGroup[]> {
