@@ -90,6 +90,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -104,11 +105,16 @@ export default function Layout() {
     return () => window.removeEventListener('storage', handler);
   }, []);
 
-  // Open sidebar when onboarding tour targets sidebar elements on mobile
+  // Tour sidebar control: open sidebar + set tour-active flag
   useEffect(() => {
-    const handler = () => setSidebarOpen(true);
-    window.addEventListener('tour-open-sidebar', handler);
-    return () => window.removeEventListener('tour-open-sidebar', handler);
+    const openHandler = () => { setTourActive(true); setSidebarOpen(true); };
+    const closeHandler = () => { setTourActive(false); setSidebarOpen(false); };
+    window.addEventListener('tour-open-sidebar', openHandler);
+    window.addEventListener('tour-close-sidebar', closeHandler);
+    return () => {
+      window.removeEventListener('tour-open-sidebar', openHandler);
+      window.removeEventListener('tour-close-sidebar', closeHandler);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -116,7 +122,7 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const closeSidebar = () => setSidebarOpen(false);
+  const closeSidebar = () => { if (!tourActive) setSidebarOpen(false); };
 
   const navGroups: (NavGroup & { tourId?: string })[] = [
     {

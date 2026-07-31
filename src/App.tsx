@@ -80,6 +80,7 @@ export default function App() {
   const handleTourComplete = useCallback(() => {
     storage.setOnboardingComplete();
     setShowTour(false);
+    window.dispatchEvent(new Event('tour-close-sidebar'));
   }, []);
 
   if (loading) {

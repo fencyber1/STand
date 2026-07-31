@@ -8,6 +8,7 @@ interface TourStep {
   title: string;
   description: string;
   route: string;
+  /** Force tooltip placement regardless of space */
   placement?: 'top' | 'bottom' | 'left' | 'right';
 }
 
@@ -15,52 +16,59 @@ const STEPS: TourStep[] = [
   {
     target: 'tour-practice',
     title: 'Start Practicing',
-    description: 'Generate AI-powered questions on any subject. Pick your topic, exam type, and difficulty — fresh questions every time.',
+    description: 'Generate AI-powered questions on any subject. Pick your topic, exam type, and difficulty.',
     route: '/',
+    placement: 'right',
   },
   {
     target: 'tour-topic-input',
     title: 'Choose Your Topic',
-    description: 'Enter any subject — Math, Biology, History, Literature, anything. The AI creates questions tailored to your level.',
+    description: 'Enter any subject — Math, Biology, History, anything. AI creates questions tailored to your level.',
     route: '/practice',
   },
   {
     target: 'tour-review',
     title: 'Review & Improve',
-    description: 'Check your session history, revisit bookmarked questions, and search through everything you\'ve practiced.',
+    description: 'Check your history, revisit bookmarked questions, and search through everything you\'ve practiced.',
     route: '/',
+    placement: 'right',
   },
   {
     target: 'tour-fenbot',
     title: 'Meet FenBot',
-    description: 'Your personal AI tutor. Ask anything, get deep explanations, and learn at your own pace — available 24/7.',
+    description: 'Your personal AI tutor. Ask anything, get deep explanations, and learn at your own pace.',
     route: '/fenbot',
   },
   {
     target: 'tour-doc-quiz',
     title: 'Document Quiz',
-    description: 'Upload a PDF, DOCX, or paste text — AI generates quiz questions directly from your own materials.',
+    description: 'Upload a PDF, DOCX, or paste text — AI generates quiz questions from your own materials.',
     route: '/doc-quiz',
   },
   {
     target: 'tour-exam-sim',
     title: 'Exam Simulation',
-    description: 'Timed exams with strict rules — no going back, no hints. Test your readiness just like the real exam.',
+    description: 'Timed exams with strict rules — no going back. Test your readiness like the real exam.',
     route: '/exam-setup',
   },
   {
     target: 'tour-groups',
     title: 'Study Together',
-    description: 'Create study groups, invite friends with a code, and compete in real-time multiplayer quizzes.',
+    description: 'Create study groups, invite friends with a code, and compete in real-time multiplayer.',
     route: '/groups',
+    placement: 'right',
   },
   {
     target: 'tour-social',
     title: 'Stay Connected',
-    description: 'Share updates on the feed, post statuses, chat 1-on-1 or in groups, and see what your friends are up to.',
+    description: 'Share updates, post statuses, chat 1-on-1 or in groups, and see what friends are up to.',
     route: '/feed',
+    placement: 'right',
   },
 ];
+
+/** Sidebar targets that live in the left nav */
+const SIDEBAR_TARGETS = new Set(['tour-practice', 'tour-review', 'tour-fenbot', 'tour-groups', 'tour-social']);
 
 interface Props {
   open: boolean;
@@ -70,68 +78,119 @@ interface Props {
 export default function OnboardingTour({ open, onComplete }: Props) {
   const [step, setStep] = useState(0);
   const [spotRect, setSpotRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number; placement: string }>({ top: 0, left: 0, placement: 'bottom' });
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [arrowStyle, setArrowStyle] = useState<React.CSSProperties>({});
+  const [arrowDir, setArrowDir] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
   const navigate = useNavigate();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const current = STEPS[step];
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  const TOOLTIP_W = isMobile ? 280 : 320;
+  const GAP = 14;
 
   const findTarget = useCallback(() => {
     const el = document.querySelector(`[data-tour-id="${current.target}"]`) as HTMLElement;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
+    const pad = isMobile ? 4 : 6;
     return {
-      top: rect.top - 8,
-      left: rect.left - 8,
-      width: rect.width + 16,
-      height: rect.height + 16,
+      top: rect.top - pad,
+      left: rect.left - pad,
+      width: rect.width + pad * 2,
+      height: rect.height + pad * 2,
       centerX: rect.left + rect.width / 2,
       centerY: rect.top + rect.height / 2,
+      // Actual element bounds (no padding) for arrow positioning
+      elTop: rect.top,
+      elLeft: rect.left,
+      elRight: rect.right,
+      elBottom: rect.bottom,
     };
-  }, [current.target]);
+  }, [current.target, isMobile]);
 
-  const positionTooltip = useCallback((spot: { top: number; left: number; width: number; height: number; centerX: number; centerY: number }) => {
-    const tooltipW = 380;
-    const tooltipH = tooltipRef.current?.offsetHeight || 260;
-    const gap = 20;
+  const positionTooltip = useCallback((spot: ReturnType<typeof findTarget>) => {
+    if (!spot) return;
+    const tooltipH = tooltipRef.current?.offsetHeight || 200;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const sidebarWidth = isMobile ? 256 : 256; // w-64 = 256px
 
     let placement = current.placement || 'bottom';
+    // On desktop, sidebar items show tooltip to the right
+    if (!isMobile && !current.placement && SIDEBAR_TARGETS.has(current.target)) {
+      placement = 'right';
+    }
+    // On mobile, sidebar items show tooltip below (not enough room to the right)
+    if (isMobile && SIDEBAR_TARGETS.has(current.target)) {
+      placement = 'bottom';
+    }
+
     let top = 0;
     let left = 0;
+    let arrowTop = 0;
+    let arrowLeft = 0;
 
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(v, max));
+
+    if (placement === 'right') {
+      left = spot.elRight + GAP;
+      top = spot.centerY - tooltipH / 2;
+      // Arrow points left (from tooltip to target)
+      arrowTop = spot.centerY - top - 8;
+      arrowLeft = -8;
+      // If overflows right, try bottom
+      if (left + TOOLTIP_W > vw - 16) {
+        placement = 'bottom';
+        left = spot.centerX - TOOLTIP_W / 2;
+        top = spot.elBottom + GAP;
+        arrowTop = -8;
+        arrowLeft = spot.centerX - left - 8;
+      }
+    }
     if (placement === 'bottom') {
-      top = spot.top + spot.height + gap;
-      left = spot.centerX - tooltipW / 2;
+      left = spot.centerX - TOOLTIP_W / 2;
+      top = spot.elBottom + GAP;
+      arrowTop = -8;
+      arrowLeft = spot.centerX - left - 8;
+      // If overflows bottom, try top
       if (top + tooltipH > vh - 16) {
         placement = 'top';
-        top = spot.top - tooltipH - gap;
+        top = spot.elTop - tooltipH - GAP;
+        arrowTop = tooltipH - 8;
+        arrowLeft = spot.centerX - left - 8;
       }
     }
     if (placement === 'top') {
-      top = spot.top - tooltipH - gap;
-      left = spot.centerX - tooltipW / 2;
+      left = spot.centerX - TOOLTIP_W / 2;
+      top = spot.elTop - tooltipH - GAP;
+      arrowTop = tooltipH - 8;
+      arrowLeft = spot.centerX - left - 8;
       if (top < 16) {
         placement = 'bottom';
-        top = spot.top + spot.height + gap;
+        top = spot.elBottom + GAP;
+        arrowTop = -8;
       }
     }
     if (placement === 'left') {
-      left = spot.left - tooltipW - gap;
+      left = spot.elLeft - TOOLTIP_W - GAP;
       top = spot.centerY - tooltipH / 2;
-    }
-    if (placement === 'right') {
-      left = spot.left + spot.width + gap;
-      top = spot.centerY - tooltipH / 2;
+      arrowTop = spot.centerY - top - 8;
+      arrowLeft = TOOLTIP_W - 8;
     }
 
-    left = Math.max(16, Math.min(left, vw - tooltipW - 16));
-    top = Math.max(16, Math.min(top, vh - tooltipH - 16));
+    // Final clamp
+    left = clamp(left, 12, vw - TOOLTIP_W - 12);
+    top = clamp(top, 12, vh - tooltipH - 12);
 
-    setTooltipPos({ top, left, placement });
-  }, [current.placement]);
+    // Arrow position clamp
+    arrowLeft = clamp(arrowLeft, 20, TOOLTIP_W - 20);
+    arrowTop = clamp(arrowTop, 8, tooltipH - 16);
 
-  const SIDEBAR_TARGETS = ['tour-practice', 'tour-review', 'tour-fenbot', 'tour-groups', 'tour-social'];
+    setTooltipStyle({ top, left, width: TOOLTIP_W });
+    setArrowStyle({ top: arrowTop, left: arrowLeft });
+    setArrowDir(placement === 'top' ? 'bottom' : placement === 'bottom' ? 'top' : placement === 'left' ? 'right' : 'left');
+  }, [current.placement, current.target, isMobile, TOOLTIP_W, GAP]);
 
   const updateSpotlight = useCallback(() => {
     const spot = findTarget();
@@ -142,22 +201,19 @@ export default function OnboardingTour({ open, onComplete }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    // Navigate to the correct route for this step
     if (window.location.pathname !== current.route) {
       navigate(current.route, { replace: true });
     }
-    // On mobile, open sidebar if targeting a sidebar element
-    const isMobile = window.innerWidth < 1024;
-    const isSidebarTarget = SIDEBAR_TARGETS.includes(current.target);
-    const delay = (isMobile && isSidebarTarget) ? 500 : 300;
-
-    if (isMobile && isSidebarTarget) {
+    // On mobile, open sidebar if targeting sidebar elements
+    const mobile = window.innerWidth < 1024;
+    const isSidebar = SIDEBAR_TARGETS.has(current.target);
+    if (mobile && isSidebar) {
       window.dispatchEvent(new Event('tour-open-sidebar'));
     }
-
+    const delay = (mobile && isSidebar) ? 500 : 350;
     const timer = setTimeout(updateSpotlight, delay);
     return () => clearTimeout(timer);
-  }, [open, step, current.route, navigate, updateSpotlight]);
+  }, [open, step, current.route, current.target, navigate, updateSpotlight]);
 
   useEffect(() => {
     if (!open) return;
@@ -171,11 +227,8 @@ export default function OnboardingTour({ open, onComplete }: Props) {
   }, [open, updateSpotlight]);
 
   const handleNext = () => {
-    if (step < STEPS.length - 1) {
-      setStep(step + 1);
-    } else {
-      onComplete();
-    }
+    if (step < STEPS.length - 1) setStep(step + 1);
+    else onComplete();
   };
 
   const handleBack = () => {
@@ -199,24 +252,15 @@ export default function OnboardingTour({ open, onComplete }: Props) {
       {spotRect && (
         <div
           className="tour-spotlight"
-          style={{
-            top: spotRect.top,
-            left: spotRect.left,
-            width: spotRect.width,
-            height: spotRect.height,
-          }}
+          style={{ top: spotRect.top, left: spotRect.left, width: spotRect.width, height: spotRect.height }}
         />
       )}
 
-      <div
-        ref={tooltipRef}
-        className="tour-tooltip"
-        style={{ top: tooltipPos.top, left: tooltipPos.left }}
-      >
-        <div className={`tour-tooltip-arrow ${tooltipPos.placement}`} />
+      <div ref={tooltipRef} className="tour-tooltip" style={tooltipStyle}>
+        <div className={`tour-tooltip-arrow ${arrowDir}`} style={arrowStyle} />
 
         <div className="tour-step-badge">
-          <Compass size={13} />
+          <Compass size={12} />
           Step {step + 1} of {STEPS.length}
         </div>
 
@@ -224,9 +268,7 @@ export default function OnboardingTour({ open, onComplete }: Props) {
         <div className="tour-description">{current.description}</div>
 
         <div className="tour-footer">
-          <button className="tour-btn tour-btn-skip" onClick={onComplete}>
-            Skip Tour
-          </button>
+          <button className="tour-btn tour-btn-skip" onClick={onComplete}>Skip</button>
 
           <div className="tour-dots">
             {STEPS.map((_, i) => (
@@ -234,21 +276,17 @@ export default function OnboardingTour({ open, onComplete }: Props) {
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="tour-nav-btns">
             {step > 0 && (
               <button className="tour-btn tour-btn-back" onClick={handleBack}>
-                <ChevronLeft size={15} />
+                <ChevronLeft size={14} />
               </button>
             )}
             <button className="tour-btn tour-btn-next" onClick={handleNext}>
               {step === STEPS.length - 1 ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  Get Started <Check size={14} />
-                </span>
+                <span className="tour-btn-inner"><Check size={13} /> Got it</span>
               ) : (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  Next <ChevronRight size={14} />
-                </span>
+                <span className="tour-btn-inner">Next <ChevronRight size={13} /></span>
               )}
             </button>
           </div>
