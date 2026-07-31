@@ -66,16 +66,17 @@ export default function QuestionImage({ query }: Props) {
     setFailed(false);
     setSrc(null);
 
-    getWikipediaImage(query).then((url) => {
+    generateImageWithFlux(query).then((fluxUrl) => {
       if (cancelled) return;
-      if (url) {
-        setSrc(url);
+      if (fluxUrl) {
+        setSrc(fluxUrl);
         setLoading(false);
       } else {
-        generateImageWithFlux(query).then((fluxUrl) => {
+        // FLUX failed, fallback to Wikipedia
+        getWikipediaImage(query).then((wikiUrl) => {
           if (cancelled) return;
-          if (fluxUrl) {
-            setSrc(fluxUrl);
+          if (wikiUrl) {
+            setSrc(wikiUrl);
           } else {
             setFailed(true);
           }
