@@ -10,6 +10,8 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!API_KEY) return res.status(500).json({ error: 'NVIDIA_API_KEY not set in Vercel env vars.' });
 
+  const wantsStream = req.body.stream === true;
+
   try {
     const response = await fetch(NVIDIA_API, {
       method: 'POST',
@@ -22,10 +24,34 @@ export default async function handler(req: any, res: any) {
         messages: req.body.messages,
         temperature: req.body.temperature || 0.7,
         max_tokens: req.body.max_tokens || 4096,
-        stream: false,
+        stream: wantsStream,
       }),
     });
 
+    if (wantsStream && response.body) {
+      // Forward SSE stream directly to client
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          res.write(chunk);
+        }
+      } catch {
+        // Stream interrupted
+      }
+
+      return res.end();
+    }
+
+    // Non-streaming: forward full response
     const text = await response.text();
     return res.status(response.status).send(text);
   } catch (err: any) {
