@@ -150,6 +150,7 @@ function TopicCard({ stats, onPractice }: { stats: TopicStats; onPractice: (s: T
   const { t } = useLanguage();
   const color = stats.accuracy >= 85 ? 'green' : stats.accuracy >= 70 ? 'orange' : 'red';
   const barColor = color === 'green' ? 'bg-green-500' : color === 'orange' ? 'bg-orange-500' : 'bg-red-500';
+  const textColor = color === 'green' ? 'text-green-600 dark:text-green-400' : color === 'orange' ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400';
 
   return (
     <BorderGlow
@@ -167,7 +168,7 @@ function TopicCard({ stats, onPractice }: { stats: TopicStats; onPractice: (s: T
             <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{stats.subject}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-bold text-${color}-600 dark:text-${color}-400`}>{stats.accuracy}%</span>
+            <span className={`text-sm font-bold ${textColor}`}>{stats.accuracy}%</span>
             <button
               onClick={() => onPractice(stats)}
               className="p-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800/40 transition"

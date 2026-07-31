@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { subscribeToNotifications, playNotificationSound } from '../services/notificationService';
 import type { Notification } from '../types';
@@ -34,8 +34,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const value = useMemo(() => ({ notifications, unreadCount }), [notifications, unreadCount]);
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount }}>
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

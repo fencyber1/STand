@@ -20,22 +20,11 @@ async function getWikipediaImage(query: string): Promise<string | null> {
 
 async function generateImageWithFlux(query: string): Promise<string | null> {
   try {
-    const isProd = window.location.hostname !== 'localhost';
-    const url = isProd ? '/api/flux' : 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-dev';
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (!isProd) {
-      const apiKey = import.meta.env.VITE_FLUX_API_KEY;
-      if (!apiKey) return null;
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-
-    const prompt = `Educational illustration for: ${query}. Clean, clear, labeled diagram style, white background, suitable for exam study material.`;
-
-    const res = await fetch(url, {
+    const res = await fetch('/api/flux', {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt,
+        prompt: `Educational illustration for: ${query}. Clean, clear, labeled diagram style, white background, suitable for exam study material.`,
         width: 1024,
         height: 768,
         steps: 30,

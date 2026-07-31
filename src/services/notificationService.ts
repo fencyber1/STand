@@ -73,11 +73,13 @@ export async function markAsRead(notificationId: string): Promise<void> {
 export async function markAllAsRead(uid: string): Promise<void> {
   const q = query(collection(db, 'notifications'), where('uid', '==', uid));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => {
-    if (!d.data().read) batch.update(d.ref, { read: true });
-  });
-  await batch.commit();
+  const BATCH_SIZE = 500;
+  const toUpdate = snap.docs.filter((d) => !d.data().read);
+  for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    toUpdate.slice(i, i + BATCH_SIZE).forEach((d) => batch.update(d.ref, { read: true }));
+    await batch.commit();
+  }
 }
 
 export async function deleteNotification(notificationId: string): Promise<void> {
@@ -88,14 +90,31 @@ export async function deleteNotification(notificationId: string): Promise<void> 
 export async function clearAllNotifications(uid: string): Promise<void> {
   const q = query(collection(db, 'notifications'), where('uid', '==', uid));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
+  // Firestore batch limit is 500
+  const BATCH_SIZE = 500;
+  for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
+let _audioCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  try {
+    if (!_audioCtx || _audioCtx.state === 'closed') {
+      _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return _audioCtx;
+  } catch {
+    return null;
+  }
 }
 
 export function playNotificationSound(): void {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);

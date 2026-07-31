@@ -137,25 +137,28 @@ export function subscribeToStatusComments(statusId: string, cb: (comments: Statu
 
 export async function deleteStatus(statusId: string): Promise<void> {
   await deleteDoc(doc(db, 'statuses', statusId));
-  // Also delete comments
+  // Also delete comments in batches of 500
   const q = query(collection(db, 'statusComments'), where('statusId', '==', statusId));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
+  const BATCH_SIZE = 500;
+  for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
 }
 
 export async function deleteExpiredStatuses(): Promise<void> {
   const snap = await getDocs(collection(db, 'statuses'));
   const now = Date.now();
-  const batch = writeBatch(db);
-  let count = 0;
-  snap.docs.forEach((d) => {
+  const BATCH_SIZE = 500;
+  const toDelete = snap.docs.filter((d) => {
     const expiresAt = new Date(d.data().expiresAt).getTime();
-    if (expiresAt <= now) {
-      batch.delete(d.ref);
-      count++;
-    }
+    return expiresAt <= now;
   });
-  if (count > 0) await batch.commit();
+  for (let i = 0; i < toDelete.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    toDelete.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
 }

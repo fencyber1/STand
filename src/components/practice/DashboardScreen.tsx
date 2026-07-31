@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
@@ -79,6 +79,9 @@ export default function DashboardScreen() {
     }
   }, [firstName, stats.total, stats.avgScore, stats.streak]);
 
+  const fetchLinesRef = useRef(fetchLines);
+  fetchLinesRef.current = fetchLines;
+
   useEffect(() => {
     const stored = localStorage.getItem('stand_motivational_lines');
     let lines: string[] = [];
@@ -89,7 +92,7 @@ export default function DashboardScreen() {
       setMotivationalLine(lines[idx]);
       localStorage.setItem('stand_motivational_line', lines[idx]);
     } else {
-      fetchLines();
+      fetchLinesRef.current();
     }
 
     const interval = setInterval(() => {
@@ -102,8 +105,8 @@ export default function DashboardScreen() {
       }
     }, 60_000);
 
-    // Refresh from API every 10 minutes
-    const refresh = setInterval(fetchLines, 600_000);
+    // Refresh from API every 10 minutes — always calls latest fetchLines
+    const refresh = setInterval(() => fetchLinesRef.current(), 600_000);
 
     return () => { clearInterval(interval); clearInterval(refresh); };
   }, []);

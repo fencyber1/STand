@@ -12,8 +12,8 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
-      '/v1/chat/completions': {
-        target: 'https://integrate.api.nvidia.com',
+      '/api': {
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },

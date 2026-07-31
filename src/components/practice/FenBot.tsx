@@ -8,24 +8,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { loadFenBotConversations, saveFenBotConversation, deleteFenBotConversation } from '../../services/fenbotService';
 
-const RAW_KEYS = import.meta.env.VITE_NVIDIA_API_KEY || '';
-const API_KEYS = RAW_KEYS.split(',').map((k: string) => k.trim()).filter(Boolean);
-let fenBotKeyIndex = 0;
-
+// Always use serverless proxy (no client-side API keys)
 function getApiUrl(): string {
-  if (import.meta.env.DEV) return '/v1/chat/completions';
   return '/api/generate';
 }
 
 function getHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  // Only send API key in dev (prod serverless adds it from process.env)
-  if (import.meta.env.DEV) {
-    const key = API_KEYS.length > 0 ? API_KEYS[fenBotKeyIndex % API_KEYS.length] : '';
-    if (key) headers['Authorization'] = `Bearer ${key}`;
-    fenBotKeyIndex = (fenBotKeyIndex + 1) % Math.max(API_KEYS.length, 1);
-  }
-  return headers;
+  return { 'Content-Type': 'application/json' };
 }
 
 interface Message {
@@ -263,6 +252,9 @@ export default function FenBot() {
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const renderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const conversationsRef = useRef<Conversation[]>([]);
+  const activeIdRef = useRef<string | null>(null);
 
   const activeConvo = conversations.find((c) => c.id === activeId);
   const messages = activeConvo?.messages || [];
@@ -311,8 +303,13 @@ export default function FenBot() {
       window.speechSynthesis?.cancel();
       recognitionRef.current?.abort();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (renderTimerRef.current) clearInterval(renderTimerRef.current);
     };
   }, []);
+
+  // Sync refs with state to avoid stale closures
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
 
   // Voice recognition setup
   const SpeechRecognitionAPI = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
@@ -418,7 +415,7 @@ export default function FenBot() {
     if (!text.trim() || loading) return;
     window.speechSynthesis?.cancel();
 
-    let convoId = activeId;
+    let convoId = activeIdRef.current;
     if (!convoId) convoId = createConversation();
 
     let finalText = text.trim();
@@ -438,7 +435,8 @@ export default function FenBot() {
     );
 
     try {
-      const convo = conversations.find((c) => c.id === convoId) || { messages: [] };
+      const currentConversations = conversationsRef.current;
+      const convo = currentConversations.find((c) => c.id === convoId) || { messages: [] };
       const allMessages = [...convo.messages, userMsg];
       const langInstruction = language && language !== 'en'
         ? `\n\nCRITICAL LANGUAGE RULE: The user's language is "${language}". You MUST respond ENTIRELY in ${language}. Do NOT use English at all in your response. All explanations, examples, and text must be written in ${language}.`
@@ -467,15 +465,15 @@ export default function FenBot() {
       const decoder = new TextDecoder();
       let buffer = '';
       let fullReply = '';
-      const tokenQueue: string[] = [];
+      let tokenQueue: string[] = [];
       let streamDone = false;
-      let renderTimer: ReturnType<typeof setInterval> | null = null;
       let ttsBuffer = '';
 
       // Cancel any ongoing speech when new message starts
       if (settings.tts) window.speechSynthesis?.cancel();
 
-      renderTimer = setInterval(() => {
+      if (renderTimerRef.current) clearInterval(renderTimerRef.current);
+      renderTimerRef.current = setInterval(() => {
         if (settings.speed === 0) {
           if (tokenQueue.length > 0) {
             const batch = tokenQueue.splice(0).join('');
@@ -526,8 +524,8 @@ export default function FenBot() {
               window.speechSynthesis?.speak(utt);
               ttsBuffer = '';
             }
-            if (renderTimer) clearInterval(renderTimer);
-            renderTimer = null;
+            if (renderTimerRef.current) clearInterval(renderTimerRef.current);
+            renderTimerRef.current = null;
           }
         }
       }, settings.speed);
@@ -567,7 +565,7 @@ export default function FenBot() {
       // Wait for queue to drain
       await new Promise<void>((resolve) => {
         const check = setInterval(() => {
-          if (tokenQueue.length === 0 || !renderTimer) { clearInterval(check); resolve(); }
+          if (tokenQueue.length === 0 || !renderTimerRef.current) { clearInterval(check); resolve(); }
         }, 50);
         setTimeout(() => { clearInterval(check); resolve(); }, 30000);
       });
@@ -591,8 +589,6 @@ export default function FenBot() {
       );
     } finally {
       setLoading(false);
-      // Don't clear streamingContent here — let the render timer handle it
-      // If timer is gone, clear immediately
       setTimeout(() => setStreamingContent(''), 100);
     }
   };

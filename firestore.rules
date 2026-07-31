@@ -8,21 +8,22 @@ service cloud.firestore {
 
     match /friendRequests/{requestId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.from == request.auth.uid;
       allow update: if request.auth != null;
+      allow delete: if request.auth != null;
     }
 
     match /posts/{postId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.authorUid == request.auth.uid;
       allow delete: if request.auth != null && resource.data.authorUid == request.auth.uid;
     }
 
     match /postComments/{commentId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.authorUid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.authorUid == request.auth.uid;
     }
 
     match /chatRooms/{chatId} {
@@ -54,17 +55,24 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
     match /statuses/{statusId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
     match /statusComments/{commentId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
     match /quizRooms/{roomId} {
@@ -73,8 +81,13 @@ service cloud.firestore {
       allow update: if request.auth != null;
     }
 
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    match /userData/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /fenbotConversations/{conversationId} {
+      allow read, write: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
     }
   }
 }

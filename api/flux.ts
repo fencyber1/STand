@@ -2,7 +2,10 @@ const FLUX_API_KEY = process.env.FLUX_API_KEY || '';
 const FLUX_API = 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-dev';
 
 export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin || '';
+  const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+  const isAllowed = allowedOrigins.includes(origin) || origin.includes('.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? origin : '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -15,6 +18,11 @@ export default async function handler(req: any, res: any) {
 
     if (!prompt) return res.status(400).json({ error: 'prompt is required' });
 
+    // Constrain inputs to prevent abuse
+    const safeWidth = Math.min(Math.max(Number(width) || 1024, 256), 2048);
+    const safeHeight = Math.min(Math.max(Number(height) || 1024, 256), 2048);
+    const safeSteps = Math.min(Math.max(Number(steps) || 40, 1), 50);
+
     const response = await fetch(FLUX_API, {
       method: 'POST',
       headers: {
@@ -22,10 +30,10 @@ export default async function handler(req: any, res: any) {
         'Authorization': `Bearer ${FLUX_API_KEY}`,
       },
       body: JSON.stringify({
-        prompt,
-        width,
-        height,
-        steps,
+        prompt: String(prompt).slice(0, 2000),
+        width: safeWidth,
+        height: safeHeight,
+        steps: safeSteps,
         cfg_scale,
         seed,
       }),

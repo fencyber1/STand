@@ -106,7 +106,6 @@ export default function QuizScreen() {
         result = { questionId: current.id, userAnswer: '', correct: false, explanation: current.explanation, score: 0 };
       } else {
         setGrading(true);
-        setShowResult(true);
         const modelAnswer = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
         try {
           const graded = await gradeTheoryAnswer({
@@ -299,19 +298,20 @@ export default function QuizScreen() {
     if (!speedRound || showResult) return;
     setSpeedTimeLeft(30);
     speedTimerRef.current = setInterval(() => {
-      setSpeedTimeLeft((prev) => {
-        if (prev <= 1) {
-          if (speedTimerRef.current) clearInterval(speedTimerRef.current);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
+      setSpeedTimeLeft((prev) => prev - 1);
     }, 1000);
     return () => {
       if (speedTimerRef.current) clearInterval(speedTimerRef.current);
     };
   }, [currentIndex, speedRound, showResult]);
+
+  // Speed timer auto-submit (outside setState updater)
+  useEffect(() => {
+    if (speedRound && speedTimeLeft <= 0 && !showResult && currentIndex >= 0) {
+      if (speedTimerRef.current) clearInterval(speedTimerRef.current);
+      handleSubmit();
+    }
+  }, [speedTimeLeft, speedRound, showResult, currentIndex]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);

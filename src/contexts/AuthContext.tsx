@@ -50,37 +50,41 @@ function mapUser(u: FirebaseUser): AuthUser {
 }
 
 async function loadAndMergeData(uid: string) {
-  const remoteData = await loadUserDataFromFirestore(uid);
-  if (!remoteData) return;
+  try {
+    const remoteData = await loadUserDataFromFirestore(uid);
+    if (!remoteData) return;
 
-  const localHistory = storage.getHistory();
-  const localBookmarks = storage.getBookmarks();
-  const localStudyPlans = storage.getStudyPlans();
-  const localTimings = storage.getQuestionTimings();
-  const localAchievements = storage.getAchievements();
-  const localNotes = storage.getAllQuestionNotes();
-  const localImported = storage.getImportedQuestions();
-  const localSavedDocs = storage.getSavedDocuments();
+    const localHistory = storage.getHistory();
+    const localBookmarks = storage.getBookmarks();
+    const localStudyPlans = storage.getStudyPlans();
+    const localTimings = storage.getQuestionTimings();
+    const localAchievements = storage.getAchievements();
+    const localNotes = storage.getAllQuestionNotes();
+    const localImported = storage.getImportedQuestions();
+    const localSavedDocs = storage.getSavedDocuments();
 
-  if (localHistory.length === 0 && remoteData.history?.length) storage.setHistory(remoteData.history);
-  if (localBookmarks.length === 0 && remoteData.bookmarks?.length) storage.setBookmarks(remoteData.bookmarks);
-  if (localStudyPlans.length === 0 && remoteData.studyPlans?.length) storage.setStudyPlans(remoteData.studyPlans);
-  if (localTimings.length === 0 && remoteData.questionTimings?.length) storage.setQuestionTimings(remoteData.questionTimings);
-  if (localAchievements.length === 0 && remoteData.achievements?.length) storage.setAchievements(remoteData.achievements);
-  if (Object.keys(localNotes).length === 0 && remoteData.questionNotes && Object.keys(remoteData.questionNotes).length) {
-    storage.setAllQuestionNotes(remoteData.questionNotes);
+    if (localHistory.length === 0 && remoteData.history?.length) storage.setHistory(remoteData.history);
+    if (localBookmarks.length === 0 && remoteData.bookmarks?.length) storage.setBookmarks(remoteData.bookmarks);
+    if (localStudyPlans.length === 0 && remoteData.studyPlans?.length) storage.setStudyPlans(remoteData.studyPlans);
+    if (localTimings.length === 0 && remoteData.questionTimings?.length) storage.setQuestionTimings(remoteData.questionTimings);
+    if (localAchievements.length === 0 && remoteData.achievements?.length) storage.setAchievements(remoteData.achievements);
+    if (Object.keys(localNotes).length === 0 && remoteData.questionNotes && Object.keys(remoteData.questionNotes).length) {
+      storage.setAllQuestionNotes(remoteData.questionNotes);
+    }
+    if (localImported.length === 0 && remoteData.importedQuestions?.length) storage.setImportedQuestions(remoteData.importedQuestions);
+    if (localSavedDocs.length === 0 && remoteData.savedDocuments?.length) {
+      for (const d of remoteData.savedDocuments) storage.saveDocument(d);
+    }
+    if (!storage.getProfilePhoto() && remoteData.profilePhoto) storage.setProfilePhoto(remoteData.profilePhoto);
+    if (!storage.getDisplayName() && remoteData.displayName) storage.setDisplayName(remoteData.displayName);
+    if (!storage.getBio() && remoteData.bio) storage.setBio(remoteData.bio);
+    if (!storage.getSurname() && remoteData.surname) storage.setSurname(remoteData.surname);
+    if (!storage.getRole() && remoteData.role) storage.setRole(remoteData.role);
+    if (!storage.getHobby() && remoteData.hobby) storage.setHobby(remoteData.hobby);
+    if (!storage.getCountry() && remoteData.country) storage.setCountry(remoteData.country);
+  } catch (e) {
+    console.error('Failed to merge remote data:', e);
   }
-  if (localImported.length === 0 && remoteData.importedQuestions?.length) storage.setImportedQuestions(remoteData.importedQuestions);
-  if (localSavedDocs.length === 0 && remoteData.savedDocuments?.length) {
-    for (const d of remoteData.savedDocuments) storage.saveDocument(d);
-  }
-  if (!storage.getProfilePhoto() && remoteData.profilePhoto) storage.setProfilePhoto(remoteData.profilePhoto);
-  if (!storage.getDisplayName() && remoteData.displayName) storage.setDisplayName(remoteData.displayName);
-  if (!storage.getBio() && remoteData.bio) storage.setBio(remoteData.bio);
-  if (!storage.getSurname() && remoteData.surname) storage.setSurname(remoteData.surname);
-  if (!storage.getRole() && remoteData.role) storage.setRole(remoteData.role);
-  if (!storage.getHobby() && remoteData.hobby) storage.setHobby(remoteData.hobby);
-  if (!storage.getCountry() && remoteData.country) storage.setCountry(remoteData.country);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -217,10 +221,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Failed to save data before logout:', e);
       }
     }
+    // Sign out first, then clear local data
+    await signOut(auth);
     storage.clearAllUserData();
     storage.setActiveUserId(null);
     storage.setOnDataChange(null);
-    await signOut(auth);
   }, []);
 
   return (

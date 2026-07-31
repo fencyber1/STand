@@ -182,6 +182,8 @@ export default function DocumentQuizScreen() {
         if (parsedText.trim().length < 20) {
           setError('Selected pages have no readable text. Try a different page range.');
           setStep('preview');
+          setQuestionProgressCallback(null);
+          setProgress(null);
           setGenerating(false);
           return;
         }

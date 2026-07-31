@@ -25,7 +25,19 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function writeJson(key: string, value: any): void {
-  localStorage.setItem(k(key), JSON.stringify(value));
+  try {
+    localStorage.setItem(k(key), JSON.stringify(value));
+  } catch (e: any) {
+    if (e?.name === 'QuotaExceededError') {
+      console.warn('localStorage quota exceeded. Clearing old data to free space.');
+      try {
+        localStorage.removeItem(k(key));
+        localStorage.setItem(k(key), JSON.stringify(value));
+      } catch {
+        console.error('localStorage still full after cleanup. Data not saved.');
+      }
+    }
+  }
 }
 
 export const storage = {
@@ -244,10 +256,16 @@ export const storage = {
   },
 
   setProfilePhoto(dataUrl: string | null): void {
-    if (dataUrl) {
-      localStorage.setItem(k('stand_profile_photo'), dataUrl);
-    } else {
-      localStorage.removeItem(k('stand_profile_photo'));
+    try {
+      if (dataUrl) {
+        localStorage.setItem(k('stand_profile_photo'), dataUrl);
+      } else {
+        localStorage.removeItem(k('stand_profile_photo'));
+      }
+    } catch (e: any) {
+      if (e?.name === 'QuotaExceededError') {
+        console.warn('localStorage quota exceeded saving profile photo.');
+      }
     }
     notifyChange();
   },
@@ -290,15 +308,21 @@ export const storage = {
   },
 
   getChatWallpaper(): string | null {
-    return localStorage.getItem('stand_chat_wallpaper');
+    return localStorage.getItem(k('stand_chat_wallpaper'));
   },
 
   setChatWallpaper(dataUrl: string): void {
-    localStorage.setItem('stand_chat_wallpaper', dataUrl);
+    try {
+      localStorage.setItem(k('stand_chat_wallpaper'), dataUrl);
+    } catch (e: any) {
+      if (e?.name === 'QuotaExceededError') {
+        console.warn('localStorage quota exceeded saving wallpaper.');
+      }
+    }
   },
 
   removeChatWallpaper(): void {
-    localStorage.removeItem('stand_chat_wallpaper');
+    localStorage.removeItem(k('stand_chat_wallpaper'));
   },
 
   getGeneratedQuestionHistory(topicKey: string): string[] {

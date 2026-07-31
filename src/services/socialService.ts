@@ -622,11 +622,13 @@ export async function sendChatMessage(chatId: string, sender: { uid: string; nam
 export async function markChatRead(chatId: string, uid: string): Promise<void> {
   const q = query(collection(db, 'chatMessages'), where('chatId', '==', chatId), where('read', '==', false));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => {
-    if (d.data().senderUid !== uid) batch.update(d.ref, { read: true });
-  });
-  await batch.commit();
+  const BATCH_SIZE = 500;
+  const toUpdate = snap.docs.filter((d) => d.data().senderUid !== uid);
+  for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    toUpdate.slice(i, i + BATCH_SIZE).forEach((d) => batch.update(d.ref, { read: true }));
+    await batch.commit();
+  }
 }
 
 export async function editChatMessage(messageId: string, newText: string): Promise<void> {
@@ -801,10 +803,14 @@ export async function sendGroupMessage(groupId: string, sender: { uid: string; n
 export async function markGroupRead(groupId: string, uid: string): Promise<void> {
   const q = query(collection(db, 'groupMessages'), where('groupId', '==', groupId), where('readBy', 'not-in', [[uid]]));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => {
-    const readBy: string[] = d.data().readBy || [];
-    if (!readBy.includes(uid)) batch.update(d.ref, { readBy: [...readBy, uid] });
-  });
-  await batch.commit();
+  const BATCH_SIZE = 500;
+  const toUpdate = snap.docs.filter((d) => !(d.data().readBy || []).includes(uid));
+  for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    toUpdate.slice(i, i + BATCH_SIZE).forEach((d) => {
+      const readBy: string[] = d.data().readBy || [];
+      batch.update(d.ref, { readBy: [...readBy, uid] });
+    });
+    await batch.commit();
+  }
 }

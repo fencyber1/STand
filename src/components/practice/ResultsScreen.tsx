@@ -220,16 +220,17 @@ export default function ResultsScreen() {
   };
 
   const handleExportAnki = () => {
+    const unescape = (s: string) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
     const lines = state.questions.map((q) => {
-      const front = q.question.replace(/"/g, '""');
+      const front = unescape(q.question).replace(/"/g, '""');
       let back = '';
       if (q.type === 'MCQ' && q.options) {
         back = q.options.join('<br>');
-        back += `<br><br><strong>Answer:</strong> ${(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}`;
+        back += `<br><br><strong>Answer:</strong> ${unescape((Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim())}`;
       } else {
-        back = `<strong>Answer:</strong> ${(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}`;
+        back = `<strong>Answer:</strong> ${unescape((Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim())}`;
       }
-      back += `<br><br><em>${q.explanation.replace(/"/g, '""')}</em>`;
+      back += `<br><br><em>${unescape(q.explanation).replace(/"/g, '""')}</em>`;
       return `"${front}","${back.replace(/"/g, '""')}","${q.subject}","${q.topic}"`;
     });
 

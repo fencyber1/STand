@@ -125,6 +125,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, [language]); // eslint-disable-line
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const t = useCallback((key: string): string => {
     if (language === 'en') return key;
     const cacheKey = `${language}:${key}`;
