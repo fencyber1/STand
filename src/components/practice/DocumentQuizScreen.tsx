@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Upload, FileText, Loader2, AlertCircle,
   Trash2, Settings2, Save, FolderOpen,
-  CheckCircle, X,
+  CheckCircle, X, BookOpen,
 } from 'lucide-react';
 import { getDocumentQuestions, setQuestionProgressCallback } from '../../services/api';
 import { QUESTION_TYPES, DIFFICULTY_LEVELS } from '../../constants';
 import { storage } from '../../services/storage';
 import type { SavedDocument } from '../../types';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 import BorderGlow from '../ui/BorderGlow';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -32,6 +33,14 @@ export default function DocumentQuizScreen() {
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [parsing, setParsing] = useState(false);
 
+  // PDF page range
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
+  const [isPdf, setIsPdf] = useState(false);
+  const [totalPages, setTotalPages] = useState(0);
+  const [pageStart, setPageStart] = useState(1);
+  const [pageEnd, setPageEnd] = useState(0);
+  const [pageRangeText, setPageRangeText] = useState('');
+
   const [savedDocs, setSavedDocs] = useState<SavedDocument[]>(() => storage.getSavedDocuments());
 
   const handleFile = async (file: File) => {
@@ -50,18 +59,22 @@ export default function DocumentQuizScreen() {
         ).toString();
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let text = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map((item: any) => item.str).join(' ') + '\n';
-        }
-        if (text.trim().length < 20) {
+        setPdfDoc(pdf);
+        setIsPdf(true);
+        setTotalPages(pdf.numPages);
+        setPageStart(1);
+        setPageEnd(pdf.numPages);
+        // Parse first page as preview
+        const firstPage = await pdf.getPage(1);
+        const firstContent = await firstPage.getTextContent();
+        const previewText = firstContent.items.map((item: any) => item.str).join(' ');
+        if (previewText.trim().length < 20) {
           setError('PDF appears to have no readable text (may be scanned/image-based). Try a different file.');
           setParsing(false);
           return;
         }
-        setDocText(text);
+        setDocText(`[Preview: Page 1 of ${pdf.numPages}]\n${previewText}\n\n[Full content will be parsed from selected pages during generation]`);
+        setPageRangeText(`Pages 1-${pdf.numPages} (all ${pdf.numPages} pages)`);
         setStep('preview');
       } else if (ext === 'docx') {
         const mammoth = await import('mammoth');
@@ -73,6 +86,9 @@ export default function DocumentQuizScreen() {
           return;
         }
         setDocText(result.value);
+        setPdfDoc(null);
+        setIsPdf(false);
+        setTotalPages(0);
         setStep('preview');
       } else {
         const text = await file.text();
@@ -82,6 +98,9 @@ export default function DocumentQuizScreen() {
           return;
         }
         setDocText(text);
+        setPdfDoc(null);
+        setIsPdf(false);
+        setTotalPages(0);
         setStep('preview');
       }
     } catch (e: any) {
@@ -109,7 +128,6 @@ export default function DocumentQuizScreen() {
   };
 
   const handleGenerate = async () => {
-    if (!docText.trim()) return;
     setGenerating(true);
     setProgress(null);
     setStep('generating');
@@ -117,8 +135,28 @@ export default function DocumentQuizScreen() {
     setQuestionProgressCallback((current, total) => setProgress({ current, total }));
 
     try {
+      let textToUse = docText;
+
+      // For PDFs, re-parse with selected page range
+      if (pdfDoc && isPdf) {
+        let parsedText = '';
+        const end = Math.min(pageEnd, totalPages);
+        for (let i = pageStart; i <= end; i++) {
+          const page = await pdfDoc.getPage(i);
+          const content = await page.getTextContent();
+          parsedText += content.items.map((item: any) => item.str).join(' ') + '\n';
+        }
+        if (parsedText.trim().length < 20) {
+          setError('Selected pages have no readable text. Try a different page range.');
+          setStep('preview');
+          setGenerating(false);
+          return;
+        }
+        textToUse = parsedText;
+      }
+
       const { questions } = await getDocumentQuestions({
-        documentText: docText,
+        documentText: textToUse,
         questionCount,
         questionType,
         difficulty: difficulty === 'all' ? undefined : difficulty,
@@ -127,7 +165,7 @@ export default function DocumentQuizScreen() {
       navigate('/quiz', {
         state: {
           questions,
-          topic: `Document: ${fileName}`,
+          topic: `Document: ${fileName}${isPdf ? ` (Pages ${pageStart}-${Math.min(pageEnd, totalPages)})` : ''}`,
           sector: 'Document-Based',
           level: 'Custom',
           questionType,
@@ -283,7 +321,7 @@ export default function DocumentQuizScreen() {
             <div className="flex items-center gap-2">
               <FileText size={16} className="text-primary-500" />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{fileName}</span>
-              <span className="text-xs text-gray-400">{wordCount} words</span>
+              <span className="text-xs text-gray-400">{isPdf ? `${totalPages} ${t('pages')}` : `${wordCount} ${t('words')}`}</span>
               {saved && <span className="text-xs text-green-500 flex items-center gap-1"><CheckCircle size={10} /> Saved</span>}
             </div>
             <div className="flex items-center gap-2">
@@ -296,7 +334,7 @@ export default function DocumentQuizScreen() {
                 </button>
               )}
               <button
-                onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); }}
+                onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); setPdfDoc(null); setIsPdf(false); setTotalPages(0); }}
                 className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
               >
                 <X size={12} /> Change
@@ -309,6 +347,80 @@ export default function DocumentQuizScreen() {
               <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
                 <Settings2 size={16} /> {t('Quiz Settings')}
               </div>
+
+              {/* Page Range (PDF only) */}
+              {isPdf && totalPages > 1 && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen size={14} className="text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{t('Page Range')}</span>
+                    <span className="text-xs text-blue-500 dark:text-blue-400">({t('of')} {totalPages} {t('pages')})</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-blue-600 dark:text-blue-400 font-medium">{t('From')}</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={pageStart}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value);
+                          if (!isNaN(v) && v >= 1 && v <= totalPages) {
+                            setPageStart(v);
+                            if (v > pageEnd) setPageEnd(v);
+                          }
+                        }}
+                        className="w-16 px-2 py-1.5 text-sm border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <span className="text-blue-400">—</span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-blue-600 dark:text-blue-400 font-medium">{t('To')}</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={pageEnd}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value);
+                          if (!isNaN(v) && v >= 1 && v <= totalPages) {
+                            setPageEnd(v);
+                            if (v < pageStart) setPageStart(v);
+                          }
+                        }}
+                        className="w-16 px-2 py-1.5 text-sm border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={() => { setPageStart(1); setPageEnd(totalPages); }}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium ml-auto"
+                    >
+                      {t('All')}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      { label: t('First 10'), start: 1, end: Math.min(10, totalPages) },
+                      { label: t('First 20'), start: 1, end: Math.min(20, totalPages) },
+                      { label: t('Last 10'), start: Math.max(1, totalPages - 9), end: totalPages },
+                      { label: t('Middle'), start: Math.max(1, Math.floor(totalPages / 3)), end: Math.min(totalPages, Math.floor(totalPages * 2 / 3)) },
+                    ].filter((p) => p.end > p.start && p.end <= totalPages).map((preset) => (
+                      <button
+                        key={preset.label}
+                        onClick={() => { setPageStart(preset.start); setPageEnd(preset.end); }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                          pageStart === preset.start && pageEnd === preset.end
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 dark:bg-blue-800/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-700/40'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Number of Questions')}</label>
