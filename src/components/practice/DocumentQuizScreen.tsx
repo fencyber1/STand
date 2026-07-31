@@ -5,7 +5,7 @@ import {
   Trash2, Settings2, Save, FolderOpen,
   CheckCircle, X,
 } from 'lucide-react';
-import { getDocumentQuestions } from '../../services/api';
+import { getDocumentQuestions, setQuestionProgressCallback } from '../../services/api';
 import { QUESTION_TYPES, DIFFICULTY_LEVELS } from '../../constants';
 import { storage } from '../../services/storage';
 import type { SavedDocument } from '../../types';
@@ -29,6 +29,7 @@ export default function DocumentQuizScreen() {
   const [difficulty, setDifficulty] = useState('all');
 
   const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [parsing, setParsing] = useState(false);
 
   const [savedDocs, setSavedDocs] = useState<SavedDocument[]>(() => storage.getSavedDocuments());
@@ -110,8 +111,10 @@ export default function DocumentQuizScreen() {
   const handleGenerate = async () => {
     if (!docText.trim()) return;
     setGenerating(true);
+    setProgress(null);
     setStep('generating');
     setError('');
+    setQuestionProgressCallback((current, total) => setProgress({ current, total }));
 
     try {
       const { questions } = await getDocumentQuestions({
@@ -135,6 +138,8 @@ export default function DocumentQuizScreen() {
       setError(e.message || 'Failed to generate questions');
       setStep('preview');
     }
+    setQuestionProgressCallback(null);
+    setProgress(null);
     setGenerating(false);
   };
 
@@ -392,7 +397,9 @@ export default function DocumentQuizScreen() {
       {step === 'generating' && (
         <div className="text-center py-16">
           <Loader2 size={40} className="animate-spin mx-auto text-primary-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">{t('Generating Questions...')}</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
+            {progress ? `${t('Generating Questions...')} ${progress.current}/${progress.total}` : t('Generating Questions...')}
+          </h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm">{t('Reading your document and creating quiz questions...')}</p>
         </div>
       )}

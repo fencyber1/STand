@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../services/storage';
 import { createQuizRoom, joinQuizRoom, type QuizRoom } from '../../services/firebaseService';
-import { generateQuestions } from '../../services/api';
+import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
 import { SECTORS, LEVELS, DIFFICULTY_LEVELS } from '../../constants';
 import BorderGlow from '../ui/BorderGlow';
 
@@ -26,6 +26,7 @@ export default function MultiplayerLobbyScreen() {
   const [ageError, setAgeError] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [error, setError] = useState('');
 
   const userObj = {
@@ -43,6 +44,8 @@ export default function MultiplayerLobbyScreen() {
     }
     setLoading(true);
     setError('');
+    setProgress(null);
+    setQuestionProgressCallback((current, total) => setProgress({ current, total }));
     try {
       const actualSubject = subject === 'Other' ? (customSubject.trim() || 'General') : (subject || 'General');
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
@@ -61,6 +64,8 @@ export default function MultiplayerLobbyScreen() {
     } catch (e: any) {
       setError(e.message || 'Failed to create room');
     }
+    setQuestionProgressCallback(null);
+    setProgress(null);
     setLoading(false);
   };
 
@@ -244,7 +249,7 @@ export default function MultiplayerLobbyScreen() {
               className="w-full py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              {loading ? t('Generating Questions...') : t('Create Room')}
+              {loading ? (progress ? `${t('Generating Questions...')} ${progress.current}/${progress.total}` : t('Generating Questions...')) : t('Create Room')}
             </button>
           </div>
         </BorderGlow>

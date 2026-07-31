@@ -139,6 +139,13 @@ function normalizeOptions(options: any, type: string): string[] | undefined {
   });
 }
 
+// Global progress callback for batch generation
+let progressCallback: ((current: number, total: number) => void) | null = null;
+
+export function setQuestionProgressCallback(cb: ((current: number, total: number) => void) | null) {
+  progressCallback = cb;
+}
+
 export async function generateQuestions(params: {
   topic: string;
   sector: string;
@@ -149,6 +156,49 @@ export async function generateQuestions(params: {
   studentAge?: number;
   language?: string;
 }): Promise<{ questions: Question[] }> {
+  const BATCH_SIZE = 10;
+  const totalNeeded = params.count;
+  const allQuestions: Question[] = [];
+
+  for (let offset = 0; offset < totalNeeded; offset += BATCH_SIZE) {
+    const batchSize = Math.min(BATCH_SIZE, totalNeeded - offset);
+    const batchNum = Math.floor(offset / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(totalNeeded / BATCH_SIZE);
+
+    progressCallback?.(offset, totalNeeded);
+
+    const batchQuestions = await generateQuestionBatch(params, batchSize, batchNum, totalBatches, allQuestions);
+    allQuestions.push(...batchQuestions);
+
+    if (offset + BATCH_SIZE < totalNeeded) {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+
+  progressCallback?.(totalNeeded, totalNeeded);
+
+  if (allQuestions.length === 0) {
+    throw new Error('No questions were generated. Please try again.');
+  }
+
+  return { questions: allQuestions.slice(0, totalNeeded) };
+}
+
+async function generateQuestionBatch(
+  params: {
+    topic: string;
+    sector: string;
+    level: string;
+    questionType: string;
+    difficulty?: string;
+    studentAge?: number;
+    language?: string;
+  },
+  count: number,
+  batchNum: number,
+  totalBatches: number,
+  existingQuestions: Question[],
+): Promise<Question[]> {
   const typeMap: Record<string, string> = {
     MCQ: 'multiple choice with 4 options',
     Theory: 'open-ended theory questions',
@@ -177,47 +227,39 @@ export async function generateQuestions(params: {
     ? `\nThe user's language is ${params.language}. ALL questions, options, correctAnswer, and explanation MUST be written entirely in ${params.language}. Do NOT write in English.`
     : '';
 
-  const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${params.count} exam questions.
+  const avoidDuplicates = existingQuestions.length > 0
+    ? `\nIMPORTANT: Do NOT repeat any of these existing questions:\n${existingQuestions.map((q) => `- "${q.question.slice(0, 80)}"`).join('\n')}`
+    : '';
+
+  const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${count} exam questions (batch ${batchNum}/${totalBatches}).
 
 STRICT RULES:
-- Every question MUST be directly about the ${params.sector} subject. Do NOT include questions from any other subject or course.
+- Every question MUST be directly about the ${params.sector} subject.
 - The topic is "${params.topic}" — all questions must relate to this topic WITHIN the ${params.sector} curriculum.
 - The level is ${params.level} — questions must match this academic level.
 - Each question's "subject" field MUST be exactly "${params.sector}".
-- Do NOT generate questions about topics outside ${params.sector}, even if they seem related.
-- EVERY question MUST include an "imageQuery" field — this is REQUIRED, not optional.
-- The imageQuery MUST be a Wikipedia article title (e.g. "Mitosis", "Supply and demand", "Water cycle", "Python (programming language)") that has a relevant diagram or illustration.
+- EVERY question MUST include an "imageQuery" field — this is REQUIRED.
+- The imageQuery MUST be a Wikipedia article title that has a relevant diagram.
+${avoidDuplicates}
 
-CRITICAL QUESTION TYPE RULE — THIS IS THE MOST IMPORTANT RULE:
-You MUST generate ALL ${params.count} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
-${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ". Do NOT generate any Theory, TrueFalse, or FillBlank questions.' : ''}
-${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory". The correctAnswer MUST be a detailed model answer (2-4 sentences). Do NOT generate any MCQ, TrueFalse, or FillBlank questions.' : ''}
-${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse". The correctAnswer MUST be exactly "True" or "False". Do NOT generate any MCQ, Theory, or FillBlank questions.' : ''}
-${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___) in the question text where the answer goes. The "type" field MUST be "FillBlank". The correctAnswer MUST be the missing term. Do NOT generate any MCQ, Theory, or TrueFalse questions.' : ''}
+CRITICAL QUESTION TYPE RULE:
+You MUST generate ALL ${count} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
+${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ".' : ''}
+${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory".' : ''}
+${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse".' : ''}
+${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___). The "type" field MUST be "FillBlank".' : ''}
 ${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ, some Theory, some TrueFalse.' : ''}
-Do NOT deviate from this type. Do NOT mix types unless it is Mixed. Every single question must be the exact type specified above.
 ${difficultyLine}
 ${ageLine}
 ${langLine}
 
 Return ONLY a JSON array. Each object:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"exact Wikipedia article title for a related diagram"}
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"Wikipedia article title"}
 
-For MCQ: type="MCQ", options MUST have exactly 4 items ["A. ...","B. ...","C. ...","D. ..."], correctAnswer MUST start with "A." "B." "C." or "D."
-For TrueFalse: type="TrueFalse", options=["True","False"], correctAnswer="True" or "False".
-For Theory: type="Theory", options can be omitted or empty array, correctAnswer is a model answer in 2-4 sentences.
-For FillBlank: type="FillBlank", question must contain "___" blank, correctAnswer is the missing term.
-The imageQuery is REQUIRED for every question. It MUST be a valid Wikipedia article title that has an image. Good examples: "Mitosis", "Photosynthesis", "Pythagorean theorem", "Supply and demand", "Newton's laws of motion", "Water cycle", "DNA".
 No markdown. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);
-  const questions = parseQuestions(raw);
-
-  if (questions.length === 0) {
-    throw new Error('No questions were generated. Please try again.');
-  }
-
-  return { questions };
+  return parseQuestions(raw);
 }
 
 export async function getDeepExplanation(params: {
@@ -279,6 +321,45 @@ export async function getDocumentQuestions(params: {
   questionType: string;
   difficulty?: string;
 }): Promise<{ questions: Question[] }> {
+  const BATCH_SIZE = 10;
+  const totalNeeded = params.questionCount;
+  const allQuestions: Question[] = [];
+
+  for (let offset = 0; offset < totalNeeded; offset += BATCH_SIZE) {
+    const batchSize = Math.min(BATCH_SIZE, totalNeeded - offset);
+    const batchNum = Math.floor(offset / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(totalNeeded / BATCH_SIZE);
+
+    progressCallback?.(offset, totalNeeded);
+
+    const batchQuestions = await generateDocumentQuestionBatch(params, batchSize, batchNum, totalBatches, allQuestions);
+    allQuestions.push(...batchQuestions);
+
+    if (offset + BATCH_SIZE < totalNeeded) {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+
+  progressCallback?.(totalNeeded, totalNeeded);
+
+  if (allQuestions.length === 0) {
+    throw new Error('No questions were generated from the document. Please try again.');
+  }
+
+  return { questions: allQuestions.slice(0, totalNeeded) };
+}
+
+async function generateDocumentQuestionBatch(
+  params: {
+    documentText: string;
+    questionType: string;
+    difficulty?: string;
+  },
+  count: number,
+  batchNum: number,
+  totalBatches: number,
+  existingQuestions: Question[],
+): Promise<Question[]> {
   const typeMap: Record<string, string> = {
     MCQ: 'multiple choice with 4 options (A, B, C, D)',
     Theory: 'open-ended theory questions requiring detailed answers',
@@ -294,24 +375,25 @@ export async function getDocumentQuestions(params: {
 
   const truncated = params.documentText.slice(0, 15000);
 
-  const prompt = `You are an expert exam question generator. Your task is to generate exactly ${params.questionCount} high-quality exam questions based SOLELY on the uploaded document below.
+  const avoidDuplicates = existingQuestions.length > 0
+    ? `\nIMPORTANT: Do NOT repeat any of these existing questions:\n${existingQuestions.map((q) => `- "${q.question.slice(0, 80)}"`).join('\n')}`
+    : '';
+
+  const prompt = `You are an expert exam question generator. Generate exactly ${count} questions based SOLELY on this document (batch ${batchNum}/${totalBatches}).
 
 CRITICAL RULES:
-- Every single question MUST be directly about the specific content, facts, concepts, definitions, formulas, processes, or examples found in this document
-- Questions must reference actual terms, names, numbers, dates, or details from the document — NOT generic/common-knowledge questions
-- Do NOT ask vague questions like "What is X?" without tying it to a specific detail in the document
-- If the document contains formulas, definitions, steps in a process, specific examples, or numerical data — generate questions that test knowledge of those exact details
-- The correct answer for every question must be explicitly stated or clearly implied in the document text
-- If the document covers a specific subject (e.g., biology, history, math), all questions must be about that subject's content as presented in the document
+- Every question MUST be directly about specific content in this document
+- Questions must reference actual terms, names, numbers, or details from the document
+- The correct answer must be explicitly stated or clearly implied in the document
+${avoidDuplicates}
 
-CRITICAL QUESTION TYPE RULE — THIS IS THE MOST IMPORTANT RULE:
-You MUST generate ALL ${params.questionCount} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
-${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ". Do NOT generate any Theory, TrueFalse, or FillBlank questions.' : ''}
-${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory". The correctAnswer MUST be a detailed model answer (2-4 sentences). Do NOT generate any MCQ, TrueFalse, or FillBlank questions.' : ''}
-${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse". The correctAnswer MUST be exactly "True" or "False". Do NOT generate any MCQ, Theory, or FillBlank questions.' : ''}
-${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___) in the question text where the answer goes. The "type" field MUST be "FillBlank". The correctAnswer MUST be the missing term. Do NOT generate any MCQ, Theory, or TrueFalse questions.' : ''}
-${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ, some Theory, some TrueFalse.' : ''}
-Do NOT deviate from this type. Do NOT mix types unless it is Mixed. Every single question must be the exact type specified above.
+CRITICAL QUESTION TYPE RULE:
+You MUST generate ALL ${count} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
+${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ".' : ''}
+${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory".' : ''}
+${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse".' : ''}
+${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___). The "type" field MUST be "FillBlank".' : ''}
+${params.questionType === 'Mixed' ? 'Generate a MIX of question types.' : ''}
 ${difficultyLine}
 
 DOCUMENT TEXT:
@@ -319,28 +401,13 @@ DOCUMENT TEXT:
 ${truncated}
 ---
 
-STEP 1: First, identify the main topic, subtopics, key terms, definitions, formulas, and important facts in the document.
-STEP 2: Generate questions that test whether someone truly read and understood this specific document — not general knowledge.
-STEP 3: Ensure every question can be answered correctly ONLY by someone who has read this document.
+Return ONLY a JSON array. Each object:
+{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"[subtopic from document]"}
 
-Return ONLY a JSON array. Each object must follow this exact structure:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"Explain why this answer is correct based on the document content","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"[The actual subtopic from the document, e.g. 'Mitosis phases' or 'French Revolution causes']"}
-
-For MCQ: type="MCQ", options MUST have exactly 4 items ["A. ...","B. ...","C. ...","D. ..."], correctAnswer MUST start with "A." "B." "C." or "D."
-For TrueFalse: type="TrueFalse", options=["True","False"], correctAnswer="True" or "False".
-For Theory: type="Theory", options can be omitted or empty array, correctAnswer is a model answer in 2-4 sentences.
-For FillBlank: type="FillBlank", question must contain "___" blank, correctAnswer is the missing term.
-
-No markdown formatting. No text outside the JSON array.`;
+No markdown. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);
-  const questions = parseQuestions(raw);
-
-  if (questions.length === 0) {
-    throw new Error('No questions were generated from the document. Please try again.');
-  }
-
-  return { questions };
+  return parseQuestions(raw);
 }
 
 export async function gradeTheoryAnswer(params: {
