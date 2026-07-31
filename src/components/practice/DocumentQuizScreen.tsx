@@ -15,6 +15,18 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 type Step = 'upload' | 'preview' | 'generating';
 
+const WORDS_PER_PAGE = 1000;
+
+function splitIntoChunks(text: string, wordsPerPage: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= wordsPerPage) return [text];
+  const chunks: string[] = [];
+  for (let i = 0; i < words.length; i += wordsPerPage) {
+    chunks.push(words.slice(i, i + wordsPerPage).join(' '));
+  }
+  return chunks;
+}
+
 export default function DocumentQuizScreen() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -33,15 +45,30 @@ export default function DocumentQuizScreen() {
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [parsing, setParsing] = useState(false);
 
-  // PDF page range
+  // Page range — works for all file types
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [isPdf, setIsPdf] = useState(false);
+  const [fullText, setFullText] = useState('');        // full text for non-PDF
+  const [chunks, setChunks] = useState<string[]>([]);  // virtual pages for non-PDF
   const [totalPages, setTotalPages] = useState(0);
   const [pageStart, setPageStart] = useState(1);
   const [pageEnd, setPageEnd] = useState(0);
-  const [pageRangeText, setPageRangeText] = useState('');
 
   const [savedDocs, setSavedDocs] = useState<SavedDocument[]>(() => storage.getSavedDocuments());
+
+  const resetState = () => {
+    setDocText('');
+    setFullText('');
+    setChunks([]);
+    setFileName('');
+    setPdfDoc(null);
+    setIsPdf(false);
+    setTotalPages(0);
+    setPageStart(1);
+    setPageEnd(0);
+    setError('');
+    setSaved(false);
+  };
 
   const handleFile = async (file: File) => {
     setError('');
@@ -51,6 +78,8 @@ export default function DocumentQuizScreen() {
     const ext = file.name.split('.').pop()?.toLowerCase();
 
     try {
+      let rawText = '';
+
       if (ext === 'pdf') {
         const pdfjsLib = await import('pdfjs-dist');
         pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -64,43 +93,47 @@ export default function DocumentQuizScreen() {
         setTotalPages(pdf.numPages);
         setPageStart(1);
         setPageEnd(pdf.numPages);
-        // Parse first page as preview
+        // Preview first page only
         const firstPage = await pdf.getPage(1);
         const firstContent = await firstPage.getTextContent();
-        const previewText = firstContent.items.map((item: any) => item.str).join(' ');
-        if (previewText.trim().length < 20) {
+        rawText = firstContent.items.map((item: any) => item.str).join(' ');
+        if (rawText.trim().length < 20) {
           setError('PDF appears to have no readable text (may be scanned/image-based). Try a different file.');
           setParsing(false);
           return;
         }
-        setDocText(`[Preview: Page 1 of ${pdf.numPages}]\n${previewText}\n\n[Full content will be parsed from selected pages during generation]`);
-        setPageRangeText(`Pages 1-${pdf.numPages} (all ${pdf.numPages} pages)`);
+        setDocText(`[Preview: Page 1 of ${pdf.numPages}]\n${rawText.slice(0, 500)}...`);
+        setFullText('');
+        setChunks([]);
         setStep('preview');
-      } else if (ext === 'docx') {
-        const mammoth = await import('mammoth');
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        if (result.value.trim().length < 20) {
+      } else {
+        // All non-PDF files: read text and split into virtual pages
+        if (ext === 'docx') {
+          const mammoth = await import('mammoth');
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          rawText = result.value;
+        } else {
+          rawText = await file.text();
+        }
+
+        if (rawText.trim().length < 20) {
           setError('Document appears to be empty. Try a different file.');
           setParsing(false);
           return;
         }
-        setDocText(result.value);
+
+        const textChunks = splitIntoChunks(rawText, WORDS_PER_PAGE);
         setPdfDoc(null);
         setIsPdf(false);
-        setTotalPages(0);
-        setStep('preview');
-      } else {
-        const text = await file.text();
-        if (text.trim().length < 20) {
-          setError('File appears to be empty or not text-readable. Try a different file.');
-          setParsing(false);
-          return;
-        }
-        setDocText(text);
-        setPdfDoc(null);
-        setIsPdf(false);
-        setTotalPages(0);
+        setFullText(rawText);
+        setChunks(textChunks);
+        setTotalPages(textChunks.length);
+        setPageStart(1);
+        setPageEnd(textChunks.length);
+        // Show first chunk as preview
+        const previewWords = rawText.split(/\s+/).slice(0, 200).join(' ');
+        setDocText(`${previewWords}${rawText.split(/\s+/).length > 200 ? '...' : ''}`);
         setStep('preview');
       }
     } catch (e: any) {
@@ -135,10 +168,10 @@ export default function DocumentQuizScreen() {
     setQuestionProgressCallback((current, total) => setProgress({ current, total }));
 
     try {
-      let textToUse = docText;
+      let textToUse = '';
 
-      // For PDFs, re-parse with selected page range
       if (pdfDoc && isPdf) {
+        // PDF: parse selected pages
         let parsedText = '';
         const end = Math.min(pageEnd, totalPages);
         for (let i = pageStart; i <= end; i++) {
@@ -153,6 +186,14 @@ export default function DocumentQuizScreen() {
           return;
         }
         textToUse = parsedText;
+      } else if (chunks.length > 0) {
+        // Non-PDF: use selected chunks
+        const end = Math.min(pageEnd, totalPages);
+        const selectedChunks = chunks.slice(pageStart - 1, end);
+        textToUse = selectedChunks.join('\n\n');
+      } else {
+        // Pasted text: use all
+        textToUse = docText;
       }
 
       const { questions } = await getDocumentQuestions({
@@ -162,10 +203,16 @@ export default function DocumentQuizScreen() {
         difficulty: difficulty === 'all' ? undefined : difficulty,
       });
 
+      const rangeLabel = isPdf
+        ? ` (Pages ${pageStart}-${Math.min(pageEnd, totalPages)})`
+        : totalPages > 1
+        ? ` (Sections ${pageStart}-${Math.min(pageEnd, totalPages)})`
+        : '';
+
       navigate('/quiz', {
         state: {
           questions,
-          topic: `Document: ${fileName}${isPdf ? ` (Pages ${pageStart}-${Math.min(pageEnd, totalPages)})` : ''}`,
+          topic: `Document: ${fileName}${rangeLabel}`,
           sector: 'Document-Based',
           level: 'Custom',
           questionType,
@@ -204,6 +251,15 @@ export default function DocumentQuizScreen() {
     setFileName(doc.name);
     setDocText(doc.text);
     setSaved(true);
+
+    // Split saved text into virtual pages
+    const textChunks = splitIntoChunks(doc.text, WORDS_PER_PAGE);
+    setFullText(doc.text);
+    setChunks(textChunks);
+    setTotalPages(textChunks.length);
+    setPageStart(1);
+    setPageEnd(textChunks.length);
+
     setStep('preview');
   };
 
@@ -334,7 +390,7 @@ export default function DocumentQuizScreen() {
                 </button>
               )}
               <button
-                onClick={() => { setDocText(''); setFileName(''); setStep('upload'); setError(''); setSaved(false); setPdfDoc(null); setIsPdf(false); setTotalPages(0); }}
+                onClick={() => resetState()}
                 className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
               >
                 <X size={12} /> Change
@@ -348,13 +404,17 @@ export default function DocumentQuizScreen() {
                 <Settings2 size={16} /> {t('Quiz Settings')}
               </div>
 
-              {/* Page Range (PDF only) */}
-              {isPdf && totalPages > 1 && (
+              {/* Page Range */}
+              {totalPages > 1 && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2 mb-2">
                     <BookOpen size={14} className="text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{t('Page Range')}</span>
-                    <span className="text-xs text-blue-500 dark:text-blue-400">({t('of')} {totalPages} {t('pages')})</span>
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                      {isPdf ? t('Page Range') : t('Section Range')}
+                    </span>
+                    <span className="text-xs text-blue-500 dark:text-blue-400">
+                      ({t('of')} {totalPages} {isPdf ? t('pages') : t('sections')})
+                    </span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
