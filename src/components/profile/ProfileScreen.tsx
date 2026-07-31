@@ -143,7 +143,7 @@ export default function ProfileScreen() {
         {[
           { label: t('Edit Profile'), action: () => setEditOpen(true) },
           { label: t('Notification Settings'), action: () => {} },
-          { label: t('Help & Support'), action: () => {} },
+          { label: t('Help & Support'), action: () => window.dispatchEvent(new Event('start-tour')) },
         ].map(({ label, action }, i) => (
           <button
             key={label}
