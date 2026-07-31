@@ -8,16 +8,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { loadFenBotConversations, saveFenBotConversation, deleteFenBotConversation } from '../../services/fenbotService';
 
-const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
+const RAW_KEYS = import.meta.env.VITE_NVIDIA_API_KEY || '';
+const API_KEYS = RAW_KEYS.split(',').map((k: string) => k.trim()).filter(Boolean);
+let fenBotKeyIndex = 0;
 
 function getApiUrl(): string {
-  if (import.meta.env.DEV) return '/api/nvidia/chat/completions';
-  return '/api/generate';
+  if (import.meta.env.DEV) return '/v1/chat/completions';
+  return 'https://integrate.api.nvidia.com/v1/chat/completions';
 }
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (import.meta.env.DEV) headers['Authorization'] = `Bearer ${API_KEY}`;
+  const key = API_KEYS.length > 0 ? API_KEYS[fenBotKeyIndex % API_KEYS.length] : '';
+  if (key) headers['Authorization'] = `Bearer ${key}`;
+  fenBotKeyIndex = (fenBotKeyIndex + 1) % Math.max(API_KEYS.length, 1);
   return headers;
 }
 

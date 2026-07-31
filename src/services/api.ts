@@ -1,52 +1,83 @@
 import type { Question } from '../types';
 
-const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
+const MODEL = 'meta/llama-3.1-8b-instruct';
 
+// In dev: Vite proxy handles CORS. In prod: call NVIDIA directly.
 function getApiUrl(): string {
-  if (import.meta.env.DEV) {
-    return '/api/nvidia/chat/completions';
-  }
-  return '/api/generate';
+  if (import.meta.env.DEV) return '/v1/chat/completions';
+  return 'https://integrate.api.nvidia.com/v1/chat/completions';
 }
 
-function getHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (import.meta.env.DEV) {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
-  }
-  return headers;
-}
+// Multi-key support: VITE_NVIDIA_API_KEY can be comma-separated
+// Keys rotate on each call, so usage is spread across them
+const RAW_KEYS = import.meta.env.VITE_NVIDIA_API_KEY || '';
+const API_KEYS = RAW_KEYS.split(',').map((k: string) => k.trim()).filter(Boolean);
+let currentKeyIndex = 0;
 
 async function callAI(prompt: string): Promise<string> {
-  const response = await fetch(getApiUrl(), {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      model: 'meta/llama-3.1-8b-instruct',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 4096,
-    }),
-  });
+  const keysToTry = API_KEYS.length > 0
+    ? Array.from({ length: API_KEYS.length }, (_, i) => API_KEYS[(currentKeyIndex + i) % API_KEYS.length])
+    : [''];
 
-  const text = await response.text();
+  let lastError = '';
 
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`AI API returned invalid response: ${text.slice(0, 200)}`);
+  for (const key of keysToTry) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+
+      const response = await fetch(getApiUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 4096,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      const text = await response.text();
+
+      if (!response.ok) {
+        lastError = `API error ${response.status}: ${text.slice(0, 200)}`;
+        if (response.status === 429 || response.status >= 500) {
+          currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+          continue;
+        }
+        throw new Error(lastError);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`AI returned invalid JSON: ${text.slice(0, 200)}`);
+      }
+
+      if (!data.choices || !data.choices[0]) {
+        throw new Error(`AI returned no choices: ${JSON.stringify(data).slice(0, 200)}`);
+      }
+
+      currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+      return data.choices[0].message.content;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        lastError = 'AI service timed out. Please try again.';
+        currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+        continue;
+      }
+      throw err;
+    }
   }
 
-  if (!response.ok) {
-    throw new Error(`AI API error (${response.status}): ${data.error || JSON.stringify(data)}`);
-  }
-
-  if (!data.choices || !data.choices[0]) {
-    throw new Error(`AI API returned no choices: ${JSON.stringify(data).slice(0, 200)}`);
-  }
-
-  return data.choices[0].message.content;
+  throw new Error(lastError || 'All API keys failed. Please check your keys.');
 }
 
 function parseQuestions(raw: string): Question[] {
@@ -324,12 +355,10 @@ export async function gradeTheoryAnswer(params: {
   const total = params.totalMarks || 100;
   const wordCount = params.studentAnswer.trim().split(/\s+/).filter(Boolean).length;
 
-  // Short-circuit: trivial or empty answers get 0
   if (wordCount < 3) {
     return { score: 0, tier1: 0, tier2: 0, tier3: 0, feedback: 'Answer is too short to demonstrate any understanding.' };
   }
 
-  // Build strictness block based on education level + difficulty
   const level = (params.level || '').toLowerCase();
   const difficulty = (params.difficulty || '').toLowerCase();
   const subject = params.subject || 'General';
@@ -337,7 +366,6 @@ export async function gradeTheoryAnswer(params: {
   let strictness = '';
 
   if (level.includes('primary') || level.includes('basic')) {
-    // Primary/basic — very lenient
     if (difficulty === 'easy') {
       strictness = `GRADING STRICTNESS: VERY LENIENT (PRIMARY/BASIC Level, Easy Difficulty)
 - This is a very young student (primary school age). Be extremely encouraging and lenient.
@@ -362,7 +390,6 @@ export async function gradeTheoryAnswer(params: {
 - Warm, encouraging feedback is important.`;
     }
   } else if (level.includes('jss') || level.includes('bece')) {
-    // Junior secondary — lenient
     if (difficulty === 'easy') {
       strictness = `GRADING STRICTNESS: LENIENT (JSS/BECE Level, Easy Difficulty)
 - This is a young student at a basic education level. Be encouraging and lenient.
@@ -387,7 +414,6 @@ export async function gradeTheoryAnswer(params: {
 - Don't penalize heavily for missing technical terms if the concept is understood.`;
     }
   } else if (level.includes('sss') || level.includes('waec') || level.includes('neco')) {
-    // Senior secondary — moderate
     if (difficulty === 'easy') {
       strictness = `GRADING STRICTNESS: MODERATE (Senior Secondary Level, Easy Difficulty)
 - This is a secondary school student with foundational knowledge.
@@ -412,7 +438,6 @@ export async function gradeTheoryAnswer(params: {
 - Penalize vague or incomplete answers appropriately.`;
     }
   } else if (level.includes('university') || level.includes('jamb')) {
-    // University — strict
     if (difficulty === 'easy') {
       strictness = `GRADING STRICTNESS: STRICT (University Level, Easy Difficulty)
 - This is a university student. Even for an easy question, expect university-level response.
@@ -440,7 +465,6 @@ export async function gradeTheoryAnswer(params: {
 - The response should show the student has engaged with the material at depth.`;
     }
   } else if (level.includes('professional') || level.includes('certification')) {
-    // Professional — very strict
     if (difficulty === 'hard') {
       strictness = `GRADING STRICTNESS: VERY STRICT (Professional/Certification Level, Hard Difficulty)
 - This is a professional or certification candidate. Apply the strictest standards.
@@ -458,7 +482,6 @@ export async function gradeTheoryAnswer(params: {
 - Penalize generic or textbook-only responses.`;
     }
   } else {
-    // Default — moderate-strict
     strictness = `GRADING STRICTNESS: MODERATE-STRICT
 - Expect a clear, well-explained answer with relevant terminology.
 - The answer should demonstrate understanding of the core concept.
