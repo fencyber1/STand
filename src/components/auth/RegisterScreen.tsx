@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Loader2, Moon, Sun, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import BorderGlow from '../ui/BorderGlow';
 import Logo from '../landing/Logo';
 
@@ -15,7 +15,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { isLoggedIn, register, loginWithGoogle } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   if (isLoggedIn) return <Navigate to="/" replace />;
 
@@ -64,15 +64,6 @@ export default function RegisterScreen() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 px-4 py-8 transition-colors overflow-y-auto">
-      <div className="absolute top-4 right-4">
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-colors shadow-sm"
-        >
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-        </button>
-      </div>
-
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
           <Logo size={160} />
