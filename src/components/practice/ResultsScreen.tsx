@@ -57,7 +57,9 @@ export default function ResultsScreen() {
 
   useEffect(() => {
     if (state) {
-      const percentage = Math.round((state.correctCount / state.totalCount) * 100);
+      const totalScore = state.totalScore || 0;
+      const percentage = Math.round((totalScore / (state.totalCount * 100)) * 100);
+      const effectiveCorrect = state.results.filter((r) => r.score != null ? r.score >= 50 : r.correct === true).length;
       storage.saveSession({
         id: Date.now().toString(),
         topic: state.topic,
@@ -67,7 +69,7 @@ export default function ResultsScreen() {
         date: new Date().toISOString(),
         score: percentage,
         totalQuestions: state.totalCount,
-        correctAnswers: state.correctCount,
+        correctAnswers: effectiveCorrect,
       });
 
       const history = storage.getHistory();
@@ -138,8 +140,10 @@ export default function ResultsScreen() {
     return null;
   }
 
-  const { topic, results, correctCount, totalCount } = state;
-  const percentage = Math.round((correctCount / totalCount) * 100);
+  const { topic, results, totalCount } = state;
+  const totalScore = state.totalScore || 0;
+  const percentage = Math.round((totalScore / (totalCount * 100)) * 100);
+  const effectiveCorrectCount = results.filter((r) => r.score != null ? r.score >= 50 : r.correct === true).length;
   const avgTheoryScore = results
     .filter((r) => r.score != null)
     .reduce((s, r, _, arr) => s + (r.score || 0) / (arr.length || 1), 0);
@@ -185,8 +189,8 @@ export default function ResultsScreen() {
       <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
       <div class="stats">
         <div class="stat"><div class="value">${percentage}%</div><div class="label">Score</div></div>
-        <div class="stat"><div class="value">${correctCount}/${totalCount}</div><div class="label">Correct</div></div>
-        <div class="stat"><div class="value">${totalCount - correctCount}</div><div class="label">Wrong</div></div>
+        <div class="stat"><div class="value">${effectiveCorrectCount}/${totalCount}</div><div class="label">Correct</div></div>
+        <div class="stat"><div class="value">${totalCount - effectiveCorrectCount}</div><div class="label">Wrong</div></div>
       </div>
       <h2>Question Details</h2>
       ${results.map((r, i) => {
@@ -262,7 +266,7 @@ export default function ResultsScreen() {
 
     ctx.fillStyle = '#a5b4fc';
     ctx.font = '20px Arial';
-    ctx.fillText(`${correctCount} / ${totalCount} correct`, 400, 215);
+    ctx.fillText(`${effectiveCorrectCount} / ${totalCount} correct`, 400, 215);
 
     const barY = 245;
     const barW = 500;
@@ -350,7 +354,7 @@ export default function ResultsScreen() {
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
           <p className="text-3xl font-bold text-primary-600 dark:text-primary-400">
-            {correctCount}/{totalCount}
+            {effectiveCorrectCount}/{totalCount}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Correct</p>
         </div>
