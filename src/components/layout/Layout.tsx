@@ -108,7 +108,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate }: { group: NavGroup; 
     <div className="mb-1">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
         {group.label}
         <Icon size={12} />
@@ -242,7 +242,7 @@ export default function Layout() {
                 to={to}
                 onClick={closeSidebar}
                 className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
                     isActive
                       ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
