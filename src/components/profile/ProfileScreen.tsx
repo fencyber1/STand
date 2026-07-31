@@ -1,14 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import EditProfileModal from './EditProfileModal';
-import { User, BookOpen, Trophy, Clock, LogOut, Moon, Sun, Briefcase, MapPin, Heart, Mail } from 'lucide-react';
+import { User, BookOpen, Trophy, Clock, LogOut, Briefcase, MapPin, Heart, Mail } from 'lucide-react';
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const history = useMemo(() => storage.getHistory(), []);
   const [editOpen, setEditOpen] = useState(false);
@@ -101,16 +99,6 @@ export default function ProfileScreen() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
-        <button
-          onClick={toggleTheme}
-          className="w-full text-left px-6 py-4 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition flex items-center justify-between border-b border-gray-100 dark:border-gray-700"
-        >
-          <span>Dark Mode</span>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">{theme === 'dark' ? 'On' : 'Off'}</span>
-            {theme === 'dark' ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-gray-400" />}
-          </div>
-        </button>
         {[
           { label: 'Edit Profile', action: () => setEditOpen(true) },
           { label: 'Notification Settings', action: () => {} },

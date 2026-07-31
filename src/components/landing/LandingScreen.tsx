@@ -1,23 +1,10 @@
 import { Link, Outlet } from 'react-router-dom';
-import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
 import Logo from './Logo';
 
 export default function LandingScreen() {
-  const { theme, toggleTheme } = useTheme();
-
   return (
     <>
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 py-8 transition-colors overflow-y-auto">
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-colors shadow-sm"
-          >
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
-        </div>
-
         <div className="text-center">
           <div className="mb-6 text-primary-600 dark:text-primary-400">
             <Logo size={280} />
