@@ -174,9 +174,17 @@ export default function OnboardingTour({ open, onComplete }: Props) {
 
   if (!open) return null;
 
+  const clipPath = spotRect
+    ? `polygon(0% 0%, 0% 100%, ${spotRect.left}px 100%, ${spotRect.left}px ${spotRect.top}px, ${spotRect.left + spotRect.width}px ${spotRect.top}px, ${spotRect.left + spotRect.width}px ${spotRect.top + spotRect.height}px, ${spotRect.left}px ${spotRect.top + spotRect.height}px, ${spotRect.left}px 100%, 100% 100%, 100% 0%)`
+    : 'none';
+
   return (
     <div className="tour-overlay">
-      <div className="tour-backdrop" onClick={onComplete} />
+      <div
+        className="tour-backdrop"
+        style={{ clipPath, WebkitClipPath: clipPath }}
+        onClick={onComplete}
+      />
 
       {spotRect && (
         <div
