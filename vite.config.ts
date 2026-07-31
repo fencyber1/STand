@@ -19,4 +19,22 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    target: 'es2020',
+    minify: 'esbuild',
+    cssMinify: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'vendor-charts': ['recharts'],
+          'vendor-ogl': ['ogl'],
+          'vendor-pdf': ['pdfjs-dist'],
+          'vendor-docx': ['mammoth'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 });
