@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bookmark, Trash2, ArrowLeft, StickyNote } from 'lucide-react';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type { Question } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
 
 export default function BookmarksScreen() {
+  const { t } = useLanguage();
   const [bookmarks, setBookmarks] = useState<Question[]>(() => storage.getBookmarks());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export default function BookmarksScreen() {
   };
 
   const handleClearAll = () => {
-    if (window.confirm('Remove all bookmarks?')) {
+    if (window.confirm(t('Remove all bookmarks?'))) {
       bookmarks.forEach((b) => storage.toggleBookmark(b));
       setBookmarks([]);
     }
@@ -31,13 +33,13 @@ export default function BookmarksScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-4 flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Bookmarks</h1>
-          <p className="text-gray-500 dark:text-gray-400">{bookmarks.length} saved question{bookmarks.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Bookmarks')}</h1>
+          <p className="text-gray-500 dark:text-gray-400">{bookmarks.length} {t('saved question')}{bookmarks.length !== 1 ? 's' : ''}</p>
         </div>
         {bookmarks.length > 0 && (
           <button onClick={handleClearAll} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2">
@@ -49,8 +51,8 @@ export default function BookmarksScreen() {
       {bookmarks.length === 0 ? (
         <div className="text-center py-16">
           <Bookmark size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No bookmarks yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Bookmark questions during quizzes to review them later</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('No bookmarks yet')}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Bookmark questions during quizzes to review them later')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -102,13 +104,13 @@ export default function BookmarksScreen() {
                             })}
                           </div>
                         )}
-                        <p className="text-xs text-gray-500 dark:text-gray-400"><strong>Answer:</strong> {(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"><strong>Explanation:</strong> {q.explanation}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400"><strong>{t('Answer')}:</strong> {(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"><strong>{t('Explanation')}:</strong> {q.explanation}</p>
 
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                           <div className="flex items-center gap-2 mb-2">
                             <StickyNote size={12} className="text-yellow-500" />
-                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Your Note</span>
+                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{t('Your Note')}</span>
                           </div>
                           {editingNote === q.id ? (
                             <div>
@@ -120,13 +122,13 @@ export default function BookmarksScreen() {
                                 }}
                                 autoFocus
                                 className="w-full px-3 py-2 text-xs border border-yellow-200 dark:border-yellow-700 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-yellow-400 outline-none resize-none h-20"
-                                placeholder="Add a note..."
+                                placeholder={t('Add a note...')}
                               />
                               <button
                                 onClick={() => setEditingNote(null)}
                                 className="mt-1 text-xs text-primary-600 dark:text-primary-400 font-medium"
                               >
-                                Done
+                                {t('Done')}
                               </button>
                             </div>
                           ) : (
@@ -138,7 +140,7 @@ export default function BookmarksScreen() {
                                   : 'text-gray-400 dark:text-gray-500 italic'
                               }`}
                             >
-                              {allNotes[q.id] || 'Click to add a note...'}
+                              {allNotes[q.id] || t('Click to add a note...')}
                             </p>
                           )}
                         </div>
@@ -148,7 +150,7 @@ export default function BookmarksScreen() {
                   <button
                     onClick={() => handleRemove(q.id)}
                     className="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition p-1"
-                    title="Remove bookmark"
+                    title={t('Remove bookmark')}
                   >
                     <Trash2 size={16} />
                   </button>

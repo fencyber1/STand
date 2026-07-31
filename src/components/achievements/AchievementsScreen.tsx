@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, CheckCircle } from 'lucide-react';
 import { ACHIEVEMENTS } from '../../constants/achievements';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BorderGlow from '../ui/BorderGlow';
 
 export default function AchievementsScreen() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const stats = useMemo(() => {
     const history = storage.getHistory();
@@ -40,12 +42,12 @@ export default function AchievementsScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-4 flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Achievements</h1>
-        <p className="text-gray-500 dark:text-gray-400">{unlockedCount} / {ACHIEVEMENTS.length} unlocked</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Achievements')}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{unlockedCount} / {ACHIEVEMENTS.length} {t('unlocked')}</p>
       </div>
 
       <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-6">

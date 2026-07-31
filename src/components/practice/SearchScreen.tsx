@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, Bookmark } from 'lucide-react';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type { Question } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
 
 export default function SearchScreen() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [query, setQuery] = useState('');
   const [bookmarks] = useState<Question[]>(() => storage.getBookmarks());
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -27,12 +29,12 @@ export default function SearchScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-4 flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Search Questions</h1>
-        <p className="text-gray-500 dark:text-gray-400">Search through your bookmarked questions</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Search Questions')}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{t('Search through your bookmarked questions')}</p>
       </div>
 
       <div className="relative mb-6">
@@ -41,7 +43,7 @@ export default function SearchScreen() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by keyword, topic, or subject..."
+          placeholder={t('Search by keyword, topic, or subject...')}
           autoFocus
           className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition text-sm"
         />
@@ -49,21 +51,21 @@ export default function SearchScreen() {
 
       {query.trim() && (
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {results.length} result{results.length !== 1 ? 's' : ''} found
+          {results.length} {t('result')}{results.length !== 1 ? 's' : ''} {t('found')}
         </p>
       )}
 
       {bookmarks.length === 0 ? (
         <div className="text-center py-16">
           <Bookmark size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No bookmarks to search</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Bookmark questions during quizzes first</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('No bookmarks to search')}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Bookmark questions during quizzes first')}</p>
         </div>
       ) : results.length === 0 && query.trim() ? (
         <div className="text-center py-16">
           <Search size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No results for "{query}"</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Try different keywords</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('No results for')} "{query}"</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Try different keywords')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -110,8 +112,8 @@ export default function SearchScreen() {
                         })}
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400"><strong>Answer:</strong> {(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"><strong>Explanation:</strong> {q.explanation}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400"><strong>{t('Answer')}:</strong> {(Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer).replace(/^[A-Za-z][.\s]+/, '').trim()}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"><strong>{t('Explanation')}:</strong> {q.explanation}</p>
                   </div>
                 )}
               </div>
@@ -122,7 +124,7 @@ export default function SearchScreen() {
 
       {!query.trim() && bookmarks.length > 0 && (
         <div className="text-center py-8">
-          <p className="text-sm text-gray-400 dark:text-gray-500">Type to search through {bookmarks.length} bookmarked questions</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Type to search through')} {bookmarks.length} {t('bookmarked questions')}</p>
         </div>
       )}
     </div>

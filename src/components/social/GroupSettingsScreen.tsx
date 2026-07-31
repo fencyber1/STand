@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   subscribeToUserGroups,
   subscribeToFriends,
@@ -22,6 +23,7 @@ export default function GroupSettingsScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const uid = user?.uid || '';
+  const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [group, setGroup] = useState<ChatGroup | null>(null);
@@ -72,7 +74,7 @@ export default function GroupSettingsScreen() {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('Photo must be under 5MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError(t('Photo must be under 5MB')); return; }
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
@@ -103,9 +105,9 @@ export default function GroupSettingsScreen() {
         description: groupDesc.trim(),
         photoURL: groupPhoto,
       });
-      setSuccess('Profile updated');
+      setSuccess(t('Profile updated'));
       setTimeout(() => setSuccess(''), 2000);
-    } catch { setError('Failed to update profile'); }
+    } catch { setError(t('Failed to update profile')); }
     setSaving(false);
   };
 
@@ -115,9 +117,9 @@ export default function GroupSettingsScreen() {
     setError('');
     try {
       await updateGroupSettings(groupId, { messagePermission: messagePerm });
-      setSuccess('Permissions updated');
+      setSuccess(t('Permissions updated'));
       setTimeout(() => setSuccess(''), 2000);
-    } catch { setError('Failed to update permissions'); }
+    } catch { setError(t('Failed to update permissions')); }
     setSaving(false);
   };
 
@@ -127,9 +129,9 @@ export default function GroupSettingsScreen() {
     setError('');
     try {
       await updateGroupSettings(groupId, { editProfile });
-      setSuccess('Profile edit permission updated');
+      setSuccess(t('Profile edit permission updated'));
       setTimeout(() => setSuccess(''), 2000);
-    } catch { setError('Failed to update setting'); }
+    } catch { setError(t('Failed to update setting')); }
     setSaving(false);
   };
 
@@ -138,18 +140,18 @@ export default function GroupSettingsScreen() {
     const newRole = currentRole === 'admin' ? 'member' : 'admin';
     try {
       await setGroupMemberRole(groupId, memberUid, newRole);
-      setSuccess(newRole === 'admin' ? 'Made admin' : 'Removed admin');
+      setSuccess(newRole === 'admin' ? t('Made admin') : t('Removed admin'));
       setTimeout(() => setSuccess(''), 2000);
-    } catch { setError('Failed to change role'); }
+    } catch { setError(t('Failed to change role')); }
   };
 
   const handleRemoveMember = async (memberUid: string) => {
-    if (!groupId || !confirm('Remove this member from the group?')) return;
+    if (!groupId || !confirm(t('Remove this member from the group?'))) return;
     try {
       await removeGroupMember(groupId, memberUid);
-      setSuccess('Member removed');
+      setSuccess(t('Member removed'));
       setTimeout(() => setSuccess(''), 2000);
-    } catch { setError('Failed to remove member'); }
+    } catch { setError(t('Failed to remove member')); }
   };
 
   const handleAddMember = async (friend: Friend) => {
@@ -157,9 +159,9 @@ export default function GroupSettingsScreen() {
     setAddingMember(true);
     try {
       await addGroupMember(groupId, { uid: friend.uid, name: friend.displayName, photo: friend.photoURL || null });
-      setSuccess(`Added ${friend.displayName}`);
+      setSuccess(`${t('Added')} ${friend.displayName}`);
       setTimeout(() => setSuccess(''), 2000);
-    } catch { setError('Failed to add member'); }
+    } catch { setError(t('Failed to add member')); }
     setAddingMember(false);
   };
 
@@ -174,7 +176,7 @@ export default function GroupSettingsScreen() {
   if (!group) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-900 text-white/40">
-        Group not found.
+        {t('Group not found.')}
       </div>
     );
   }
@@ -188,7 +190,7 @@ export default function GroupSettingsScreen() {
             <ArrowLeft className="w-5 h-5 text-white/70" />
           </button>
           <h1 className="text-xl font-bold text-white">
-            {isAdmin ? 'Group Settings' : 'Group Info'}
+            {isAdmin ? t('Group Settings') : t('Group Info')}
           </h1>
         </div>
 
@@ -234,7 +236,7 @@ export default function GroupSettingsScreen() {
               </div>
               <div className="flex-1 min-w-0 pb-1">
                 <h2 className="text-lg font-bold text-white truncate">{group.name}</h2>
-                <p className="text-xs text-white/40">{group.members.length} member{group.members.length !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-white/40">{group.members.length} {t('member')}{group.members.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
             {group.description && (
@@ -248,7 +250,7 @@ export default function GroupSettingsScreen() {
                   onClick={() => setExpanded(expanded === 'profile' ? null : 'profile')}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-white/70 font-medium"
                 >
-                  <span>Edit Group Profile</span>
+                  <span>{t('Edit Group Profile')}</span>
                   <span className="text-white/30">{expanded === 'profile' ? '−' : '+'}</span>
                 </button>
                 {expanded === 'profile' && (
@@ -256,13 +258,13 @@ export default function GroupSettingsScreen() {
                     <input
                       value={groupName}
                       onChange={(e) => setGroupName(e.target.value)}
-                      placeholder="Group name"
+                      placeholder={t('Group name')}
                       className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50"
                     />
                     <textarea
                       value={groupDesc}
                       onChange={(e) => setGroupDesc(e.target.value)}
-                      placeholder="Description (optional)"
+                      placeholder={t('Description (optional)')}
                       rows={2}
                       className="w-full px-4 py-2.5 bg-white/10 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 outline-none focus:border-primary-500/50 resize-none"
                     />
@@ -272,7 +274,7 @@ export default function GroupSettingsScreen() {
                       className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2"
                     >
                       {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                      Save Profile
+                      {t('Save Profile')}
                     </button>
                   </div>
                 )}
@@ -280,7 +282,7 @@ export default function GroupSettingsScreen() {
             )}
 
             {!canEditProfile && (
-              <p className="text-xs text-white/30 italic">Only admins can edit the group profile</p>
+              <p className="text-xs text-white/30 italic">{t('Only admins can edit the group profile')}</p>
             )}
           </div>
         </div>
@@ -289,7 +291,7 @@ export default function GroupSettingsScreen() {
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
-              <Users size={14} /> Members
+              <Users size={14} /> {t('Members')}
             </h3>
             <span className="text-xs text-white/30">{group.members.length}</span>
           </div>
@@ -311,9 +313,9 @@ export default function GroupSettingsScreen() {
                       <span className="text-sm text-white truncate">{m.name}</span>
                       {isCreator && <Crown size={11} className="text-yellow-400 shrink-0" />}
                       {m.role === 'admin' && !isCreator && <Shield size={11} className="text-blue-400 shrink-0" />}
-                      {isMe && <span className="text-[10px] text-white/30">(you)</span>}
+                      {isMe && <span className="text-[10px] text-white/30">({t('you')})</span>}
                     </div>
-                    <p className="text-[11px] text-white/30">{isCreator ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Member'}</p>
+                    <p className="text-[11px] text-white/30">{isCreator ? t('Owner') : m.role === 'admin' ? t('Admin') : t('Member')}</p>
                   </div>
                   {/* Admin actions — only visible to admins */}
                   {isAdmin && !isMe && !isCreator && (
@@ -321,14 +323,14 @@ export default function GroupSettingsScreen() {
                       <button
                         onClick={() => handleToggleRole(m.uid, m.role)}
                         className="p-1.5 rounded-lg hover:bg-white/10 transition text-white/40 hover:text-white/70"
-                        title={m.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                        title={m.role === 'admin' ? t('Remove admin') : t('Make admin')}
                       >
                         {m.role === 'admin' ? <Shield size={13} className="text-blue-400" /> : <Crown size={13} />}
                       </button>
                       <button
                         onClick={() => handleRemoveMember(m.uid)}
                         className="p-1.5 rounded-lg hover:bg-red-500/20 transition text-white/40 hover:text-red-400"
-                        title="Remove member"
+                        title={t('Remove member')}
                       >
                         <UserMinus size={13} />
                       </button>
@@ -346,12 +348,12 @@ export default function GroupSettingsScreen() {
                 onClick={() => setExpanded(expanded === 'addMember' ? null : 'addMember')}
                 className="w-full mt-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition text-sm text-primary-400 font-medium flex items-center justify-center gap-2"
               >
-                <UserPlus size={14} /> Add Member
+                <UserPlus size={14} /> {t('Add Member')}
               </button>
               {expanded === 'addMember' && (
                 <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
                   {nonMembers.length === 0 ? (
-                    <p className="text-xs text-white/30 text-center py-3">All friends are already in this group</p>
+                    <p className="text-xs text-white/30 text-center py-3">{t('All friends are already in this group')}</p>
                   ) : (
                     nonMembers.map((f) => (
                       <div key={f.uid} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition">
@@ -389,7 +391,7 @@ export default function GroupSettingsScreen() {
                 className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition"
               >
                 <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
-                  <Lock size={14} /> Message Permissions
+                  <Lock size={14} /> {t('Message Permissions')}
                 </h3>
                 <span className="text-white/30 text-xs">{expanded === 'permissions' ? '−' : '+'}</span>
               </button>
@@ -405,8 +407,8 @@ export default function GroupSettingsScreen() {
                   >
                     <MessageCircle size={18} className={messagePerm === 'all' ? 'text-primary-400' : 'text-white/30'} />
                     <div>
-                      <p className="text-sm font-medium text-white">All Members</p>
-                      <p className="text-[11px] text-white/40">Anyone can send messages</p>
+                      <p className="text-sm font-medium text-white">{t('All Members')}</p>
+                      <p className="text-[11px] text-white/40">{t('Anyone can send messages')}</p>
                     </div>
                   </button>
                   <button
@@ -419,8 +421,8 @@ export default function GroupSettingsScreen() {
                   >
                     <Shield size={18} className={messagePerm === 'admins' ? 'text-primary-400' : 'text-white/30'} />
                     <div>
-                      <p className="text-sm font-medium text-white">Admins Only</p>
-                      <p className="text-[11px] text-white/40">Only admins can send messages</p>
+                      <p className="text-sm font-medium text-white">{t('Admins Only')}</p>
+                      <p className="text-[11px] text-white/40">{t('Only admins can send messages')}</p>
                     </div>
                   </button>
                   <button
@@ -429,7 +431,7 @@ export default function GroupSettingsScreen() {
                     className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2 mt-2"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    Save
+                    {t('Save')}
                   </button>
                 </div>
               )}
@@ -442,13 +444,13 @@ export default function GroupSettingsScreen() {
                 className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition"
               >
                 <h3 className="text-sm font-bold text-white/80 flex items-center gap-2">
-                  <Settings size={14} /> Profile Edit Permission
+                  <Settings size={14} /> {t('Profile Edit Permission')}
                 </h3>
                 <span className="text-white/30 text-xs">{expanded === 'editPerm' ? '−' : '+'}</span>
               </button>
               {expanded === 'editPerm' && (
                 <div className="px-4 pb-4 space-y-2">
-                  <p className="text-xs text-white/40 mb-2">Choose who can edit the group name, photo, and description</p>
+                  <p className="text-xs text-white/40 mb-2">{t('Choose who can edit the group name, photo, and description')}</p>
                   <button
                     onClick={() => setEditProfile('all')}
                     className={`w-full p-3 rounded-xl text-left transition flex items-center gap-3 ${
@@ -459,8 +461,8 @@ export default function GroupSettingsScreen() {
                   >
                     <Eye size={18} className={editProfile === 'all' ? 'text-primary-400' : 'text-white/30'} />
                     <div>
-                      <p className="text-sm font-medium text-white">All Members</p>
-                      <p className="text-[11px] text-white/40">Anyone can edit the group profile</p>
+                      <p className="text-sm font-medium text-white">{t('All Members')}</p>
+                      <p className="text-[11px] text-white/40">{t('Anyone can edit the group profile')}</p>
                     </div>
                   </button>
                   <button
@@ -473,8 +475,8 @@ export default function GroupSettingsScreen() {
                   >
                     <EyeOff size={18} className={editProfile === 'admins' ? 'text-primary-400' : 'text-white/30'} />
                     <div>
-                      <p className="text-sm font-medium text-white">Admins Only</p>
-                      <p className="text-[11px] text-white/40">Only admins can edit the group profile</p>
+                      <p className="text-sm font-medium text-white">{t('Admins Only')}</p>
+                      <p className="text-[11px] text-white/40">{t('Only admins can edit the group profile')}</p>
                     </div>
                   </button>
                   <button
@@ -483,7 +485,7 @@ export default function GroupSettingsScreen() {
                     className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition flex items-center justify-center gap-2 mt-2"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    Save
+                    {t('Save')}
                   </button>
                 </div>
               )}

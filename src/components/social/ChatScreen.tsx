@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChatTheme } from '../../contexts/ChatThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   subscribeToUserChats,
   subscribeToChatMessages,
@@ -59,6 +60,7 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const uid = user?.uid || '';
   const { theme, wallpaper } = useChatTheme();
+  const { t } = useLanguage();
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -199,7 +201,7 @@ export default function ChatScreen() {
     return { uid: other || '', name: chat.memberNames?.[other || ''] || 'Unknown', photo: chat.memberPhotos?.[other || ''] || null };
   };
 
-  if (!uid) return <div className="flex items-center justify-center h-full bg-gray-900 text-white">Please log in.</div>;
+  if (!uid) return <div className="flex items-center justify-center h-full bg-gray-900 text-white">{t('Please log in.')}</div>;
 
   // ── Chat List ──
   if (!chatId) {
@@ -213,7 +215,7 @@ export default function ChatScreen() {
                 <ArrowLeft className="w-5 h-5 text-white/70" />
               </button>
               <MessageCircle className="w-6 h-6 text-white/80" />
-              <h1 className="text-2xl font-bold text-white">Messages</h1>
+              <h1 className="text-2xl font-bold text-white">{t('Messages')}</h1>
             </div>
             <button onClick={() => setShowThemePicker(true)} className="p-2 bg-white/10 hover:bg-white/20 backdrop-blur border border-white/10 rounded-xl transition-all">
               <Palette className="w-5 h-5 text-white/70" />
@@ -224,8 +226,8 @@ export default function ChatScreen() {
           ) : chats.length === 0 ? (
             <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/10 p-12 text-center">
               <MessageCircle className="w-14 h-14 text-white/30 mx-auto mb-3" />
-              <p className="text-white/50 text-sm font-medium">No conversations yet</p>
-              <p className="text-white/30 text-xs mt-1">Start a chat from a friend's profile</p>
+              <p className="text-white/50 text-sm font-medium">{t('No conversations yet')}</p>
+              <p className="text-white/30 text-xs mt-1">{t('Start a chat from a friend\'s profile')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -280,7 +282,7 @@ export default function ChatScreen() {
             <div className="min-w-0 cursor-pointer" onClick={() => setProfileModal({ uid: other.uid, name: other.name, photo: other.photo, online: otherOnline })}>
               <p className={`text-sm font-bold ${theme.textColor} truncate`}>{other.name}</p>
               <p className={`text-[11px] ${theme.textColor === 'text-white' ? 'text-white/50' : 'text-gray-400'}`}>
-                {otherTyping ? <span className="text-blue-400">typing...</span> : otherOnline ? 'Online' : 'Offline'}
+                {otherTyping ? <span className="text-blue-400">{t('typing...')}</span> : otherOnline ? t('Online') : t('Offline')}
               </p>
             </div>
           </div>
@@ -318,8 +320,8 @@ export default function ChatScreen() {
                     <div className={`px-3 py-2 rounded-xl ${theme.bubbleOwn}`}>
                       <input type="text" value={editText} onChange={(e) => setEditText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') { setEditingMsg(null); setEditText(''); } }} className={`w-full bg-transparent text-[13px] outline-none ${theme.textColor}`} autoFocus />
                       <div className="flex items-center gap-2 mt-1">
-                        <button onClick={handleEditSave} className="text-[11px] text-blue-400 font-medium">Save</button>
-                        <button onClick={() => { setEditingMsg(null); setEditText(''); }} className="text-[11px] text-white/40">Cancel</button>
+                        <button onClick={handleEditSave} className="text-[11px] text-blue-400 font-medium">{t('Save')}</button>
+                        <button onClick={() => { setEditingMsg(null); setEditText(''); }} className="text-[11px] text-white/40">{t('Cancel')}</button>
                       </div>
                     </div>
                   ) : (
@@ -330,7 +332,7 @@ export default function ChatScreen() {
                         <TwemojiText className={`text-[13px] break-words leading-relaxed ${theme.textColor}`}>{msg.text}</TwemojiText>
                       )}
                       <div className="flex items-center justify-end gap-1 mt-1">
-                        {msg.edited && <span className={`text-[9px] ${theme.timestampColor} italic`}>edited</span>}
+                        {msg.edited && <span className={`text-[9px] ${theme.timestampColor} italic`}>{t('edited')}</span>}
                         <p className={`text-[10px] ${theme.timestampColor}`}>{formatTime(msg.createdAt)}</p>
                         {isOwn && <DeliveryIndicator read={msg.read} />}
                       </div>

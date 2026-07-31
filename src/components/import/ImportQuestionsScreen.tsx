@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
 import type { Question } from '../../types';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BorderGlow from '../ui/BorderGlow';
 
 function parseCSV(text: string): Question[] {
@@ -88,6 +89,7 @@ function parseSingleLine(text: string): Question[] {
 
 export default function ImportQuestionsScreen() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [fileName, setFileName] = useState('');
@@ -112,7 +114,7 @@ export default function ImportQuestionsScreen() {
         parsed = parseSingleLine(text);
       }
       if (parsed.length === 0) {
-        setError('Could not parse any questions. Check the format.');
+        setError(t('Could not parse any questions. Check the format.'));
         return;
       }
       setQuestions(parsed);
@@ -132,7 +134,7 @@ export default function ImportQuestionsScreen() {
     const existing = storage.getImportedQuestions();
     const merged = [...existing, ...updated];
     storage.saveImportedQuestions(merged);
-    setSuccess(`${updated.length} questions saved! You can now use them in Practice.`);
+    setSuccess(`${updated.length} ${t('questions saved! You can now use them in Practice.')}`);
     setTimeout(() => navigate('/practice'), 1500);
   };
 
@@ -146,12 +148,12 @@ export default function ImportQuestionsScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-4 flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Import Questions</h1>
-        <p className="text-gray-500 dark:text-gray-400">Upload CSV or text files with your own questions</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Import Questions')}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{t('Upload CSV or text files with your own questions')}</p>
       </div>
 
       {error && (
@@ -184,9 +186,9 @@ export default function ImportQuestionsScreen() {
           >
             <Upload size={36} className="mx-auto text-gray-400 dark:text-gray-500 mb-3" />
             <p className="text-gray-700 dark:text-gray-300 font-medium">
-              {fileName ? fileName : 'Drop a file here or click to browse'}
+              {fileName ? fileName : t('Drop a file here or click to browse')}
             </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Supports .csv and .txt files</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{t('Supports .csv and .txt files')}</p>
             <input
               ref={fileRef}
               type="file"
@@ -200,15 +202,15 @@ export default function ImportQuestionsScreen() {
             <div className="mt-4">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={16} className="text-primary-500" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{questions.length} questions parsed</span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{questions.length} {t('questions parsed')}</span>
                 <button onClick={handleClear} className="ml-auto text-red-400 hover:text-red-600 text-sm flex items-center gap-1">
-                  <Trash2 size={12} /> Clear
+                  <Trash2 size={12} /> {t('Clear')}
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Subject</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('Subject')}</label>
                   <input
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
@@ -216,7 +218,7 @@ export default function ImportQuestionsScreen() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Topic</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('Topic')}</label>
                   <input
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
@@ -233,7 +235,7 @@ export default function ImportQuestionsScreen() {
                     <span className="ml-2 text-primary-500">({q.type})</span>
                   </div>
                 ))}
-                {questions.length > 20 && <p className="text-xs text-gray-400 text-center">...and {questions.length - 20} more</p>}
+                {questions.length > 20 && <p className="text-xs text-gray-400 text-center">...{t('and')} {questions.length - 20} {t('more')}</p>}
               </div>
 
               <button
@@ -241,7 +243,7 @@ export default function ImportQuestionsScreen() {
                 className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition flex items-center justify-center gap-2"
               >
                 <CheckCircle size={18} />
-                Save {questions.length} Questions
+                {t('Save')} {questions.length} {t('Questions')}
               </button>
             </div>
           )}
@@ -249,11 +251,11 @@ export default function ImportQuestionsScreen() {
       </BorderGlow>
 
       <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm mb-2">Supported Formats</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm mb-2">{t('Supported Formats')}</h3>
         <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
-          <p><strong>CSV:</strong> Question, Type (MCQ/TrueFalse/Theory), Correct Answer, Explanation, Options (pipe-separated), Difficulty, Subject, Topic</p>
-          <p><strong>Text blocks:</strong> Separate questions with blank lines. Use "Q:", "A:", "E:" prefixes.</p>
-          <p><strong>Simple pipe:</strong> Question | Answer | Explanation (one per line)</p>
+          <p><strong>{t('CSV')}:</strong> {t('Question, Type (MCQ/TrueFalse/Theory), Correct Answer, Explanation, Options (pipe-separated), Difficulty, Subject, Topic')}</p>
+          <p><strong>{t('Text blocks')}:</strong> {t('Separate questions with blank lines. Use "Q:", "A:", "E:" prefixes.')}</p>
+          <p><strong>{t('Simple pipe')}:</strong> {t('Question | Answer | Explanation (one per line)')}</p>
         </div>
       </div>
     </div>

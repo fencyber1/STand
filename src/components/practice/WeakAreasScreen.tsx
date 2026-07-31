@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target, TrendingDown, Play, BarChart3 } from 'lucide-react';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BorderGlow from '../ui/BorderGlow';
 
 interface TopicStats {
@@ -14,6 +15,7 @@ interface TopicStats {
 
 export default function WeakAreasScreen() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [minAttempts, setMinAttempts] = useState(3);
 
   const history = useMemo(() => storage.getHistory(), []);
@@ -55,31 +57,31 @@ export default function WeakAreasScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-4 flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Weak Areas</h1>
-        <p className="text-gray-500 dark:text-gray-400">Topics you need to focus on</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Weak Areas')}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{t('Topics you need to focus on')}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center border border-gray-100 dark:border-gray-700">
           <p className="text-2xl font-bold text-green-600 dark:text-green-400">{strongTopics.length}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Strong (85%+)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('Strong')} (85%+)</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center border border-gray-100 dark:border-gray-700">
           <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">{midTopics.length}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Mid (70-85%)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('Mid')} (70-85%)</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center border border-gray-100 dark:border-gray-700">
           <p className="text-2xl font-bold text-red-500 dark:text-red-400">{weakTopics.length}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Weak (&lt;70%)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t('Weak')} (&lt;70%)</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 mb-4">
-        <label className="text-sm text-gray-600 dark:text-gray-400">Min attempts:</label>
+        <label className="text-sm text-gray-600 dark:text-gray-400">{t('Min attempts')}:</label>
         <select
           value={minAttempts}
           onChange={(e) => setMinAttempts(Number(e.target.value))}
@@ -95,15 +97,15 @@ export default function WeakAreasScreen() {
       {topicStats.length === 0 ? (
         <div className="text-center py-16">
           <Target size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Not enough data yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Complete more quizzes to see your weak areas</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('Not enough data yet')}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Complete more quizzes to see your weak areas')}</p>
         </div>
       ) : (
         <div className="space-y-4">
           {weakTopics.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
-                <TrendingDown size={14} /> Needs Improvement
+                <TrendingDown size={14} /> {t('Needs Improvement')}
               </h3>
               <div className="space-y-2">
                 {weakTopics.map((t) => (
@@ -116,7 +118,7 @@ export default function WeakAreasScreen() {
           {midTopics.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-1">
-                <BarChart3 size={14} /> Getting There
+                <BarChart3 size={14} /> {t('Getting There')}
               </h3>
               <div className="space-y-2">
                 {midTopics.map((t) => (
@@ -129,7 +131,7 @@ export default function WeakAreasScreen() {
           {strongTopics.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2 flex items-center gap-1">
-                <Target size={14} /> Strong Areas
+                <Target size={14} /> {t('Strong Areas')}
               </h3>
               <div className="space-y-2">
                 {strongTopics.map((t) => (
@@ -145,6 +147,7 @@ export default function WeakAreasScreen() {
 }
 
 function TopicCard({ stats, onPractice }: { stats: TopicStats; onPractice: (s: TopicStats) => void }) {
+  const { t } = useLanguage();
   const color = stats.accuracy >= 85 ? 'green' : stats.accuracy >= 70 ? 'orange' : 'red';
   const barColor = color === 'green' ? 'bg-green-500' : color === 'orange' ? 'bg-orange-500' : 'bg-red-500';
 
@@ -168,7 +171,7 @@ function TopicCard({ stats, onPractice }: { stats: TopicStats; onPractice: (s: T
             <button
               onClick={() => onPractice(stats)}
               className="p-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800/40 transition"
-              title="Practice this topic"
+              title={t('Practice this topic')}
             >
               <Play size={14} />
             </button>
@@ -177,7 +180,7 @@ function TopicCard({ stats, onPractice }: { stats: TopicStats; onPractice: (s: T
         <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${stats.accuracy}%` }} />
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{stats.correct}/{stats.total} correct</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{stats.correct}/{stats.total} {t('correct')}</p>
       </div>
     </BorderGlow>
   );
