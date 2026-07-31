@@ -116,6 +116,7 @@ export async function generateQuestions(params: {
   count: number;
   difficulty?: string;
   studentAge?: number;
+  language?: string;
 }): Promise<{ questions: Question[] }> {
   const typeMap: Record<string, string> = {
     MCQ: 'multiple choice with 4 options',
@@ -141,6 +142,10 @@ export async function generateQuestions(params: {
 - Topics should match what a ${params.studentAge}-year-old is learning in school`
     : '';
 
+  const langLine = params.language && params.language !== 'en'
+    ? `\nThe user's language is ${params.language}. ALL questions, options, correctAnswer, and explanation MUST be written entirely in ${params.language}. Do NOT write in English.`
+    : '';
+
   const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${params.count} exam questions.
 
 STRICT RULES:
@@ -162,6 +167,7 @@ ${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ,
 Do NOT deviate from this type. Do NOT mix types unless it is Mixed. Every single question must be the exact type specified above.
 ${difficultyLine}
 ${ageLine}
+${langLine}
 
 Return ONLY a JSON array. Each object:
 {"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"exact Wikipedia article title for a related diagram"}

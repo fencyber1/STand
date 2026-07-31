@@ -6,6 +6,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../services/storage';
 import { createGroup, joinGroup, subscribeToGroup, leaveGroup, deleteGroup, getUserGroups, type StudyGroup, type GroupMember } from '../../services/firebaseService';
 import BorderGlow from '../ui/BorderGlow';
@@ -13,6 +14,7 @@ import BorderGlow from '../ui/BorderGlow';
 export default function StudyGroupsScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [myGroups, setMyGroups] = useState<StudyGroup[]>([]);
   const [activeGroup, setActiveGroup] = useState<StudyGroup | null>(null);
   const [tab, setTab] = useState<'list' | 'create' | 'join'>('list');
@@ -49,13 +51,13 @@ export default function StudyGroupsScreen() {
     setError('');
     try {
       const code = await createGroup(groupName.trim(), userObj);
-      setSuccess(`Group created! Code: ${code}`);
+      setSuccess(`${t('Group created! Code')}: ${code}`);
       setGroupName('');
       setTab('list');
       const groups = await getUserGroups(userObj.uid);
       setMyGroups(groups);
     } catch (e: any) {
-      setError(e.message || 'Failed to create group');
+      setError(e.message || t('Failed to create group'));
     }
     setLoading(false);
   };
@@ -67,22 +69,22 @@ export default function StudyGroupsScreen() {
     try {
       const result = await joinGroup(joinCode.trim().toUpperCase(), userObj);
       if (result.success) {
-        setSuccess('Joined group!');
+        setSuccess(t('Joined group!'));
         setJoinCode('');
         setTab('list');
         const groups = await getUserGroups(userObj.uid);
         setMyGroups(groups);
       } else {
-        setError(result.error || 'Failed to join');
+        setError(result.error || t('Failed to join'));
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to join group');
+      setError(e.message || t('Failed to join group'));
     }
     setLoading(false);
   };
 
   const handleLeave = async (group: StudyGroup) => {
-    if (!confirm('Leave this group?')) return;
+    if (!confirm(t('Leave this group?'))) return;
     const member = group.members.find((m) => m.uid === userObj.uid);
     if (!member) return;
     await leaveGroup(group.id, userObj.uid, member);
@@ -92,7 +94,7 @@ export default function StudyGroupsScreen() {
   };
 
   const handleDelete = async (group: StudyGroup) => {
-    if (!confirm('Delete this group? All members will be removed.')) return;
+    if (!confirm(t('Delete this group? All members will be removed.'))) return;
     await deleteGroup(group.id);
     setActiveGroup(null);
     const groups = await getUserGroups(userObj.uid);
@@ -112,19 +114,19 @@ export default function StudyGroupsScreen() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <button onClick={() => setActiveGroup(null)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm flex items-center gap-1">
-          <ArrowLeft size={14} /> Back to Groups
+          <ArrowLeft size={14} /> {t('Back to Groups')}
         </button>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{activeGroup.name}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{activeGroup.members.length} member{activeGroup.members.length !== 1 ? 's' : ''}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{activeGroup.members.length} {t('member')}{activeGroup.members.length !== 1 ? 's' : ''}</p>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => copyCode(activeGroup.code)} className="px-3 py-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg text-sm font-mono font-bold flex items-center gap-1.5 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition">
                 {copiedCode === activeGroup.code ? <CheckCircle size={14} /> : <Copy size={14} />}
-                {activeGroup.code}
+                {t('Copy Code')} {activeGroup.code}
               </button>
             </div>
           </div>
@@ -144,7 +146,7 @@ export default function StudyGroupsScreen() {
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{m.name}</span>
                     {m.uid === activeGroup.createdBy && <Crown size={12} className="text-yellow-500 shrink-0" />}
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Joined {new Date(m.joinedAt).toLocaleDateString()}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t('Joined')} {new Date(m.joinedAt).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1"><BookOpen size={12} />{m.stats.sessions}</span>
@@ -159,16 +161,16 @@ export default function StudyGroupsScreen() {
         <div className="flex gap-3">
           {activeGroup.chatGroupId && (
             <button onClick={() => navigate(`/groups-chat/${activeGroup.chatGroupId}`)} className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition flex items-center justify-center gap-2">
-              <MessageCircle size={16} /> Group Chat
+              <MessageCircle size={16} /> {t('Group Chat')}
             </button>
           )}
           {isOwner ? (
             <button onClick={() => handleDelete(activeGroup)} className="flex-1 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition flex items-center justify-center gap-2">
-              <Trash2 size={16} /> Delete Group
+              <Trash2 size={16} /> {t('Delete Group')}
             </button>
           ) : (
             <button onClick={() => handleLeave(activeGroup)} className="flex-1 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition flex items-center justify-center gap-2">
-              <LogOut size={16} /> Leave Group
+              <LogOut size={16} /> {t('Leave Group')}
             </button>
           )}
         </div>
@@ -184,8 +186,8 @@ export default function StudyGroupsScreen() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Study Groups</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Learn together with classmates</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Study Groups')}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('Learn together with classmates')}</p>
         </div>
       </div>
 
@@ -201,17 +203,17 @@ export default function StudyGroupsScreen() {
       )}
 
       <div className="flex gap-2">
-        {(['list', 'create', 'join'] as const).map((t) => (
+        {(['list', 'create', 'join'] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => { setTab(t); setError(''); setSuccess(''); }}
+            key={tabKey}
+            onClick={() => { setTab(tabKey); setError(''); setSuccess(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
-              tab === t
+              tab === tabKey
                 ? 'bg-primary-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            {t === 'list' ? 'My Groups' : t === 'create' ? 'Create' : 'Join'}
+            {tabKey === 'list' ? t('My Groups') : tabKey === 'create' ? t('Create') : t('Join')}
           </button>
         ))}
       </div>
@@ -219,16 +221,16 @@ export default function StudyGroupsScreen() {
       {tab === 'create' && (
         <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="220 80 70" glowIntensity={0.4} colors={['#6366f1', '#8b5cf6', '#3b82f6']}>
           <div className="p-6 space-y-4">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Create a Study Group</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('Create a Study Group')}</h3>
             <input
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Group name (e.g. CS Study Group)"
+              placeholder={t('Group name (e.g. CS Study Group)')}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 outline-none"
             />
             <button onClick={handleCreate} disabled={loading || !groupName.trim()} className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              Create Group
+              {t('Create Group')}
             </button>
           </div>
         </BorderGlow>
@@ -237,17 +239,17 @@ export default function StudyGroupsScreen() {
       {tab === 'join' && (
         <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="220 80 70" glowIntensity={0.4} colors={['#6366f1', '#8b5cf6', '#3b82f6']}>
           <div className="p-6 space-y-4">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Join a Study Group</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('Join a Study Group')}</h3>
             <input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="Enter 6-letter code"
+              placeholder={t('Enter group code')}
               maxLength={6}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-lg tracking-widest text-center focus:ring-2 focus:ring-primary-500 outline-none uppercase"
             />
             <button onClick={handleJoin} disabled={loading || joinCode.length < 6} className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
               {loading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
-              Join Group
+              {t('Join Group')}
             </button>
           </div>
         </BorderGlow>
@@ -258,8 +260,8 @@ export default function StudyGroupsScreen() {
           {myGroups.length === 0 ? (
             <div className="text-center py-12 text-gray-400 dark:text-gray-500">
               <Users size={40} className="mx-auto mb-3 opacity-50" />
-              <p className="font-medium">No groups yet</p>
-              <p className="text-sm mt-1">Create or join a group to get started</p>
+              <p className="font-medium">{t('No groups yet')}</p>
+              <p className="text-sm mt-1">{t('Create or join a group to get started')}</p>
             </div>
           ) : (
             myGroups.map((g) => (
@@ -271,7 +273,7 @@ export default function StudyGroupsScreen() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-gray-800 dark:text-gray-100">{g.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{g.members.length} member{g.members.length !== 1 ? 's' : ''}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{g.members.length} {t('member')}{g.members.length !== 1 ? 's' : ''}</p>
                   </div>
                   <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">{g.code}</span>
                 </div>

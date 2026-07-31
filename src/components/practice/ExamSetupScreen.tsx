@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Shield, Timer, AlertTriangle } from 'lucide-react';
 import { SECTORS, LEVELS, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const TIMER_PRESETS = [
   { label: '5m', value: 300 },
@@ -26,6 +27,7 @@ function hmsToSeconds(h: number, m: number, s: number) {
 
 export default function ExamSetupScreen() {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
   const [topic, setTopic] = useState('');
   const [sector, setSector] = useState(SECTORS[0]);
   const [customSector, setCustomSector] = useState('');
@@ -51,15 +53,15 @@ export default function ExamSetupScreen() {
   const handleStart = async () => {
     setError('');
     if (!topic.trim()) {
-      setError('Please enter a topic');
+      setError(t('Please enter a topic'));
       return;
     }
     if (sector === 'Other' && !customSector.trim()) {
-      setError('Please enter your course name');
+      setError(t('Please enter your course name'));
       return;
     }
     if (timeLimit <= 0) {
-      setError('Please set a time limit');
+      setError(t('Please set a time limit'));
       return;
     }
 
@@ -74,6 +76,7 @@ export default function ExamSetupScreen() {
         questionType: 'MCQ',
         count,
         studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+        language,
       });
       navigate('/exam', {
         state: { questions: result.questions, topic, sector: actualSector, level, timeLimit },
@@ -90,21 +93,21 @@ export default function ExamSetupScreen() {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Shield size={24} className="text-orange-600 dark:text-orange-400" />
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Exam Simulation</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Exam Simulation')}</h1>
         </div>
-        <p className="text-gray-500 dark:text-gray-400">Strict timed exam with no interruptions</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('Strict timed exam with no interruptions')}</p>
       </div>
 
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-6">
         <div className="flex items-start gap-3">
           <AlertTriangle size={18} className="text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
           <div className="text-sm text-orange-800 dark:text-orange-300">
-            <p className="font-semibold mb-1">Exam Mode Rules:</p>
+            <p className="font-semibold mb-1">{t('Exam Mode Rules:')}</p>
             <ul className="list-disc list-inside space-y-0.5 text-orange-700 dark:text-orange-400">
-              <li>Strict countdown timer — cannot be paused</li>
-              <li>No explanations shown during the exam</li>
-              <li>Results revealed only after submission</li>
-              <li>Unanswered questions marked wrong on expiry</li>
+              <li>{t('Strict countdown timer — cannot be paused')}</li>
+              <li>{t('No explanations shown during the exam')}</li>
+              <li>{t('Results revealed only after submission')}</li>
+              <li>{t('Unanswered questions marked wrong on expiry')}</li>
             </ul>
           </div>
         </div>
@@ -116,7 +119,7 @@ export default function ExamSetupScreen() {
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Topic')}</label>
           <input
             type="text"
             value={topic}
@@ -128,7 +131,7 @@ export default function ExamSetupScreen() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Sector</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Course Sector')}</label>
             <select
               value={sector}
               onChange={(e) => setSector(e.target.value)}
@@ -150,7 +153,7 @@ export default function ExamSetupScreen() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Education Level</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Education Level')}</label>
             <select
               value={level}
               onChange={(e) => setLevel(e.target.value)}
@@ -188,7 +191,7 @@ export default function ExamSetupScreen() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Number of Questions')}</label>
           <select
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
@@ -202,7 +205,7 @@ export default function ExamSetupScreen() {
 
         <div>
           <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            <Timer size={14} /> Time Limit (required)
+            <Timer size={14} /> {t('Time Limit (required)')}
           </label>
           <div className="flex items-center gap-2 mb-2">
             <div className="flex items-center gap-1">
@@ -260,7 +263,7 @@ export default function ExamSetupScreen() {
           className="w-full py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
         >
           {loading && <Loader2 size={18} className="animate-spin" />}
-          {loading ? 'Generating Exam...' : 'Start Exam'}
+          {loading ? t('Generating Exam...') : t('Start Exam')}
         </button>
       </div>
     </div>

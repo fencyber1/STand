@@ -5,6 +5,7 @@ import type { Question, QuestionTiming } from '../../types';
 import { getDeepExplanation, gradeTheoryAnswer } from '../../services/api';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
+import { useLanguage } from '../../contexts/LanguageContext';
 import CalculatorPanel from './CalculatorPanel';
 import CheatSheet from './CheatSheet';
 import QuestionImage from './QuestionImage';
@@ -32,6 +33,7 @@ interface Result {
 export default function QuizScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
   const state = location.state as QuizState | null;
 
   if (!state?.questions?.length) {
@@ -323,7 +325,7 @@ export default function QuizScreen() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-4">
         <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); window.speechSynthesis.cancel(); navigate('/practice'); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
-          <ArrowLeft size={14} /> Back to Practice
+          <ArrowLeft size={14} /> {t('Back to Practice')}
         </button>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{topic}</h2>
@@ -365,7 +367,7 @@ export default function QuizScreen() {
             showCalculator ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
-          <Calculator size={14} /> Calculator
+          <Calculator size={14} /> {t('Calculator')}
         </button>
         <button
           onClick={() => setShowCheatSheet(!showCheatSheet)}
@@ -373,7 +375,7 @@ export default function QuizScreen() {
             showCheatSheet ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
-          <BookOpen size={14} /> Cheat Sheet
+          <BookOpen size={14} /> {t('Cheat Sheet')}
         </button>
         <button
           onClick={() => setShowNote(!showNote)}
@@ -381,7 +383,7 @@ export default function QuizScreen() {
             showNote ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
-          <StickyNote size={14} /> Note
+          <StickyNote size={14} /> {t('Note')}
         </button>
       </div>
 
@@ -393,10 +395,10 @@ export default function QuizScreen() {
               setNote(e.target.value);
               storage.setQuestionNote(current.id, e.target.value);
             }}
-            placeholder="Add a note about this question..."
+            placeholder={t('Add a note about this question...')}
             className="w-full px-3 py-2 text-sm border border-yellow-200 dark:border-yellow-700 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-yellow-400 outline-none resize-none h-20"
           />
-          <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">Note saved automatically</p>
+          <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">{t('Note saved')}</p>
         </div>
       )}
 
@@ -448,17 +450,17 @@ export default function QuizScreen() {
             <button
               onClick={handleBookmark}
               className="flex items-center gap-1 text-sm font-medium transition-colors"
-              title={bookmarked ? 'Remove bookmark' : 'Bookmark this question'}
+              title={bookmarked ? t('Remove bookmark') : t('Bookmark this question')}
             >
               {bookmarked ? (
                 <>
                   <BookmarkCheck size={18} className="text-yellow-500" />
-                  <span className="text-yellow-600 dark:text-yellow-400">Bookmarked</span>
+                  <span className="text-yellow-600 dark:text-yellow-400">{t('Bookmarked')}</span>
                 </>
               ) : (
                 <>
                   <Bookmark size={18} className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400" />
-                  <span className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400">Bookmark</span>
+                  <span className="text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400">{t('Bookmark')}</span>
                 </>
               )}
             </button>
@@ -537,7 +539,7 @@ export default function QuizScreen() {
 
         {showResult && (
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-primary-500 rounded-lg">
-            <p className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-1">Explanation</p>
+            <p className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-1">{t('Explanation')}</p>
             <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{current.explanation}</p>
             {current.imageQuery && (
               <img
@@ -549,7 +551,7 @@ export default function QuizScreen() {
             )}
             {current.type === 'Theory' && grading && (
               <div className="mt-3 flex items-center gap-2 text-sm text-indigo-400">
-                <Loader2 className="w-4 h-4 animate-spin" /> Grading your answer...
+                <Loader2 className="w-4 h-4 animate-spin" /> {t('Grading your answer...')}
               </div>
             )}
             {current.type === 'Theory' && !grading && results[results.length - 1]?.score != null && (
@@ -579,11 +581,11 @@ export default function QuizScreen() {
               ) : (
                 <ChevronDown size={14} />
               )}
-              {deepLoading ? 'Loading deeper explanation...' : showDeep ? 'Hide Deep Explanation' : 'Deep Explanation'}
+              {deepLoading ? t('Loading question...') : showDeep ? t('Hide Deep Explanation') : t('Deep Explanation')}
             </button>
             {showDeep && deepExplanation && (
               <div className="mt-3 pt-3 border-t border-primary-200 dark:border-primary-800">
-                <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-1">Deep Explanation</p>
+                <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-1">{t('Deep Explanation')}</p>
                 <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{deepExplanation}</p>
               </div>
             )}
@@ -598,14 +600,14 @@ export default function QuizScreen() {
               className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle size={18} />
-              Submit Answer
+              {t('Submit Answer')}
             </button>
           ) : (
             <button
               onClick={handleNext}
               className="flex-1 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
             >
-              {isLast ? 'View Results' : 'Next Question'}
+              {isLast ? t('Results') : t('Next Question')}
               <ArrowRight size={18} />
             </button>
           )}

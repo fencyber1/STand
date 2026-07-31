@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Trash2, Filter } from 'lucide-react';
 import type { SessionData } from '../../types';
 
 export default function HistoryScreen() {
+  const { t } = useLanguage();
   const [history, setHistory] = useState<SessionData[]>(() => storage.getHistory().reverse());
   const [filter, setFilter] = useState('all');
 
@@ -15,7 +17,7 @@ export default function HistoryScreen() {
   }, [history, filter]);
 
   const handleClear = () => {
-    if (window.confirm('Clear all practice history?')) {
+    if (window.confirm(t('Clear all practice history?'))) {
       storage.clearHistory();
       setHistory([]);
     }
@@ -25,11 +27,11 @@ export default function HistoryScreen() {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">History</h1>
-          <p className="text-gray-500 dark:text-gray-400">Your practice sessions</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('History')}</h1>
+          <p className="text-gray-500 dark:text-gray-400">{t('Your practice sessions')}</p>
         </div>
         {history.length > 0 && (
-          <button onClick={handleClear} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2">
+          <button onClick={handleClear} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2" title={t('Clear All')}>
             <Trash2 size={18} />
           </button>
         )}
@@ -58,8 +60,8 @@ export default function HistoryScreen() {
       {filtered.length === 0 ? (
         <div className="text-center py-16">
           <Filter size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No practice sessions yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Start practicing to see your history here</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('No sessions yet')}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Start practicing to see your history here')}</p>
         </div>
       ) : (
         <div className="space-y-3">

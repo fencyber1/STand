@@ -5,6 +5,7 @@ import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getMotivationalLines } from '../../services/api';
 import BorderGlow from '../ui/BorderGlow';
 import FenBotIcon from '../effects/FenBotIcon';
@@ -12,6 +13,7 @@ import FenBotIcon from '../effects/FenBotIcon';
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const history = useMemo(() => storage.getHistory(), []);
 
   const greeting = useMemo(() => {
@@ -138,7 +140,7 @@ export default function DashboardScreen() {
             <FenBotIcon size={48} />
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                {greeting}, {firstName}
+                {t(greeting)}, {firstName}
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm sm:text-base">
                 {motivationalLine}
@@ -155,11 +157,11 @@ export default function DashboardScreen() {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Streak', value: `${stats.streak}d`, icon: Flame, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30', glow: '0 80 60', colors: ['#ef4444', '#f87171', '#dc2626'] },
-          { label: 'Total Sessions', value: stats.total, icon: Target, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', glow: '220 80 60', colors: ['#3b82f6', '#60a5fa', '#2563eb'] },
-          { label: 'Questions Done', value: stats.totalQ, icon: Trophy, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', glow: '142 70 60', colors: ['#22c55e', '#4ade80', '#16a34a'] },
-          { label: 'Correct Answers', value: stats.totalCorrect, icon: TrendingUp, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/30', glow: '270 70 65', colors: ['#a855f7', '#c084fc', '#7c3aed'] },
-          { label: 'Avg Score', value: `${stats.avgScore}%`, icon: Clock, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/30', glow: '25 80 60', colors: ['#f97316', '#fb923c', '#ea580c'] },
+          { label: t('Streak'), value: `${stats.streak}d`, icon: Flame, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30', glow: '0 80 60', colors: ['#ef4444', '#f87171', '#dc2626'] },
+          { label: t('Total Sessions'), value: stats.total, icon: Target, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', glow: '220 80 60', colors: ['#3b82f6', '#60a5fa', '#2563eb'] },
+          { label: t('Questions Done'), value: stats.totalQ, icon: Trophy, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', glow: '142 70 60', colors: ['#22c55e', '#4ade80', '#16a34a'] },
+          { label: t('Correct Answers'), value: stats.totalCorrect, icon: TrendingUp, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/30', glow: '270 70 65', colors: ['#a855f7', '#c084fc', '#7c3aed'] },
+          { label: t('Avg Score'), value: `${stats.avgScore}%`, icon: Clock, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/30', glow: '25 80 60', colors: ['#f97316', '#fb923c', '#ea580c'] },
         ].map(({ label, value, icon: Icon, color, bg, glow, colors }) => (
           <BorderGlow
             key={label}
@@ -193,7 +195,7 @@ export default function DashboardScreen() {
           colors={['#6366f1', '#8b5cf6', '#3b82f6']}
         >
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Subject Performance</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('Subject Performance')}</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -218,13 +220,13 @@ export default function DashboardScreen() {
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Recent Sessions</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('Recent Sessions')}</h3>
             <Link to="/history" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
-              View All
+              {t('View All')}
             </Link>
           </div>
           {recentSessions.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No sessions yet. Start practicing!</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('No sessions yet. Start practicing!')}</p>
           ) : (
             <div className="space-y-3">
               {recentSessions.map((s) => (
@@ -248,7 +250,7 @@ export default function DashboardScreen() {
         className="flex items-center justify-center gap-2 w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition"
       >
         <Play size={18} />
-        Start New Practice
+        {t('Start New Practice')}
       </Link>
     </div>
   );

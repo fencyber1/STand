@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   subscribeToFriends,
   subscribeToFriendRequests,
@@ -69,6 +70,7 @@ type Tab = 'friends' | 'requests' | 'find';
 
 export default function FriendsScreen() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const uid = user?.uid || '';
 
@@ -88,8 +90,8 @@ export default function FriendsScreen() {
   // Auto-dismiss toast
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   // Sync sentRequests with actual outgoing requests from Firestore
@@ -239,7 +241,7 @@ export default function FriendsScreen() {
       return (
         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium flex-shrink-0">
           <Check className="w-3.5 h-3.5" />
-          Friends
+          {t('Friends')}
         </span>
       );
     }
@@ -247,7 +249,7 @@ export default function FriendsScreen() {
       return (
         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium flex-shrink-0">
           <Check className="w-3.5 h-3.5" />
-          Request sent
+          {t('Request sent')}
         </span>
       );
     }
@@ -258,7 +260,7 @@ export default function FriendsScreen() {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-xs font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 flex-shrink-0"
       >
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-        Add
+        {t('Add')}
       </button>
     );
   };
@@ -285,7 +287,7 @@ export default function FriendsScreen() {
 
       <div className="flex items-center gap-3 mb-6">
         <Users className="w-6 h-6 text-indigo-500" />
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Friends</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Friends')}</h1>
       </div>
 
       <div className="flex gap-1 mb-4 bg-gray-200 dark:bg-gray-700 rounded-xl p-1">
@@ -299,7 +301,7 @@ export default function FriendsScreen() {
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
             }`}
           >
-            {tab.label}
+            {t(tab.label)}
             {tab.count !== undefined && tab.count > 0 && (
               <span className="ml-1.5 bg-indigo-500 text-white text-xs rounded-full px-1.5 py-0.5">
                 {tab.count}
@@ -315,7 +317,7 @@ export default function FriendsScreen() {
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
               <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                No friends yet. Go to the Find tab to add some!
+                {t('No friends yet. Go to the Find tab to add some!')}
               </p>
             </div>
           ) : (
@@ -342,7 +344,7 @@ export default function FriendsScreen() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {friend.status || 'No status'}
+                    {friend.status || t('No status')}
                   </p>
                 </div>
                 <div className="flex gap-1.5 flex-shrink-0">
@@ -350,7 +352,7 @@ export default function FriendsScreen() {
                     onClick={() => handleMessage(friend.uid, friend.displayName, friend.photoURL)}
                     disabled={loadingAction === `msg-${friend.uid}`}
                     className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
-                    title="Message"
+                    title={t('Message')}
                   >
                     {loadingAction === `msg-${friend.uid}` ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -362,7 +364,7 @@ export default function FriendsScreen() {
                     onClick={() => handleRemove(friend.uid)}
                     disabled={loadingAction === `remove-${friend.uid}`}
                     className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
-                    title="Remove friend"
+                    title={t('Remove friend')}
                   >
                     {loadingAction === `remove-${friend.uid}` ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -381,12 +383,12 @@ export default function FriendsScreen() {
         <div className="space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 px-1">
-              Incoming Requests
+              {t('Incoming Requests')}
             </h2>
             {incomingRequests.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
                 <UserPlus className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No incoming requests</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{t('No incoming requests')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -402,14 +404,14 @@ export default function FriendsScreen() {
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                         {req.fromName}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Wants to be your friend</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('Wants to be your friend')}</p>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
                       <button
                         onClick={() => handleAccept(req.id)}
                         disabled={loadingAction === `accept-${req.id}`}
                         className="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
-                        title="Accept"
+                        title={t('Accept')}
                       >
                         {loadingAction === `accept-${req.id}` ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -421,7 +423,7 @@ export default function FriendsScreen() {
                         onClick={() => handleReject(req.id)}
                         disabled={loadingAction === `reject-${req.id}`}
                         className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
-                        title="Reject"
+                        title={t('Reject')}
                       >
                         {loadingAction === `reject-${req.id}` ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -438,12 +440,12 @@ export default function FriendsScreen() {
 
           <div>
             <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 px-1">
-              Outgoing Requests
+              {t('Outgoing Requests')}
             </h2>
             {outgoingRequests.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
                 <Clock className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No pending requests</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{t('No pending requests')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -460,7 +462,7 @@ export default function FriendsScreen() {
                         {req.toName}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> Request pending
+                        <Clock className="w-3 h-3" /> {t('Request pending')}
                       </p>
                     </div>
                     <button
@@ -473,7 +475,7 @@ export default function FriendsScreen() {
                       ) : (
                         <X className="w-3.5 h-3.5" />
                       )}
-                      Remove
+                      {t('Remove')}
                     </button>
                   </div>
                 ))}
@@ -489,7 +491,7 @@ export default function FriendsScreen() {
             <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
             <input
               type="text"
-              placeholder="Search users by name..."
+              placeholder={t('Search users by name...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -500,23 +502,23 @@ export default function FriendsScreen() {
               disabled={searching || !searchTerm.trim()}
               className="px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : t('Search')}
             </button>
           </div>
 
           <div className="space-y-2">
             {searchResults.length === 0 && !searching && searchTerm.trim() && (
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-1">No results for "{searchTerm}"</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-1">{t('No results for')} "{searchTerm}"</p>
                 {suggested.length > 0 && (
                   <>
-                    <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-2 px-1">Suggested friends</p>
+                    <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-2 px-1">{t('Suggested friends')}</p>
                     {suggested.map((profile) => (
                       <div key={profile.uid} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3 mb-2">
                         <div className="flex-shrink-0">{getAvatar(profile.photoURL, profile.displayName)}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{profile.displayName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || t('No status')}</p>
                         </div>
                         {renderAddButton(profile)}
                       </div>
@@ -531,17 +533,17 @@ export default function FriendsScreen() {
                 {suggested.length === 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
                     <UserPlus className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Search for users to add as friends</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('Search for users to add as friends')}</p>
                   </div>
                 ) : (
                   <>
-                    <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-2 px-1">Suggested friends</p>
+                    <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-2 px-1">{t('Suggested friends')}</p>
                     {suggested.map((profile) => (
                       <div key={profile.uid} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3 mb-2">
                         <div className="flex-shrink-0">{getAvatar(profile.photoURL, profile.displayName)}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{profile.displayName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || t('No status')}</p>
                         </div>
                         {renderAddButton(profile)}
                       </div>
@@ -563,7 +565,7 @@ export default function FriendsScreen() {
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                     {profile.displayName}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || 'No status'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.status || t('No status')}</p>
                 </div>
                 {renderAddButton(profile)}
               </div>

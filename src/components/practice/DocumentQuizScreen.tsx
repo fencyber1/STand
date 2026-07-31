@@ -10,11 +10,13 @@ import { QUESTION_TYPES, DIFFICULTY_LEVELS } from '../../constants';
 import { storage } from '../../services/storage';
 import type { SavedDocument } from '../../types';
 import BorderGlow from '../ui/BorderGlow';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type Step = 'upload' | 'preview' | 'generating';
 
 export default function DocumentQuizScreen() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>('upload');
   const [docText, setDocText] = useState('');
@@ -171,8 +173,8 @@ export default function DocumentQuizScreen() {
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Document Quiz</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Upload a document and quiz yourself on its content</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Document Quiz')}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{t('Upload a document or paste text')}</p>
       </div>
 
       {error && (
@@ -185,9 +187,9 @@ export default function DocumentQuizScreen() {
       {step === 'upload' && savedDocs.length > 0 && (
         <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.3} colors={['#6366f1', '#3b82f6', '#10b981']}>
           <div className="p-4">
-            <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-gray-300 font-semibold text-sm">
-              <FolderOpen size={16} /> Saved Documents
-            </div>
+              <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-gray-300 font-semibold text-sm">
+                <FolderOpen size={16} /> {t('Saved Documents')}
+              </div>
             <div className="space-y-2 max-h-56 overflow-y-auto">
               {savedDocs.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg group">
@@ -236,10 +238,10 @@ export default function DocumentQuizScreen() {
                   <Upload size={36} className="mx-auto text-gray-400 dark:text-gray-500 mb-3" />
                 )}
                 <p className="text-gray-700 dark:text-gray-300 font-medium">
-                  {parsing ? 'Reading document...' : 'Drop a document here or click to browse'}
+                  {parsing ? t('Reading document...') : t('drag and drop')}
                 </p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                  {parsing ? 'This may take a moment for large files' : 'Supports PDF, DOCX, TXT, HTML, CSV, and more'}
+                  {parsing ? t('This may take a moment for large files') : t('Supported formats')}
                 </p>
                 <input
                   ref={fileRef}
@@ -261,7 +263,7 @@ export default function DocumentQuizScreen() {
               <div className="w-full border-t border-gray-200 dark:border-gray-700" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-3 bg-gray-100 dark:bg-gray-900 text-gray-400">or paste text</span>
+              <span className="px-3 bg-gray-100 dark:bg-gray-900 text-gray-400">{t('Paste Text')}</span>
             </div>
           </div>
 
@@ -300,11 +302,11 @@ export default function DocumentQuizScreen() {
           <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#10b981', '#3b82f6', '#6366f1']}>
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
-                <Settings2 size={16} /> Quiz Settings
+                <Settings2 size={16} /> {t('Quiz Settings')}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Number of Questions')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -337,7 +339,7 @@ export default function DocumentQuizScreen() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Question Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Question Type')}</label>
                 <select
                   value={questionType}
                   onChange={(e) => setQuestionType(e.target.value)}
@@ -352,7 +354,7 @@ export default function DocumentQuizScreen() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Difficulty')}</label>
                 <div className="flex gap-2">
                   {['all', ...DIFFICULTY_LEVELS].map((d) => (
                     <button
@@ -376,9 +378,9 @@ export default function DocumentQuizScreen() {
                 className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
               >
                 {generating ? (
-                  <><Loader2 size={18} className="animate-spin" /> Generating Questions...</>
+                  <><Loader2 size={18} className="animate-spin" /> {t('Generating Questions...')}</>
                 ) : (
-                  <>Generate {questionCount} Questions from Document</>
+                  <>{t('Generate Questions from Document')}</>
                 )}
               </button>
             </div>
@@ -390,8 +392,8 @@ export default function DocumentQuizScreen() {
       {step === 'generating' && (
         <div className="text-center py-16">
           <Loader2 size={40} className="animate-spin mx-auto text-primary-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Generating Questions</h3>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Reading your document and creating quiz questions...</p>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">{t('Generating Questions...')}</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('Reading your document and creating quiz questions...')}</p>
         </div>
       )}
     </div>
@@ -400,14 +402,15 @@ export default function DocumentQuizScreen() {
 
 function PasteBox({ onSubmit }: { onSubmit: (text: string) => void }) {
   const [text, setText] = useState('');
+  const { t } = useLanguage();
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Paste your document text</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('Paste your document text')}</label>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Paste your notes, textbook content, lecture slides, or any study material here..."
+        placeholder={t('Paste your notes, textbook content, lecture slides, or any study material here...')}
         rows={6}
         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none resize-none text-sm"
       />
@@ -418,7 +421,7 @@ function PasteBox({ onSubmit }: { onSubmit: (text: string) => void }) {
           disabled={text.trim().length < 50}
           className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition"
         >
-          Use This Text
+          {t('Use This Text')}
         </button>
       </div>
     </div>

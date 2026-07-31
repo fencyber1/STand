@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowLeft, Heart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../services/storage';
 import { subscribeToStatuses } from '../../services/statusService';
 import StatusViewer from './StatusViewer';
@@ -10,6 +11,7 @@ import type { Status } from '../../types';
 export default function StatusScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [viewIndex, setViewIndex] = useState<number | null>(null);
 
@@ -80,10 +82,10 @@ export default function StatusScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-4 flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Status</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">{t('Status')}</h1>
 
       {/* Status Circles */}
       <div className="flex gap-4 overflow-x-auto pb-4 mb-6 scrollbar-hide">
@@ -114,7 +116,7 @@ export default function StatusScreen() {
             </div>
           </div>
           <span className="text-xs text-gray-600 dark:text-gray-400 w-16 text-center truncate">
-            {myCircleStatuses.length > 0 ? 'My Status' : 'Add Status'}
+            {myCircleStatuses.length > 0 ? t('My Status') : t('Add to My Status')}
           </span>
         </button>
 
@@ -153,7 +155,7 @@ export default function StatusScreen() {
       <div className="space-y-3">
         {otherGroups.length === 0 && myStatuses.length === 0 ? (
           <p className="text-gray-400 dark:text-gray-500 text-center py-12">
-            No statuses yet. Be the first to post!
+            {t('No statuses yet')}
           </p>
         ) : (
           <>
@@ -181,7 +183,7 @@ export default function StatusScreen() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{g.displayName}</p>
                   <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                    <span>{g.statuses.length} update{g.statuses.length !== 1 ? 's' : ''}</span>
+                    <span>{g.statuses.length} {t('update')}{g.statuses.length !== 1 ? 's' : ''}</span>
                     {g.statuses.reduce((sum, s) => sum + s.likes.length, 0) > 0 && (
                       <span className="flex items-center gap-0.5">
                         <Heart size={10} className="fill-pink-400 text-pink-400" />
@@ -190,7 +192,7 @@ export default function StatusScreen() {
                     )}
                     <span>· {(() => {
                       const diff = Math.floor((Date.now() - new Date(g.statuses[g.statuses.length - 1].createdAt).getTime()) / 1000);
-                      if (diff < 60) return 'Just now';
+                      if (diff < 60) return t('Just now');
                       if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
                       if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
                       return `${Math.floor(diff / 86400)}d ago`;

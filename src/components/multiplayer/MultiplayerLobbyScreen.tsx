@@ -4,6 +4,7 @@ import {
   ArrowLeft, Plus, LogIn, Users, Loader2, AlertCircle, CheckCircle, Copy,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../services/storage';
 import { createQuizRoom, joinQuizRoom, type QuizRoom } from '../../services/firebaseService';
 import { generateQuestions } from '../../services/api';
@@ -13,6 +14,7 @@ import BorderGlow from '../ui/BorderGlow';
 export default function MultiplayerLobbyScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [topic, setTopic] = useState('');
   const [subject, setSubject] = useState('');
@@ -52,6 +54,7 @@ export default function MultiplayerLobbyScreen() {
         count: questionCount,
         difficulty,
         studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+        language,
       });
       const code = await createQuizRoom(userObj, { topic: topic.trim(), subject: actualSubject, level, difficulty, questionCount }, questions);
       navigate(`/multiplayer/${code}`);
@@ -81,15 +84,15 @@ export default function MultiplayerLobbyScreen() {
   return (
     <div className="max-w-lg mx-auto space-y-6">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm flex items-center gap-1">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('Back')}
       </button>
 
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 bg-purple-100 dark:bg-purple-900/40 rounded-2xl mb-3">
           <Users size={28} className="text-purple-600 dark:text-purple-400" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Multiplayer Quiz</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Compete head-to-head with friends</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Multiplayer Quiz')}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{t('Compete head-to-head with friends')}</p>
       </div>
 
       {error && (
@@ -99,17 +102,17 @@ export default function MultiplayerLobbyScreen() {
       )}
 
       <div className="flex gap-2">
-        {(['create', 'join'] as const).map((t) => (
+        {(['create', 'join'] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => { setTab(t); setError(''); }}
+            key={tabKey}
+            onClick={() => { setTab(tabKey); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
-              tab === t
+              tab === tabKey
                 ? 'bg-purple-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            {t === 'create' ? 'Create Room' : 'Join Room'}
+            {tabKey === 'create' ? t('Create Room') : t('Join Room')}
           </button>
         ))}
       </div>
@@ -118,23 +121,23 @@ export default function MultiplayerLobbyScreen() {
         <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="280 80 70" glowIntensity={0.4} colors={['#a855f7', '#6366f1', '#3b82f6']}>
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Topic')} *</label>
               <input
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g. Photosynthesis, Python Loops"
+                placeholder={t('e.g. Photosynthesis, Python Loops')}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Subject')}</label>
               <select
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none"
               >
-                <option value="">General</option>
+                <option value="">{t('General')}</option>
                 {SECTORS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
               {subject === 'Other' && (
@@ -142,14 +145,14 @@ export default function MultiplayerLobbyScreen() {
                   type="text"
                   value={customSubject}
                   onChange={(e) => setCustomSubject(e.target.value)}
-                  placeholder="e.g. Graphic Designing, Music..."
+                  placeholder={t('e.g. Graphic Designing, Music...')}
                   className="mt-2 w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-purple-500 outline-none"
                 />
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Education Level</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Education Level')}</label>
               <select
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
@@ -159,7 +162,7 @@ export default function MultiplayerLobbyScreen() {
               </select>
               {level === 'PRIMARY/BASIC' && (
                 <div className="mt-2">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Student's Age (4–12)</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t("Student's Age")} (4–12)</label>
                   <input
                     type="number"
                     min={4}
@@ -177,14 +180,14 @@ export default function MultiplayerLobbyScreen() {
                   {ageError ? (
                     <p className="text-xs text-red-500 dark:text-red-400 mt-1">{ageError}</p>
                   ) : (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Questions tailored for this age</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('Questions tailored for this age')}</p>
                   )}
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Difficulty')}</label>
               <div className="flex gap-2">
                 {DIFFICULTY_LEVELS.map((d) => (
                   <button
@@ -204,7 +207,7 @@ export default function MultiplayerLobbyScreen() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Questions: <span className="text-purple-600 dark:text-purple-400 font-bold">{questionCount}</span>
+                {t('Questions')}: <span className="text-purple-600 dark:text-purple-400 font-bold">{questionCount}</span>
               </label>
               <input
                 type="range"
@@ -241,7 +244,7 @@ export default function MultiplayerLobbyScreen() {
               className="w-full py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              {loading ? 'Generating Questions...' : 'Create Room'}
+              {loading ? t('Generating Questions...') : t('Create Room')}
             </button>
           </div>
         </BorderGlow>
@@ -250,11 +253,11 @@ export default function MultiplayerLobbyScreen() {
       {tab === 'join' && (
         <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="280 80 70" glowIntensity={0.4} colors={['#a855f7', '#6366f1', '#3b82f6']}>
           <div className="p-6 space-y-4">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Join a Room</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('Join a Room')}</h3>
             <input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="Enter 6-letter room code"
+              placeholder={t('Enter 6-letter room code')}
               maxLength={6}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-lg tracking-widest text-center focus:ring-2 focus:ring-purple-500 outline-none uppercase"
             />
@@ -264,7 +267,7 @@ export default function MultiplayerLobbyScreen() {
               className="w-full py-2.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
-              Join Room
+              {t('Join Room')}
             </button>
           </div>
         </BorderGlow>

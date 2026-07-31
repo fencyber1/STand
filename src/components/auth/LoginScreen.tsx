@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import BorderGlow from '../ui/BorderGlow';
 import Logo from '../landing/Logo';
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const { isLoggedIn, login, loginWithGoogle } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   if (isLoggedIn) return <Navigate to="/" replace />;
 
@@ -22,7 +24,7 @@ export default function LoginScreen() {
     setError('');
 
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError(t('Please fill in all fields'));
       return;
     }
 
@@ -31,7 +33,7 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (!result.success) {
-      setError(result.error || 'Failed to login.');
+      setError(result.error || t('Failed to login.'));
     }
   };
 
@@ -41,7 +43,7 @@ export default function LoginScreen() {
     const result = await loginWithGoogle();
     setLoading(false);
     if (!result.success) {
-      setError(result.error || 'Failed to sign in with Google.');
+      setError(result.error || t('Failed to sign in with Google.'));
     }
   };
 
@@ -50,7 +52,7 @@ export default function LoginScreen() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
           <Logo size={160} />
-          <p className="text-gray-500 dark:text-gray-400 mt-2">AI Exam Practice Platform</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">{t('AI Exam Practice Platform')}</p>
         </div>
 
         <BorderGlow
@@ -61,8 +63,8 @@ export default function LoginScreen() {
           colors={['#6366f1', '#8b5cf6', '#3b82f6']}
         >
           <div className="p-8">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">Welcome Back</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">Sign in to continue practicing</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">{t('Welcome Back')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">{t('Sign in to continue practicing')}</p>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg">
@@ -81,7 +83,7 @@ export default function LoginScreen() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            {t('Continue with Google')}
           </button>
 
           <div className="relative mb-4">
@@ -89,20 +91,20 @@ export default function LoginScreen() {
               <div className="w-full border-t border-gray-200 dark:border-gray-600" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-400">or sign in with email</span>
+              <span className="px-2 bg-white dark:bg-gray-800 text-gray-400">{t('or sign in with email')}</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email Address
+                {t('Email Address')}
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                placeholder={t('Enter your email')}
                 autoFocus
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
               />
@@ -110,14 +112,14 @@ export default function LoginScreen() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
+                {t('Password')}
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t('Enter your password')}
                   className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
                 />
                 <button
@@ -136,14 +138,14 @@ export default function LoginScreen() {
               className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
-              Sign In
+              {t('Sign In')}
             </button>
           </form>
 
           <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
-            Don't have an account?{' '}
+            {t("Don't have an account?")}{' '}
             <Link to="/register" className="text-primary-600 dark:text-primary-400 font-semibold hover:underline">
-              Sign Up
+              {t('Sign Up')}
             </Link>
           </p>
           </div>

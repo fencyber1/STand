@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Timer, Shuffle, Zap, BarChart3, Rocket, ChevronRight, ChevronLeft } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { generateQuestions } from '../../services/api';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const TIMER_PRESETS = [
   { label: '5m', value: 300 },
@@ -25,6 +26,7 @@ function hmsToSeconds(h: number, m: number, s: number) {
 }
 
 export default function HomeScreen() {
+  const { t, language } = useLanguage();
   const [step, setStep] = useState(1);
   const [topic, setTopic] = useState('');
   const [sector, setSector] = useState(SECTORS[0]);
@@ -58,11 +60,11 @@ export default function HomeScreen() {
 
   const handleNext = () => {
     if (!topic.trim()) {
-      setError('Please enter a topic');
+      setError(t('Please enter a topic'));
       return;
     }
     if (sector === 'Other' && !customSector.trim()) {
-      setError('Please enter your course name');
+      setError(t('Please enter your course name'));
       return;
     }
     setError('');
@@ -83,6 +85,7 @@ export default function HomeScreen() {
         count,
         difficulty,
         studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+        language,
       });
       let questions = result.questions;
       if (shuffle) {
@@ -93,7 +96,7 @@ export default function HomeScreen() {
       });
     } catch (err: any) {
       console.error('Question generation error:', err);
-      setError(err.message || 'Failed to generate questions. Please try again.');
+      setError(err.message || t('Failed to generate questions. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -102,8 +105,8 @@ export default function HomeScreen() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Practice Setup</h1>
-        <p className="text-gray-500 dark:text-gray-400">Configure your practice session</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Practice Setup')}</h1>
+        <p className="text-gray-500 dark:text-gray-400">{t('Configure your practice session')}</p>
       </div>
 
       <div className="flex items-center gap-2 mb-6">
@@ -118,7 +121,7 @@ export default function HomeScreen() {
       {step === 1 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Topic')}</label>
             <input
               type="text"
               value={topic}
@@ -130,7 +133,7 @@ export default function HomeScreen() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Sector</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Course Sector')}</label>
             <select
               value={sector}
               onChange={(e) => setSector(e.target.value)}
@@ -153,7 +156,7 @@ export default function HomeScreen() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Education Level</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Education Level')}</label>
             <select
               value={level}
               onChange={(e) => setLevel(e.target.value)}
@@ -165,7 +168,7 @@ export default function HomeScreen() {
             </select>
             {level === 'PRIMARY/BASIC' && (
               <div className="mt-2">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Student's Age (4–12)</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t("Student's Age (4–12)")}</label>
                 <input
                   type="number"
                   min={4}
@@ -175,7 +178,7 @@ export default function HomeScreen() {
                   onBlur={() => {
                     const n = Number(studentAge);
                     if (!studentAge || isNaN(n)) { setStudentAge('8'); setAgeError(''); return; }
-                    if (n < 4 || n > 12) { setAgeError('Age must be between 4 and 12'); setStudentAge(studentAge); return; }
+                    if (n < 4 || n > 12) { setAgeError(t('Age must be between 4 and 12')); setStudentAge(studentAge); return; }
                     setAgeError('');
                   }}
                   className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition ${ageError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
@@ -183,34 +186,34 @@ export default function HomeScreen() {
                 {ageError ? (
                   <p className="text-xs text-red-500 dark:text-red-400 mt-1">{ageError}</p>
                 ) : (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Questions will be tailored to this age group</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('Questions will be tailored to this age group')}</p>
                 )}
               </div>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Question Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Question Type')}</label>
             <select
               value={questionType}
               onChange={(e) => setQuestionType(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
             >
-              {QUESTION_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+              {QUESTION_TYPES.map((qt) => (
+                <option key={qt} value={qt}>{qt}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Number of Questions')}</label>
             <select
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
             >
               {COUNT_OPTIONS.map((c) => (
-                <option key={c} value={c}>{c} questions</option>
+                <option key={c} value={c}>{c} {t('questions')}</option>
               ))}
             </select>
           </div>
@@ -219,7 +222,7 @@ export default function HomeScreen() {
             onClick={handleNext}
             className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition flex items-center justify-center gap-2"
           >
-            Next
+            {t('Next')}
             <ChevronRight size={18} />
           </button>
         </div>
@@ -228,12 +231,12 @@ export default function HomeScreen() {
       {step === 2 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-medium text-gray-800 dark:text-gray-200">{topic}</span> &middot; {sector === 'Other' ? (customSector.trim() || 'General') : sector} &middot; {level}{level === 'PRIMARY/BASIC' ? ` (Age ${studentAge})` : ''} &middot; {count} questions
+            <span className="font-medium text-gray-800 dark:text-gray-200">{topic}</span> &middot; {sector === 'Other' ? (customSector.trim() || 'General') : sector} &middot; {level}{level === 'PRIMARY/BASIC' ? ` (${t('Age')} ${studentAge})` : ''} &middot; {count} {t('questions')}
           </div>
 
           <div>
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Timer size={14} /> Time Limit
+              <Timer size={14} /> {t('Time Limit')}
             </label>
             <div className="flex items-center gap-2 mb-2">
               <button
@@ -242,7 +245,7 @@ export default function HomeScreen() {
               >
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useTimer ? 'translate-x-5' : ''}`} />
               </button>
-              <span className="text-sm text-gray-600 dark:text-gray-400">{useTimer ? 'On' : 'Off (No Limit)'}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{useTimer ? t('On') : t('Off (No Limit)')}</span>
             </div>
             {useTimer && (
               <>
@@ -300,7 +303,7 @@ export default function HomeScreen() {
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-              <Shuffle size={14} /> Shuffle Questions
+              <Shuffle size={14} /> {t('Shuffle Questions')}
             </label>
             <button
               onClick={() => setShuffle(!shuffle)}
@@ -312,7 +315,7 @@ export default function HomeScreen() {
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-              <Zap size={14} /> Instant Feedback
+              <Zap size={14} /> {t('Instant Feedback')}
             </label>
             <button
               onClick={() => setInstantFeedback(!instantFeedback)}
@@ -324,7 +327,7 @@ export default function HomeScreen() {
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-              <Rocket size={14} /> Speed Round (30s/question)
+              <Rocket size={14} /> {t('Speed Round (30s/question)')}
             </label>
             <button
               onClick={() => setSpeedRound(!speedRound)}
@@ -336,14 +339,14 @@ export default function HomeScreen() {
 
           <div>
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <BarChart3 size={14} /> Difficulty
+              <BarChart3 size={14} /> {t('Difficulty')}
             </label>
             <div className="flex gap-2">
               {[
-                { value: 'all', label: 'All Levels', color: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' },
-                { value: 'easy', label: 'Easy', color: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
-                { value: 'medium', label: 'Medium', color: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' },
-                { value: 'hard', label: 'Hard', color: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' },
+                { value: 'all', label: t('All Levels'), color: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' },
+                { value: 'easy', label: t('Easy'), color: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
+                { value: 'medium', label: t('Medium'), color: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' },
+                { value: 'hard', label: t('Hard'), color: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' },
               ].map((d) => (
                 <button
                   key={d.value}
@@ -366,7 +369,7 @@ export default function HomeScreen() {
               className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
             >
               <ChevronLeft size={18} />
-              Back
+              {t('Back')}
             </button>
             <button
               onClick={handleGenerate}
@@ -374,7 +377,7 @@ export default function HomeScreen() {
               className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Generating...' : 'Generate Questions'}
+              {loading ? t('Generating...') : t('Generate Questions')}
             </button>
           </div>
         </div>

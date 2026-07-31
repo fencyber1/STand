@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { storage } from '../../services/storage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Plus, Trash2, CalendarDays, Target, Flame } from 'lucide-react';
 import { SECTORS } from '../../constants';
 
@@ -15,6 +16,7 @@ interface StudyPlan {
 }
 
 export default function StudyPlansScreen() {
+  const { t } = useLanguage();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [goal, setGoal] = useState('');
@@ -54,7 +56,7 @@ export default function StudyPlansScreen() {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Delete this study plan?')) {
+    if (window.confirm(t('Delete this study plan?'))) {
       storage.deleteStudyPlan(id);
       setPlans(storage.getStudyPlans());
     }
@@ -70,34 +72,34 @@ export default function StudyPlansScreen() {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Study Plans</h1>
-          <p className="text-gray-500 dark:text-gray-400">Set goals and track your study streaks</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Study Plans')}</h1>
+          <p className="text-gray-500 dark:text-gray-400">{t('Set goals and track your study streaks')}</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
         >
           <Plus size={16} />
-          New Plan
+          {t('Create Plan')}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 space-y-4 transition-colors">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Goal')}</label>
             <input
               type="text"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder="e.g. Ace my WAEC Mathematics exam"
+              placeholder={t('e.g. Ace my WAEC Mathematics exam')}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Target Date')}</label>
               <input
                 type="date"
                 value={targetDate}
@@ -106,7 +108,7 @@ export default function StudyPlansScreen() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Daily Goal (min)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Daily Goal')} (min)</label>
               <input
                 type="number"
                 value={dailyGoal}
@@ -117,7 +119,7 @@ export default function StudyPlansScreen() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subjects</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('Subjects')}</label>
             <div className="flex flex-wrap gap-2">
               {SECTORS.slice(0, 8).map((s) => (
                 <button
@@ -140,7 +142,7 @@ export default function StudyPlansScreen() {
             disabled={!goal || !targetDate || selectedSubjects.length === 0}
             className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 transition"
           >
-            Create Study Plan
+            {t('Create Study Plan')}
           </button>
         </div>
       )}
@@ -148,8 +150,8 @@ export default function StudyPlansScreen() {
       {plans.length === 0 ? (
         <div className="text-center py-16">
           <CalendarDays size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No study plans yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Create a plan to set goals and track progress</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('No study plans yet')}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('Create a plan to set goals and track progress')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -161,7 +163,7 @@ export default function StudyPlansScreen() {
                   <div>
                     <h3 className="font-semibold text-gray-800 dark:text-gray-100">{plan.goal}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Target: {new Date(plan.targetDate).toLocaleDateString()}
+                      {t('Target')}: {new Date(plan.targetDate).toLocaleDateString()}
                     </p>
                   </div>
                   <button
@@ -175,11 +177,11 @@ export default function StudyPlansScreen() {
                 <div className="flex gap-6 mb-3">
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                     <Flame size={14} className="text-orange-500" />
-                    {plan.currentStreak} day streak
+                    {plan.currentStreak} {t('day streak')}
                   </div>
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                     <Target size={14} className="text-primary-500" />
-                    {plan.dailyGoal} min/day
+                    {plan.dailyGoal} {t('min/day')}
                   </div>
                 </div>
 
@@ -190,7 +192,7 @@ export default function StudyPlansScreen() {
                   />
                 </div>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {plan.completedDays} / {plan.totalDays} days completed
+                  {plan.completedDays} / {plan.totalDays} {t('days completed')}
                 </p>
 
                 <div className="flex flex-wrap gap-1.5 mt-3">

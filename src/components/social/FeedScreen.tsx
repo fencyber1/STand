@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { auth } from '../../services/firebase';
 import {
   subscribeToFeed,
@@ -31,7 +32,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, onShareImage, comments, expandedComments, toggleComments, commentInputs, setCommentInputs, submittingComment, getAvatar }: {
+function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, onShareImage, comments, expandedComments, toggleComments, commentInputs, setCommentInputs, submittingComment, getAvatar, t }: {
   post: Post;
   uid: string;
   onLike: (p: Post) => void;
@@ -47,6 +48,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
   setCommentInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   submittingComment: string | null;
   getAvatar: (photo: string | null, name: string, size?: string) => React.ReactNode;
+  t: (key: string) => string;
 }) {
   const isLiked = post.likes.includes(uid);
   const [saved, setSaved] = useState(false);
@@ -87,7 +89,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
       {/* Repost indicator */}
       {post.repostOf && (
         <div className="px-4 pb-1 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-          <Repeat2 size={11} /> Reposted
+          <Repeat2 size={11} /> {t('Reposted')}
         </div>
       )}
 
@@ -112,13 +114,13 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
                 onClick={() => { setShowShareMenu(false); onShareImage(post); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
               >
-                <ImageIcon size={16} className="text-indigo-500" /> Share as Image
+                <ImageIcon size={16} className="text-indigo-500" /> {t('Share as Image')}
               </button>
               <button
                 onClick={() => { setShowShareMenu(false); onShare(post.id); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
               >
-                <LinkIcon size={16} className="text-gray-400" /> Share Link
+                <LinkIcon size={16} className="text-gray-400" /> {t('Share Link')}
               </button>
             </div>
           )}
@@ -136,7 +138,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
       {(post.likes.length > 0 || post.shares > 0) && (
         <div className="px-4 pb-1 space-y-0.5">
           {post.likes.length > 0 && (
-            <p className="text-sm font-bold text-gray-800 dark:text-white">{post.likes.length.toLocaleString()} {post.likes.length === 1 ? 'like' : 'likes'}</p>
+            <p className="text-sm font-bold text-gray-800 dark:text-white">{post.likes.length.toLocaleString()} {post.likes.length === 1 ? t('like') : t('likes')}</p>
           )}
         </div>
       )}
@@ -146,8 +148,8 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
         <button onClick={() => toggleComments(post.id)} className="px-4 pb-1 text-left w-full">
           <p className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition">
             {post.commentCount > 0 && !expandedComments
-              ? `View all ${post.commentCount} comment${post.commentCount !== 1 ? 's' : ''}`
-              : post.commentCount > 0 ? 'Hide comments' : ''
+              ? `${t('View all')} ${post.commentCount} ${t('comment')}${post.commentCount !== 1 ? t('s') : ''}`
+              : post.commentCount > 0 ? t('Hide comments') : ''
             }
           </p>
         </button>
@@ -157,7 +159,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
       {expandedComments && (
         <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-3 max-h-64 overflow-y-auto">
           {comments.length === 0 ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No comments yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{t('No comments yet')}</p>
           ) : (
             comments.map((c) => (
               <div key={c.id} className="flex items-start gap-2.5 group">
@@ -170,7 +172,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="text-[10px] text-gray-400 dark:text-gray-500">{timeAgo(c.createdAt)}</span>
                     {c.authorUid === uid && (
-                      <button onClick={() => onDelete(c.id)} className="text-[10px] text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition">Delete</button>
+                      <button onClick={() => onDelete(c.id)} className="text-[10px] text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition">{t('Delete')}</button>
                     )}
                   </div>
                 </div>
@@ -187,7 +189,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
           value={commentInputs[post.id] || ''}
           onChange={(e) => setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onComment(post.id); } }}
-          placeholder="Add a comment..."
+          placeholder={t('Add a comment...')}
           className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
         />
         <button
@@ -195,7 +197,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
           disabled={!commentInputs[post.id]?.trim() || submittingComment === post.id}
           className="text-indigo-400 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:text-indigo-300 transition"
         >
-          {submittingComment === post.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Post'}
+          {submittingComment === post.id ? <Loader2 className="w-4 h-4 animate-spin" /> : t('Post')}
         </button>
       </div>
     </div>
@@ -204,6 +206,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
 
 export default function FeedScreen() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const uid = auth.currentUser?.uid || '';
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -305,8 +308,8 @@ export default function FeedScreen() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 pt-2">
         <BookOpen className="w-6 h-6 text-indigo-400" />
-        <h1 className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Feed</h1>
-        <span className="text-[10px] text-gray-400 dark:text-gray-600 uppercase tracking-widest ml-auto font-medium">Public</span>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">{t('Feed')}</h1>
+        <span className="text-[10px] text-gray-400 dark:text-gray-600 uppercase tracking-widest ml-auto font-medium">{t('Public')}</span>
       </div>
 
       {/* Composer */}
@@ -315,7 +318,7 @@ export default function FeedScreen() {
         className="w-full mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-3 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors group"
       >
         {getAvatar(user?.photoURL || null, user?.fullName || 'Student', 'w-10 h-10')}
-        <span className="text-gray-400 dark:text-gray-500 text-sm group-hover:text-gray-600 dark:group-hover:text-gray-400 transition">Share something with the community...</span>
+        <span className="text-gray-400 dark:text-gray-500 text-sm group-hover:text-gray-600 dark:group-hover:text-gray-400 transition">{t('Share something with the community...')}</span>
         <Plus className="w-5 h-5 text-indigo-400 ml-auto" />
       </button>
 
@@ -324,7 +327,7 @@ export default function FeedScreen() {
         <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowComposer(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg border border-gray-200 dark:border-gray-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-base font-bold text-gray-800 dark:text-white">New Post</h3>
+              <h3 className="text-base font-bold text-gray-800 dark:text-white">{t('New Post')}</h3>
               <button onClick={() => setShowComposer(false)} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
@@ -335,7 +338,7 @@ export default function FeedScreen() {
                 <textarea
                   value={postText}
                   onChange={(e) => setPostText(e.target.value)}
-                  placeholder="What's on your mind? Use #hashtags"
+                  placeholder={t("What's on your mind? Use #hashtags")}
                   rows={4}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none resize-none"
                   autoFocus
@@ -347,7 +350,7 @@ export default function FeedScreen() {
                 className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-sm font-bold transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Share
+                {t('Share')}
               </button>
             </div>
           </div>
@@ -359,18 +362,18 @@ export default function FeedScreen() {
         <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowRepost(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2"><Repeat2 size={16} className="text-green-500" /> Repost</h3>
+              <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2"><Repeat2 size={16} className="text-green-500" /> {t('Repost')}</h3>
               <button onClick={() => setShowRepost(null)} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10"><X className="w-5 h-5 text-gray-400" /></button>
             </div>
             <textarea
               value={repostCaption}
               onChange={(e) => setRepostCaption(e.target.value)}
-              placeholder="Add a caption..."
+              placeholder={t('Add a caption...')}
               rows={2}
               className="w-full bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none border border-gray-200 dark:border-gray-600 focus:border-indigo-400 dark:focus:border-indigo-500 resize-none mb-3"
             />
             <button onClick={() => handleRepost(showRepost)} className="w-full py-2.5 bg-green-500 hover:bg-green-400 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2">
-              <Repeat2 size={14} /> Repost
+              <Repeat2 size={14} /> {t('Repost')}
             </button>
           </div>
         </div>
@@ -384,8 +387,8 @@ export default function FeedScreen() {
       ) : posts.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-16 text-center">
           <BookOpen className="w-14 h-14 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No posts yet</p>
-          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Be the first to share!</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{t('No posts yet')}</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t('Be the first to share!')}</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -407,6 +410,7 @@ export default function FeedScreen() {
               setCommentInputs={setCommentInputs}
               submittingComment={submittingComment}
               getAvatar={getAvatar}
+              t={t}
             />
           ))}
         </div>

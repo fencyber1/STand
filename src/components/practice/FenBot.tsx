@@ -5,6 +5,7 @@ import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { loadFenBotConversations, saveFenBotConversation, deleteFenBotConversation } from '../../services/fenbotService';
 
 const API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || '';
@@ -235,6 +236,7 @@ function formatInline(text: string): string {
 export default function FenBot() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const uid = user?.uid || '';
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -431,8 +433,11 @@ export default function FenBot() {
     try {
       const convo = conversations.find((c) => c.id === convoId) || { messages: [] };
       const allMessages = [...convo.messages, userMsg];
+      const langInstruction = language && language !== 'en'
+        ? `\n\nCRITICAL LANGUAGE RULE: The user's language is "${language}". You MUST respond ENTIRELY in ${language}. Do NOT use English at all in your response. All explanations, examples, and text must be written in ${language}.`
+        : '';
       const apiMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: SYSTEM_PROMPT + langInstruction },
         ...allMessages.map((m) => ({ role: m.role, content: m.content })),
       ];
 

@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from '../../constants/achievements';
 import { getTopicFunFact } from '../../services/api';
 import { createNotification } from '../../services/notificationService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type { QuestionTiming, AchievementStats } from '../../types';
 
 interface ResultsState {
@@ -42,6 +43,7 @@ export default function ResultsScreen() {
   const location = useLocation();
   const state = location.state as ResultsState | null;
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [funFact, setFunFact] = useState('');
   const [funFactLoading, setFunFactLoading] = useState(true);
 
@@ -341,7 +343,7 @@ export default function ResultsScreen() {
         <div className="inline-flex p-4 bg-primary-50 dark:bg-primary-900/30 rounded-full mb-3">
           <Trophy size={32} className="text-primary-600 dark:text-primary-400" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Results</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Results')}</h1>
         <p className="text-gray-500 dark:text-gray-400">{topic}</p>
       </div>
 
@@ -350,18 +352,18 @@ export default function ResultsScreen() {
           <p className={`text-3xl font-bold ${percentage >= 70 ? 'text-green-600 dark:text-green-400' : percentage >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
             {percentage}%
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Score</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('Score')}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
           <p className="text-3xl font-bold text-primary-600 dark:text-primary-400">
             {effectiveCorrectCount}/{totalCount}
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Correct</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('Correct')}</p>
         </div>
         {avgTheoryScore > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">
             <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{Math.round(avgTheoryScore)}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Avg Theory</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('Avg Theory')}</p>
           </div>
         )}
       </div>
@@ -390,20 +392,20 @@ export default function ResultsScreen() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
             <Clock size={18} className="text-blue-500" />
-            Time Analysis
+            {t('Time Analysis')}
           </h3>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="text-center">
               <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatSeconds(timingStats.avg)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Avg / Question</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('Avg / Question')}</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatSeconds(timingStats.fastest.timeSpent)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Fastest</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('Fastest')}</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-red-600 dark:text-red-400">{formatSeconds(timingStats.slowest.timeSpent)}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Slowest</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('Slowest')}</p>
             </div>
           </div>
           {fastestQuestion && (
@@ -426,7 +428,7 @@ export default function ResultsScreen() {
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Performance Summary</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t('Performance Summary')}</h3>
         <p className={`text-sm ${
           percentage >= 80 ? 'text-green-600 dark:text-green-400' : percentage >= 60 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
         }`}>
@@ -439,7 +441,7 @@ export default function ResultsScreen() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Question Details</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('Question Details')}</h3>
         <div className="space-y-4">
           {results.map((r, i) => {
             const timing = timingStats ? state.questionTimings?.find((t) => t.questionId === r.questionId) : null;
@@ -473,7 +475,7 @@ export default function ResultsScreen() {
           className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition flex items-center justify-center gap-2"
         >
           <Home size={18} />
-          New Topic
+          {t('Back to Dashboard')}
         </Link>
         {wrongQuestions.length > 0 && (
           <button
@@ -481,7 +483,7 @@ export default function ResultsScreen() {
             className="flex-1 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition flex items-center justify-center gap-2"
           >
             <RotateCw size={18} />
-            Review Wrong ({wrongQuestions.length})
+            {t('Review Wrong Answers')} ({wrongQuestions.length})
           </button>
         )}
         <button
@@ -489,28 +491,28 @@ export default function ResultsScreen() {
           className="flex-1 py-3 bg-gray-700 dark:bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-800 dark:hover:bg-gray-500 transition flex items-center justify-center gap-2"
         >
           <Download size={18} />
-          PDF
+          {t('Download as Image')}
         </button>
         <button
           onClick={handleExportAnki}
           className="flex-1 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition flex items-center justify-center gap-2"
         >
           <CreditCard size={18} />
-          Anki
+          {t('Copy to Clipboard')}
         </button>
         <button
           onClick={handleShareCard}
           className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition flex items-center justify-center gap-2"
         >
           <Share2 size={18} />
-          Share
+          {t('Share Score Card')}
         </button>
         <button
           onClick={() => navigate(-1)}
           className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2"
         >
           <RotateCcw size={18} />
-          Try Again
+          {t('Try Again')}
         </button>
       </div>
     </div>
