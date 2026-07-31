@@ -8,7 +8,6 @@ interface TourStep {
   title: string;
   description: string;
   route: string;
-  /** Force tooltip placement regardless of space */
   placement?: 'top' | 'bottom' | 'left' | 'right';
 }
 
@@ -67,7 +66,6 @@ const STEPS: TourStep[] = [
   },
 ];
 
-/** Sidebar targets that live in the left nav */
 const SIDEBAR_TARGETS = new Set(['tour-practice', 'tour-review', 'tour-fenbot', 'tour-groups', 'tour-social']);
 
 interface Props {
@@ -90,7 +88,32 @@ export default function OnboardingTour({ open, onComplete }: Props) {
   const GAP = 14;
 
   const findTarget = useCallback(() => {
-    const el = document.querySelector(`[data-tour-id="${current.target}"]`) as HTMLElement;
+    let el: HTMLElement | null = null;
+    let isFallback = false;
+
+    if (SIDEBAR_TARGETS.has(current.target)) {
+      // Try sidebar first
+      const sidebar = document.querySelector('[data-tour-id="tour-sidebar"]') as HTMLElement;
+      if (sidebar) {
+        el = sidebar.querySelector(`[data-tour-id="${current.target}"]`) as HTMLElement;
+      }
+      // If not found or not visible (sidebar closed on mobile), fall back to hamburger menu
+      if (!el || !el.getBoundingClientRect) {
+        el = document.querySelector('[data-tour-id="tour-hamburger"]') as HTMLElement;
+        isFallback = true;
+      }
+      // Also check if element is off-screen (sidebar closed)
+      if (el && !isFallback) {
+        const r = el.getBoundingClientRect();
+        if (r.left < -10 || r.right > window.innerWidth + 10) {
+          el = document.querySelector('[data-tour-id="tour-hamburger"]') as HTMLElement;
+          isFallback = true;
+        }
+      }
+    } else {
+      el = document.querySelector(`[data-tour-id="${current.target}"]`) as HTMLElement;
+    }
+
     if (!el) return null;
     const rect = el.getBoundingClientRect();
     const pad = isMobile ? 4 : 6;
@@ -101,11 +124,11 @@ export default function OnboardingTour({ open, onComplete }: Props) {
       height: rect.height + pad * 2,
       centerX: rect.left + rect.width / 2,
       centerY: rect.top + rect.height / 2,
-      // Actual element bounds (no padding) for arrow positioning
       elTop: rect.top,
       elLeft: rect.left,
       elRight: rect.right,
       elBottom: rect.bottom,
+      isFallback,
     };
   }, [current.target, isMobile]);
 
@@ -114,15 +137,19 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     const tooltipH = tooltipRef.current?.offsetHeight || 200;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const sidebarWidth = isMobile ? 256 : 256; // w-64 = 256px
 
     let placement = current.placement || 'bottom';
-    // On desktop, sidebar items show tooltip to the right
-    if (!isMobile && !current.placement && SIDEBAR_TARGETS.has(current.target)) {
+
+    // On desktop, sidebar items go to the right (if sidebar is visible)
+    if (!isMobile && !current.placement && SIDEBAR_TARGETS.has(current.target) && !spot.isFallback) {
       placement = 'right';
     }
-    // On mobile, sidebar items show tooltip below (not enough room to the right)
-    if (isMobile && SIDEBAR_TARGETS.has(current.target)) {
+    // Fallback (hamburger) always goes below
+    if (spot.isFallback) {
+      placement = 'bottom';
+    }
+    // On mobile, non-fallback sidebar items go below
+    if (isMobile && SIDEBAR_TARGETS.has(current.target) && !spot.isFallback) {
       placement = 'bottom';
     }
 
@@ -136,10 +163,8 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     if (placement === 'right') {
       left = spot.elRight + GAP;
       top = spot.centerY - tooltipH / 2;
-      // Arrow points left (from tooltip to target)
       arrowTop = spot.centerY - top - 8;
       arrowLeft = -8;
-      // If overflows right, try bottom
       if (left + TOOLTIP_W > vw - 16) {
         placement = 'bottom';
         left = spot.centerX - TOOLTIP_W / 2;
@@ -153,7 +178,6 @@ export default function OnboardingTour({ open, onComplete }: Props) {
       top = spot.elBottom + GAP;
       arrowTop = -8;
       arrowLeft = spot.centerX - left - 8;
-      // If overflows bottom, try top
       if (top + tooltipH > vh - 16) {
         placement = 'top';
         top = spot.elTop - tooltipH - GAP;
@@ -179,11 +203,8 @@ export default function OnboardingTour({ open, onComplete }: Props) {
       arrowLeft = TOOLTIP_W - 8;
     }
 
-    // Final clamp
     left = clamp(left, 12, vw - TOOLTIP_W - 12);
     top = clamp(top, 12, vh - tooltipH - 12);
-
-    // Arrow position clamp
     arrowLeft = clamp(arrowLeft, 20, TOOLTIP_W - 20);
     arrowTop = clamp(arrowTop, 8, tooltipH - 16);
 
@@ -206,11 +227,10 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     }
     // On mobile, open sidebar if targeting sidebar elements
     const mobile = window.innerWidth < 1024;
-    const isSidebar = SIDEBAR_TARGETS.has(current.target);
-    if (mobile && isSidebar) {
+    if (mobile && SIDEBAR_TARGETS.has(current.target)) {
       window.dispatchEvent(new Event('tour-open-sidebar'));
     }
-    const delay = (mobile && isSidebar) ? 500 : 350;
+    const delay = 400;
     const timer = setTimeout(updateSpotlight, delay);
     return () => clearTimeout(timer);
   }, [open, step, current.route, current.target, navigate, updateSpotlight]);

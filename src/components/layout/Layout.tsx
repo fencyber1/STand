@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   GraduationCap,
@@ -90,7 +90,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [tourActive, setTourActive] = useState(false);
+  const tourActiveRef = useRef(false);
   const [photoVersion, setPhotoVersion] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -107,8 +107,8 @@ export default function Layout() {
 
   // Tour sidebar control: open sidebar + set tour-active flag
   useEffect(() => {
-    const openHandler = () => { setTourActive(true); setSidebarOpen(true); };
-    const closeHandler = () => { setTourActive(false); setSidebarOpen(false); };
+    const openHandler = () => { tourActiveRef.current = true; setSidebarOpen(true); };
+    const closeHandler = () => { tourActiveRef.current = false; setSidebarOpen(false); };
     window.addEventListener('tour-open-sidebar', openHandler);
     window.addEventListener('tour-close-sidebar', closeHandler);
     return () => {
@@ -122,7 +122,7 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const closeSidebar = () => { if (!tourActive) setSidebarOpen(false); };
+  const closeSidebar = () => { if (!tourActiveRef.current) setSidebarOpen(false); };
 
   const navGroups: (NavGroup & { tourId?: string })[] = [
     {
@@ -185,7 +185,7 @@ export default function Layout() {
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={closeSidebar} />
       )}
 
-      <aside className={`fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside data-tour-id="tour-sidebar" className={`fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <div className="text-primary-600 dark:text-primary-400">
             <Logo size={130} />
@@ -237,7 +237,7 @@ export default function Layout() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="flex items-center h-14 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 lg:px-6 transition-colors shrink-0">
-          <button className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-3" onClick={() => setSidebarOpen(true)}>
+          <button data-tour-id="tour-hamburger" className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-3" onClick={() => setSidebarOpen(true)}>
             <Menu size={22} />
           </button>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex-1">STand Exam Practice</h2>
