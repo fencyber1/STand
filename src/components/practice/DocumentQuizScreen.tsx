@@ -219,7 +219,7 @@ export default function DocumentQuizScreen() {
 
       {/* Step: Upload */}
       {step === 'upload' && (
-        <>
+        <div data-tour-id="tour-doc-quiz">
           <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#10b981', '#3b82f6', '#6366f1']}>
             <div className="p-6">
               <div
@@ -268,7 +268,7 @@ export default function DocumentQuizScreen() {
           </div>
 
           <PasteBox onSubmit={handlePaste} />
-        </>
+        </div>
       )}
 
       {/* Step: Preview */}

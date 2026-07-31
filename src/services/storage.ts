@@ -323,6 +323,14 @@ export const storage = {
     notifyChange();
   },
 
+  getOnboardingComplete(): boolean {
+    return localStorage.getItem(k('stand_onboarding_complete')) === 'true';
+  },
+
+  setOnboardingComplete(): void {
+    localStorage.setItem(k('stand_onboarding_complete'), 'true');
+  },
+
   clearAllUserData(): void {
     const keys = [
       'stand_history',

@@ -1,7 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
+import OnboardingTour from './components/onboarding/OnboardingTour';
+import { storage } from './services/storage';
 
 const LandingScreen = lazy(() => import('./components/landing/LandingScreen'));
 const LoginScreen = lazy(() => import('./components/auth/LoginScreen'));
@@ -57,6 +59,8 @@ function ProtectedFullScreen({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { isLoggedIn, loading } = useAuth();
+  const [showTour, setShowTour] = useState(() => isLoggedIn && !storage.getOnboardingComplete());
+  const handleTourComplete = () => { storage.setOnboardingComplete(); setShowTour(false); };
 
   if (loading) {
     return (
@@ -71,6 +75,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<RouteSpinner />}>
+      <OnboardingTour open={showTour} onComplete={handleTourComplete} />
       <Routes>
         <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <LoginScreen />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/" replace /> : <RegisterScreen />} />

@@ -50,12 +50,12 @@ interface NavGroup {
   items: NavItem[];
 }
 
-function NavGroupSection({ group, defaultOpen, onNavigate }: { group: NavGroup; defaultOpen: boolean; onNavigate: () => void }) {
+function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: NavGroup; defaultOpen: boolean; onNavigate: () => void; tourId?: string }) {
   const [open, setOpen] = useState(defaultOpen);
   const Icon = open ? ChevronDown : ChevronRight;
 
   return (
-    <div className="mb-1">
+    <div className="mb-1" data-tour-id={tourId}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -111,9 +111,10 @@ export default function Layout() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const navGroups: NavGroup[] = [
+  const navGroups: (NavGroup & { tourId?: string })[] = [
     {
       label: t('Practice'),
+      tourId: 'tour-practice',
       items: [
         { to: '/practice', label: t('Practice'), icon: GraduationCap },
         { to: '/doc-quiz', label: t('Document Quiz'), icon: FileText },
@@ -122,6 +123,7 @@ export default function Layout() {
     },
     {
       label: t('Review'),
+      tourId: 'tour-review',
       items: [
         { to: '/history', label: t('History'), icon: Clock },
         { to: '/bookmarks', label: t('Bookmarks'), icon: Bookmark },
@@ -139,6 +141,7 @@ export default function Layout() {
     },
     {
       label: t('Study'),
+      tourId: 'tour-groups',
       items: [
         { to: '/groups', label: t('Study Groups'), icon: Users },
         { to: '/multiplayer', label: t('Multiplayer'), icon: Swords },
@@ -147,6 +150,7 @@ export default function Layout() {
     },
     {
       label: t('Social'),
+      tourId: 'tour-social',
       items: [
         { to: '/statuses', label: t('Status'), icon: Circle },
         { to: '/feed', label: t('Feed'), icon: Rss },
@@ -183,7 +187,7 @@ export default function Layout() {
             <LayoutDashboard size={16} />
             <span className="truncate">{t('Dashboard')}</span>
           </NavLink>
-          <NavLink to="/fenbot" onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
             <FenBotNavIcon size={16} />
             <span className="truncate">FenBot</span>
           </NavLink>
@@ -195,6 +199,7 @@ export default function Layout() {
                 group={group}
                 defaultOpen={group.label === t('Practice') || group.label === t('Social')}
                 onNavigate={closeSidebar}
+                tourId={group.tourId}
               />
             ))}
           </div>

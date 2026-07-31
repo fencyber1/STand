@@ -119,7 +119,7 @@ export default function HomeScreen() {
       )}
 
       {step === 1 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
+        <div data-tour-id="tour-topic-input" className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Topic')}</label>
             <input

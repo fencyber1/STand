@@ -117,7 +117,7 @@ export default function ExamSetupScreen() {
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
+      <div data-tour-id="tour-exam-sim" className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5 transition-colors">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Topic')}</label>
           <input
