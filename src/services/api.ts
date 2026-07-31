@@ -1,4 +1,5 @@
 import type { Question } from '../types';
+import { storage } from './storage';
 
 const MODEL = 'meta/llama-3.1-8b-instruct';
 
@@ -163,6 +164,15 @@ export async function generateQuestions(params: {
   const totalNeeded = params.count;
   const allQuestions: Question[] = [];
 
+  // Load previously generated questions for this topic to avoid repeats
+  const topicKey = `${params.sector}__${params.topic}__${params.level}`.toLowerCase().slice(0, 120);
+  const previousQuestions = storage.getGeneratedQuestionHistory(topicKey);
+  const previousAsQuestions: Question[] = previousQuestions.map((q, i) => ({
+    id: `hist-${i}`, question: q, type: 'MCQ', options: undefined,
+    correctAnswer: '', explanation: '', difficulty: 'medium', subject: params.sector,
+    topic: params.topic, imageQuery: '',
+  }));
+
   for (let offset = 0; offset < totalNeeded; offset += BATCH_SIZE) {
     const batchSize = Math.min(BATCH_SIZE, totalNeeded - offset);
     const batchNum = Math.floor(offset / BATCH_SIZE) + 1;
@@ -170,7 +180,7 @@ export async function generateQuestions(params: {
 
     progressCallback?.(offset, totalNeeded);
 
-    const batchQuestions = await generateQuestionBatch(params, batchSize, batchNum, totalBatches, allQuestions);
+    const batchQuestions = await generateQuestionBatch(params, batchSize, batchNum, totalBatches, [...previousAsQuestions, ...allQuestions]);
     allQuestions.push(...batchQuestions);
 
     if (offset + BATCH_SIZE < totalNeeded) {
@@ -184,7 +194,12 @@ export async function generateQuestions(params: {
     throw new Error('No questions were generated. Please try again.');
   }
 
-  return { questions: allQuestions.slice(0, totalNeeded) };
+  const final = allQuestions.slice(0, totalNeeded);
+
+  // Save generated questions to history to prevent future repeats
+  storage.saveGeneratedQuestionHistory(topicKey, final);
+
+  return { questions: final };
 }
 
 async function generateQuestionBatch(
@@ -231,7 +246,13 @@ async function generateQuestionBatch(
     : '';
 
   const avoidDuplicates = existingQuestions.length > 0
-    ? `\nIMPORTANT: Do NOT repeat any of these existing questions:\n${existingQuestions.map((q) => `- "${q.question.slice(0, 80)}"`).join('\n')}`
+    ? `\n\n⚠️ ABSOLUTE PROHIBITION — DO NOT REPEAT QUESTIONS ⚠️
+The following questions have ALREADY been generated. You MUST NOT generate any question that is the same as, similar to, or a rephrased version of ANY of these. Every single question you generate must be COMPLETELY NEW and UNIQUE.
+
+PREVIOUSLY GENERATED QUESTIONS (DO NOT REPEAT):
+${existingQuestions.map((q, i) => `${i + 1}. "${q.question.slice(0, 120)}"`).join('\n')}
+
+VIOLATION RULE: If you generate ANY question that matches or closely resembles any question above, the entire output will be rejected. Generate ONLY entirely new, never-before-seen questions about different aspects of the topic.`
     : '';
 
   const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${count} exam questions (batch ${batchNum}/${totalBatches}).
@@ -323,10 +344,20 @@ export async function getDocumentQuestions(params: {
   questionCount: number;
   questionType: string;
   difficulty?: string;
+  documentName?: string;
 }): Promise<{ questions: Question[] }> {
   const BATCH_SIZE = 10;
   const totalNeeded = params.questionCount;
   const allQuestions: Question[] = [];
+
+  // Load previously generated questions for this document
+  const docKey = `doc__${(params.documentName || 'pasted').slice(0, 80)}`.toLowerCase();
+  const previousQuestions = storage.getGeneratedQuestionHistory(docKey);
+  const previousAsQuestions: Question[] = previousQuestions.map((q, i) => ({
+    id: `hist-${i}`, question: q, type: 'MCQ', options: undefined,
+    correctAnswer: '', explanation: '', difficulty: 'medium', subject: 'Document-Based',
+    topic: '', imageQuery: '',
+  }));
 
   for (let offset = 0; offset < totalNeeded; offset += BATCH_SIZE) {
     const batchSize = Math.min(BATCH_SIZE, totalNeeded - offset);
@@ -335,7 +366,7 @@ export async function getDocumentQuestions(params: {
 
     progressCallback?.(offset, totalNeeded);
 
-    const batchQuestions = await generateDocumentQuestionBatch(params, batchSize, batchNum, totalBatches, allQuestions);
+    const batchQuestions = await generateDocumentQuestionBatch(params, batchSize, batchNum, totalBatches, [...previousAsQuestions, ...allQuestions]);
     allQuestions.push(...batchQuestions);
 
     if (offset + BATCH_SIZE < totalNeeded) {
@@ -349,7 +380,12 @@ export async function getDocumentQuestions(params: {
     throw new Error('No questions were generated from the document. Please try again.');
   }
 
-  return { questions: allQuestions.slice(0, totalNeeded) };
+  const final = allQuestions.slice(0, totalNeeded);
+
+  // Save generated questions to history
+  storage.saveGeneratedQuestionHistory(docKey, final);
+
+  return { questions: final };
 }
 
 async function generateDocumentQuestionBatch(
@@ -379,7 +415,13 @@ async function generateDocumentQuestionBatch(
   const truncated = params.documentText.slice(0, 15000);
 
   const avoidDuplicates = existingQuestions.length > 0
-    ? `\nIMPORTANT: Do NOT repeat any of these existing questions:\n${existingQuestions.map((q) => `- "${q.question.slice(0, 80)}"`).join('\n')}`
+    ? `\n\n⚠️ ABSOLUTE PROHIBITION — DO NOT REPEAT QUESTIONS ⚠️
+The following questions have ALREADY been generated. You MUST NOT generate any question that is the same as, similar to, or a rephrased version of ANY of these. Every single question you generate must be COMPLETELY NEW and UNIQUE.
+
+PREVIOUSLY GENERATED QUESTIONS (DO NOT REPEAT):
+${existingQuestions.map((q, i) => `${i + 1}. "${q.question.slice(0, 120)}"`).join('\n')}
+
+VIOLATION RULE: If you generate ANY question that matches or closely resembles any question above, the entire output will be rejected. Generate ONLY entirely new, never-before-seen questions about different aspects of the document.`
     : '';
 
   const prompt = `You are an expert exam question generator. Generate exactly ${count} questions based SOLELY on this document (batch ${batchNum}/${totalBatches}).

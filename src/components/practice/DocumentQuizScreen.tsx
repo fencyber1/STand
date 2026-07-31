@@ -201,6 +201,7 @@ export default function DocumentQuizScreen() {
         questionCount,
         questionType,
         difficulty: difficulty === 'all' ? undefined : difficulty,
+        documentName: fileName,
       });
 
       const rangeLabel = isPdf

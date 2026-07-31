@@ -301,6 +301,19 @@ export const storage = {
     localStorage.removeItem('stand_chat_wallpaper');
   },
 
+  getGeneratedQuestionHistory(topicKey: string): string[] {
+    const all = readJson<Record<string, string[]>>('stand_generated_questions', {});
+    return all[topicKey] || [];
+  },
+
+  saveGeneratedQuestionHistory(topicKey: string, questions: Question[]): void {
+    const all = readJson<Record<string, string[]>>('stand_generated_questions', {});
+    const existing = all[topicKey] || [];
+    const newEntries = questions.map((q) => q.question.slice(0, 120));
+    all[topicKey] = [...existing, ...newEntries].slice(-500);
+    writeJson('stand_generated_questions', all);
+  },
+
   getSavedDocuments(): SavedDocument[] {
     return readJson<SavedDocument[]>('stand_saved_documents', []);
   },
@@ -349,6 +362,7 @@ export const storage = {
       'stand_country',
       'stand_chat_theme',
       'stand_saved_documents',
+      'stand_generated_questions',
     ];
     for (const base of keys) {
       localStorage.removeItem(k(base));
