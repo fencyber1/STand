@@ -145,14 +145,19 @@ export default function StatusComposer() {
         <button
           onClick={handlePost}
           disabled={loading || !canPost}
-          className="w-14 h-14 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
-          style={{ backgroundColor: canPost ? '#22c55e' : 'rgba(255,255,255,0.15)' }}
+          className="flex items-center gap-2.5 px-6 py-3 rounded-2xl font-semibold text-sm transition-all disabled:opacity-30"
+          style={{
+            background: canPost ? 'linear-gradient(135deg, #1e1b4b, #312e81)' : 'rgba(255,255,255,0.1)',
+            boxShadow: canPost ? '0 4px 20px rgba(30,27,75,0.5), 0 0 0 1px rgba(255,255,255,0.1) inset' : 'none',
+            color: canPost ? '#fff' : 'rgba(255,255,255,0.3)',
+          }}
         >
           {loading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Send size={22} className="text-white" style={{ transform: 'translateX(1px)' }} />
+            <Send size={18} style={{ transform: 'translateX(1px)' }} />
           )}
+          <span>Send</span>
         </button>
       </div>
 
