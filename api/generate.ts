@@ -1,124 +1,34 @@
 const API_KEY = process.env.NVIDIA_API_KEY || '';
 const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
-export const config = {
-  maxDuration: 60,
-};
-
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function callNvidia(body: Record<string, unknown>, retries = 2): Promise<Response> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetchWithTimeout(NVIDIA_API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify(body),
-      }, 25000);
-
-      if (res.ok) return res;
-
-      // Retry on 429 (rate limit) or 5xx (server error)
-      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        continue;
-      }
-
-      return res;
-    } catch (err: any) {
-      if (attempt < retries && (err.name === 'AbortError' || err.code === 'UND_ERR_CONNECT_TIMEOUT')) {
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error('Max retries exceeded');
-}
-
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!API_KEY) {
-    return res.status(500).json({ error: 'NVIDIA_API_KEY is not set. Add it in Vercel dashboard → Settings → Environment Variables.' });
-  }
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!API_KEY) return res.status(500).json({ error: 'NVIDIA_API_KEY not set in Vercel env vars.' });
 
   try {
-    const isStreaming = req.body.stream === true;
-
-    const response = await callNvidia({
-      model: 'meta/llama-3.1-8b-instruct',
-      messages: req.body.messages,
-      temperature: req.body.temperature || 0.7,
-      max_tokens: req.body.max_tokens || 4096,
-      stream: isStreaming,
+    const response = await fetch(NVIDIA_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: req.body.model || 'meta/llama-3.1-8b-instruct',
+        messages: req.body.messages,
+        temperature: req.body.temperature || 0.7,
+        max_tokens: req.body.max_tokens || 4096,
+        stream: false,
+      }),
     });
 
-    if (isStreaming) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        return res.status(502).json({ error: 'No stream from NVIDIA' });
-      }
-
-      const decoder = new TextDecoder();
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          res.write(chunk);
-        }
-      } catch {
-        // Stream interrupted — send what we have and end
-      }
-
-      return res.end();
-    }
-
     const text = await response.text();
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return res.status(502).json({ error: `NVIDIA API returned non-JSON: ${text.slice(0, 300)}` });
-    }
-
-    return res.status(response.status).json(data);
+    return res.status(response.status).send(text);
   } catch (err: any) {
-    if (err.name === 'AbortError') {
-      return res.status(504).json({
-        error: 'AI service is taking too long. Please try again with fewer questions or a simpler topic.',
-        retryable: true,
-      });
-    }
-    return res.status(500).json({ error: err.message || 'Unexpected error' });
+    return res.status(500).json({ error: err.message || 'Proxy error' });
   }
 }

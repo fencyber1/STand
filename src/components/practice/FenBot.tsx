@@ -14,14 +14,17 @@ let fenBotKeyIndex = 0;
 
 function getApiUrl(): string {
   if (import.meta.env.DEV) return '/v1/chat/completions';
-  return 'https://integrate.api.nvidia.com/v1/chat/completions';
+  return '/api/generate';
 }
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const key = API_KEYS.length > 0 ? API_KEYS[fenBotKeyIndex % API_KEYS.length] : '';
-  if (key) headers['Authorization'] = `Bearer ${key}`;
-  fenBotKeyIndex = (fenBotKeyIndex + 1) % Math.max(API_KEYS.length, 1);
+  // Only send API key in dev (prod serverless adds it from process.env)
+  if (import.meta.env.DEV) {
+    const key = API_KEYS.length > 0 ? API_KEYS[fenBotKeyIndex % API_KEYS.length] : '';
+    if (key) headers['Authorization'] = `Bearer ${key}`;
+    fenBotKeyIndex = (fenBotKeyIndex + 1) % Math.max(API_KEYS.length, 1);
+  }
   return headers;
 }
 

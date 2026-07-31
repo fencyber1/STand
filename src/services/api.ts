@@ -2,20 +2,20 @@ import type { Question } from '../types';
 
 const MODEL = 'meta/llama-3.1-8b-instruct';
 
-// In dev: Vite proxy handles CORS. In prod: call NVIDIA directly.
+// Dev: Vite proxy (CORS handled, API key sent in headers)
+// Prod: Vercel serverless function (CORS handled, API key from env var)
 function getApiUrl(): string {
   if (import.meta.env.DEV) return '/v1/chat/completions';
-  return 'https://integrate.api.nvidia.com/v1/chat/completions';
+  return '/api/generate';
 }
 
-// Multi-key support: VITE_NVIDIA_API_KEY can be comma-separated
-// Keys rotate on each call, so usage is spread across them
 const RAW_KEYS = import.meta.env.VITE_NVIDIA_API_KEY || '';
 const API_KEYS = RAW_KEYS.split(',').map((k: string) => k.trim()).filter(Boolean);
 let currentKeyIndex = 0;
 
 async function callAI(prompt: string): Promise<string> {
-  const keysToTry = API_KEYS.length > 0
+  // In dev mode, try each key. In production, serverless uses its own key.
+  const keysToTry = import.meta.env.DEV && API_KEYS.length > 0
     ? Array.from({ length: API_KEYS.length }, (_, i) => API_KEYS[(currentKeyIndex + i) % API_KEYS.length])
     : [''];
 
@@ -26,12 +26,15 @@ async function callAI(prompt: string): Promise<string> {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 45000);
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      // Only send API key in dev (prod serverless adds it from process.env)
+      if (import.meta.env.DEV && key) {
+        headers['Authorization'] = `Bearer ${key}`;
+      }
+
       const response = await fetch(getApiUrl(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
-        },
+        headers,
         body: JSON.stringify({
           model: MODEL,
           messages: [{ role: 'user', content: prompt }],
@@ -47,7 +50,7 @@ async function callAI(prompt: string): Promise<string> {
 
       if (!response.ok) {
         lastError = `API error ${response.status}: ${text.slice(0, 200)}`;
-        if (response.status === 429 || response.status >= 500) {
+        if (import.meta.env.DEV && (response.status === 429 || response.status >= 500)) {
           currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
           continue;
         }
@@ -77,7 +80,7 @@ async function callAI(prompt: string): Promise<string> {
     }
   }
 
-  throw new Error(lastError || 'All API keys failed. Please check your keys.');
+  throw new Error(lastError || 'API request failed. Please try again.');
 }
 
 function parseQuestions(raw: string): Question[] {
