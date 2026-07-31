@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import OnboardingTour from './components/onboarding/OnboardingTour';
@@ -59,12 +59,12 @@ function ProtectedFullScreen({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { isLoggedIn, loading } = useAuth();
+  const navigate = useNavigate();
   const [showTour, setShowTour] = useState(false);
 
   // Check for new user AFTER auth loads
   useEffect(() => {
     if (!loading && isLoggedIn && !storage.getOnboardingComplete()) {
-      // Small delay so dashboard renders first
       const timer = setTimeout(() => setShowTour(true), 600);
       return () => clearTimeout(timer);
     }
@@ -72,16 +72,20 @@ export default function App() {
 
   // Listen for "start-tour" event (from Help & Support button)
   useEffect(() => {
-    const handler = () => setShowTour(true);
+    const handler = () => {
+      navigate('/', { replace: true });
+      setTimeout(() => setShowTour(true), 300);
+    };
     window.addEventListener('start-tour', handler);
     return () => window.removeEventListener('start-tour', handler);
-  }, []);
+  }, [navigate]);
 
   const handleTourComplete = useCallback(() => {
     storage.setOnboardingComplete();
     setShowTour(false);
     window.dispatchEvent(new Event('tour-close-sidebar'));
-  }, []);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   if (loading) {
     return (
