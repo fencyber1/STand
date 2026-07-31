@@ -106,6 +106,12 @@ export default function App() {
         <NotificationProvider>
           <ChatThemeProvider>
             <Routes>
+              <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+              <Route path="/chat/:chatId" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+              <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
+              <Route path="/groups-chat/:groupId" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
+              <Route path="/groups-chat/:groupId/settings" element={<ProtectedFullScreen><GroupSettingsScreen /></ProtectedFullScreen>} />
+              <Route path="/fenbot" element={<ProtectedFullScreen><FenBot /></ProtectedFullScreen>} />
               <Route path="/" element={<ProtectedLayout />}>
                 <Route index element={<DashboardScreen />} />
                 <Route path="practice" element={<HomeScreen />} />
