@@ -5,6 +5,49 @@ export const config = {
   maxDuration: 60,
 };
 
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callNvidia(body: Record<string, unknown>, retries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchWithTimeout(NVIDIA_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify(body),
+      }, 25000);
+
+      if (res.ok) return res;
+
+      // Retry on 429 (rate limit) or 5xx (server error)
+      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+
+      return res;
+    } catch (err: any) {
+      if (attempt < retries && (err.name === 'AbortError' || err.code === 'UND_ERR_CONNECT_TIMEOUT')) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -25,19 +68,12 @@ export default async function handler(req: any, res: any) {
   try {
     const isStreaming = req.body.stream === true;
 
-    const response = await fetch(NVIDIA_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'meta/llama-3.1-8b-instruct',
-        messages: req.body.messages,
-        temperature: req.body.temperature || 0.7,
-        max_tokens: req.body.max_tokens || 4096,
-        stream: isStreaming,
-      }),
+    const response = await callNvidia({
+      model: 'meta/llama-3.1-8b-instruct',
+      messages: req.body.messages,
+      temperature: req.body.temperature || 0.7,
+      max_tokens: req.body.max_tokens || 4096,
+      stream: isStreaming,
     });
 
     if (isStreaming) {
@@ -59,7 +95,7 @@ export default async function handler(req: any, res: any) {
           const chunk = decoder.decode(value, { stream: true });
           res.write(chunk);
         }
-      } catch (streamErr) {
+      } catch {
         // Stream interrupted — send what we have and end
       }
 
@@ -77,6 +113,12 @@ export default async function handler(req: any, res: any) {
 
     return res.status(response.status).json(data);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    if (err.name === 'AbortError') {
+      return res.status(504).json({
+        error: 'AI service is taking too long. Please try again with fewer questions or a simpler topic.',
+        retryable: true,
+      });
+    }
+    return res.status(500).json({ error: err.message || 'Unexpected error' });
   }
 }
