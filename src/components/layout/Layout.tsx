@@ -104,6 +104,13 @@ export default function Layout() {
     return () => window.removeEventListener('storage', handler);
   }, []);
 
+  // Open sidebar when onboarding tour targets sidebar elements on mobile
+  useEffect(() => {
+    const handler = () => setSidebarOpen(true);
+    window.addEventListener('tour-open-sidebar', handler);
+    return () => window.removeEventListener('tour-open-sidebar', handler);
+  }, []);
+
   const handleLogout = async () => {
     try { await logout(); } catch {}
     navigate('/login');

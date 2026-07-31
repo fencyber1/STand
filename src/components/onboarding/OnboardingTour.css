@@ -217,15 +217,39 @@
 /* Mobile adjustments */
 @media (max-width: 640px) {
   .tour-tooltip {
-    width: calc(100vw - 32px);
-    padding: 22px;
+    width: calc(100vw - 24px);
+    padding: 18px;
+    border-radius: 16px;
   }
 
   .tour-title {
-    font-size: 18px;
+    font-size: 16px;
+    margin-bottom: 8px;
   }
 
   .tour-description {
-    font-size: 13px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+
+  .tour-step-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+
+  .tour-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+
+  .tour-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .tour-dot.active {
+    width: 16px;
   }
 }

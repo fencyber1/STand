@@ -131,6 +131,8 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     setTooltipPos({ top, left, placement });
   }, [current.placement]);
 
+  const SIDEBAR_TARGETS = ['tour-practice', 'tour-review', 'tour-fenbot', 'tour-groups', 'tour-social'];
+
   const updateSpotlight = useCallback(() => {
     const spot = findTarget();
     if (!spot) return;
@@ -144,8 +146,16 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     if (window.location.pathname !== current.route) {
       navigate(current.route, { replace: true });
     }
-    // Wait for navigation + render, then find target
-    const timer = setTimeout(updateSpotlight, 300);
+    // On mobile, open sidebar if targeting a sidebar element
+    const isMobile = window.innerWidth < 1024;
+    const isSidebarTarget = SIDEBAR_TARGETS.includes(current.target);
+    const delay = (isMobile && isSidebarTarget) ? 500 : 300;
+
+    if (isMobile && isSidebarTarget) {
+      window.dispatchEvent(new Event('tour-open-sidebar'));
+    }
+
+    const timer = setTimeout(updateSpotlight, delay);
     return () => clearTimeout(timer);
   }, [open, step, current.route, navigate, updateSpotlight]);
 
