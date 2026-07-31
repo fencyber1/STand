@@ -228,7 +228,7 @@ export default function Layout() {
               <NavGroupSection
                 key={group.label}
                 group={group}
-                defaultOpen={i < 2}
+                defaultOpen={group.label === 'Practice' || group.label === 'Social'}
                 onNavigate={closeSidebar}
               />
             ))}
