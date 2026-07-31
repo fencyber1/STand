@@ -1,9 +1,12 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import Layout from './components/layout/Layout';
-import OnboardingTour from './components/onboarding/OnboardingTour';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ChatThemeProvider } from './contexts/ChatThemeContext';
 import { storage } from './services/storage';
+
+const Layout = lazy(() => import('./components/layout/Layout'));
+const OnboardingTour = lazy(() => import('./components/onboarding/OnboardingTour'));
 
 const LandingScreen = lazy(() => import('./components/landing/LandingScreen'));
 const LoginScreen = lazy(() => import('./components/auth/LoginScreen'));
@@ -62,7 +65,6 @@ export default function App() {
   const navigate = useNavigate();
   const [showTour, setShowTour] = useState(false);
 
-  // Check for new user AFTER auth loads
   useEffect(() => {
     if (!loading && isLoggedIn && !storage.getOnboardingComplete()) {
       const timer = setTimeout(() => setShowTour(true), 600);
@@ -70,7 +72,6 @@ export default function App() {
     }
   }, [loading, isLoggedIn]);
 
-  // Listen for "start-tour" event (from Help & Support button)
   useEffect(() => {
     const handler = () => {
       navigate('/', { replace: true });
@@ -100,52 +101,56 @@ export default function App() {
 
   return (
     <Suspense fallback={<RouteSpinner />}>
-      <OnboardingTour open={showTour} onComplete={handleTourComplete} />
-      <Routes>
-        <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <LoginScreen />} />
-        <Route path="/register" element={isLoggedIn ? <Navigate to="/" replace /> : <RegisterScreen />} />
-
-        <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
-        <Route path="/chat/:chatId" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
-        <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
-        <Route path="/groups-chat/:groupId" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
-        <Route path="/groups-chat/:groupId/settings" element={<ProtectedFullScreen><GroupSettingsScreen /></ProtectedFullScreen>} />
-        <Route path="/fenbot" element={<ProtectedFullScreen><FenBot /></ProtectedFullScreen>} />
-
-        {isLoggedIn ? (
-          <Route path="/" element={<ProtectedLayout />}>
-            <Route index element={<DashboardScreen />} />
-            <Route path="practice" element={<HomeScreen />} />
-            <Route path="doc-quiz" element={<DocumentQuizScreen />} />
-            <Route path="quiz" element={<QuizScreen />} />
-            <Route path="exam-setup" element={<ExamSetupScreen />} />
-            <Route path="exam" element={<ExamSimScreen />} />
-            <Route path="results" element={<ResultsScreen />} />
-            <Route path="history" element={<HistoryScreen />} />
-            <Route path="bookmarks" element={<BookmarksScreen />} />
-            <Route path="progress" element={<ProgressScreen />} />
-            <Route path="search" element={<SearchScreen />} />
-            <Route path="achievements" element={<AchievementsScreen />} />
-            <Route path="import" element={<ImportQuestionsScreen />} />
-            <Route path="weak-areas" element={<WeakAreasScreen />} />
-            <Route path="compare" element={<SessionCompareScreen />} />
-            <Route path="study-plans" element={<StudyPlansScreen />} />
-            <Route path="groups" element={<StudyGroupsScreen />} />
-            <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
-            <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
-            <Route path="profile" element={<ProfileScreen />} />
-            <Route path="friends" element={<FriendsScreen />} />
-            <Route path="feed" element={<FeedScreen />} />
-            <Route path="statuses" element={<StatusScreen />} />
-            <Route path="statuses/new" element={<StatusComposer />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        ) : (
+      {showTour && <OnboardingTour open={showTour} onComplete={handleTourComplete} />}
+      {isLoggedIn ? (
+        <NotificationProvider>
+          <ChatThemeProvider>
+            <Routes>
+              <Route path="/" element={<ProtectedLayout />}>
+                <Route index element={<DashboardScreen />} />
+                <Route path="practice" element={<HomeScreen />} />
+                <Route path="doc-quiz" element={<DocumentQuizScreen />} />
+                <Route path="quiz" element={<QuizScreen />} />
+                <Route path="exam-setup" element={<ExamSetupScreen />} />
+                <Route path="exam" element={<ExamSimScreen />} />
+                <Route path="results" element={<ResultsScreen />} />
+                <Route path="history" element={<HistoryScreen />} />
+                <Route path="bookmarks" element={<BookmarksScreen />} />
+                <Route path="progress" element={<ProgressScreen />} />
+                <Route path="search" element={<SearchScreen />} />
+                <Route path="achievements" element={<AchievementsScreen />} />
+                <Route path="import" element={<ImportQuestionsScreen />} />
+                <Route path="weak-areas" element={<WeakAreasScreen />} />
+                <Route path="compare" element={<SessionCompareScreen />} />
+                <Route path="study-plans" element={<StudyPlansScreen />} />
+                <Route path="groups" element={<StudyGroupsScreen />} />
+                <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
+                <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
+                <Route path="profile" element={<ProfileScreen />} />
+                <Route path="friends" element={<FriendsScreen />} />
+                <Route path="feed" element={<FeedScreen />} />
+                <Route path="statuses" element={<StatusScreen />} />
+                <Route path="statuses/new" element={<StatusComposer />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </ChatThemeProvider>
+        </NotificationProvider>
+      ) : (
+        <Routes>
+          <Route path="/login" element={<LoginScreen />} />
+          <Route path="/register" element={<RegisterScreen />} />
+          <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+          <Route path="/chat/:chatId" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+          <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
+          <Route path="/groups-chat/:groupId" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
+          <Route path="/groups-chat/:groupId/settings" element={<ProtectedFullScreen><GroupSettingsScreen /></ProtectedFullScreen>} />
+          <Route path="/fenbot" element={<ProtectedFullScreen><FenBot /></ProtectedFullScreen>} />
           <Route path="/" element={<LandingScreen />}>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-        )}
-      </Routes>
+        </Routes>
+      )}
     </Suspense>
   );
 }
