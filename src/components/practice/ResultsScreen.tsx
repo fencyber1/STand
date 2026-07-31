@@ -45,15 +45,18 @@ export default function ResultsScreen() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [funFact, setFunFact] = useState('');
-  const [funFactLoading, setFunFactLoading] = useState(true);
+  const [funFactLoading, setFunFactLoading] = useState(false);
 
   useEffect(() => {
     if (state?.topic && state?.sector) {
-      setFunFactLoading(true);
-      getTopicFunFact(state.topic, state.sector)
-        .then(setFunFact)
-        .catch(() => setFunFact(''))
-        .finally(() => setFunFactLoading(false));
+      const timer = setTimeout(() => {
+        setFunFactLoading(true);
+        getTopicFunFact(state.topic, state.sector)
+          .then(setFunFact)
+          .catch(() => setFunFact(''))
+          .finally(() => setFunFactLoading(false));
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [state?.topic, state?.sector]);
 
