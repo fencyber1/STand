@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, FileText, Wrench, Image, BookOpen, Calculator, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -66,13 +66,6 @@ For any subject structure knowledge at multiple layers: Surface Layer with defin
 You genuinely believe they can master this. You'll explain as many times as needed with fresh enthusiasm. You're fully present not rushing them. Their success genuinely matters to you. You've thought deeply about how to teach effectively. Nothing is too basic to explain clearly. You push them toward their potential while staying supportive. They can be confused and struggle without judgment. Your success is measured not by how much you know but by how effectively they learn. Be the mentor who changes how they think, not just what they know. Be the guide who helps them discover their own capability. Be the person who genuinely believes in their potential. Be FenBot - the elite educator who transforms learners into masters of their craft.
 
 IMAGE RULES: Always include [IMG: Wikipedia article title] tags when teaching topics that have visual representations. The query must be a valid English Wikipedia article title. Examples: [IMG: Mitosis], [IMG: DNA], [IMG: Photosynthesis], [IMG: Water cycle], [IMG: Neuron], [IMG: Pythagorean theorem], [IMG: Solar System], [IMG: Periodic table]. Include 1-3 images per response depending on the topic. Place each [IMG: tag on its own line.`;
-
-const TOOLS = [
-  { icon: BookOpen, label: 'Summarize', desc: 'Summarize a document or text', color: 'text-blue-400' },
-  { icon: Calculator, label: 'Solve', desc: 'Solve math problems step by step', color: 'text-green-400' },
-  { icon: FileText, label: 'Explain', desc: 'Explain any concept simply', color: 'text-purple-400' },
-  { icon: Image, label: 'Visualize', desc: 'Create diagrams and flowcharts', color: 'text-orange-400' },
-];
 
 const SUGGESTIONS = [
   { icon: '🎲', label: 'Surprise me', desc: 'Surprise me with a creative idea or story', topic: 'Tell me something surprising and interesting about science' },
@@ -239,15 +232,6 @@ function formatInline(text: string): string {
     .replace(/`(.+?)`/g, '<code class="bg-white/10 px-1.5 py-0.5 rounded text-indigo-300 text-xs font-mono">$1</code>');
 }
 
-function readFileContent(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-}
-
 export default function FenBot() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -258,8 +242,6 @@ export default function FenBot() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showTools, setShowTools] = useState(false);
-  const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -270,7 +252,6 @@ export default function FenBot() {
   const [transcript, setTranscript] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -432,10 +413,6 @@ export default function FenBot() {
     if (!convoId) convoId = createConversation();
 
     let finalText = text.trim();
-    if (attachedFile) {
-      finalText = `Attached file "${attachedFile.name}":\n\n${attachedFile.content}\n\n---\n\nMy question: ${finalText}`;
-      setAttachedFile(null);
-    }
 
     const userMsg: Message = { role: 'user', content: finalText };
     setInput('');
@@ -612,20 +589,6 @@ export default function FenBot() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (file.size > 500 * 1024) { alert('File must be under 500KB'); return; }
-    try {
-      const content = await readFileContent(file);
-      setAttachedFile({ name: file.name, content });
-      inputRef.current?.focus();
-    } catch {
-      alert('Could not read file');
-    }
-  };
-
   return (
     <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
       {/* Overlay */}
@@ -785,13 +748,6 @@ export default function FenBot() {
               {/* Input bar */}
               <div className="w-full max-w-lg mb-6">
                 <div className="relative bg-[#141926] rounded-2xl border border-white/5 overflow-hidden shadow-2xl shadow-black/40">
-                  {attachedFile && (
-                    <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-white/5">
-                      <FileText className="w-4 h-4 text-indigo-400" />
-                      <span className="text-xs text-white/60 truncate flex-1">{attachedFile.name}</span>
-                      <button onClick={() => setAttachedFile(null)} className="p-0.5 rounded hover:bg-white/10"><X className="w-3 h-3 text-white/40" /></button>
-                    </div>
-                  )}
                   <div className="flex items-center gap-2 px-4 py-2">
                     {listening && (
                       <div className="flex items-center gap-2 flex-1">
@@ -822,33 +778,7 @@ export default function FenBot() {
                       {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 px-4 pb-3">
-                    <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/30 text-xs transition-colors">
-                      <FileText size={12} /> Import file
-                    </button>
-                    <button onClick={() => setShowTools(!showTools)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors ${showTools ? 'bg-white/10 text-white/60' : 'bg-white/5 hover:bg-white/10 text-white/30'}`}>
-                      <Wrench size={12} /> Tools
-                    </button>
-                  </div>
                 </div>
-
-                {/* Tools menu */}
-                {showTools && (
-                  <div className="mt-2 bg-[#141926] rounded-xl border border-white/5 p-2 grid grid-cols-2 gap-1.5">
-                    {TOOLS.map((t) => {
-                      const Icon = t.icon;
-                      return (
-                        <button key={t.label} onClick={() => { setShowTools(false); sendMessage(`Use the ${t.label} tool: `); }} className="flex items-center gap-2 p-2.5 rounded-lg hover:bg-white/5 transition-colors text-left">
-                          <Icon className={`w-4 h-4 ${t.color}`} />
-                          <div>
-                            <p className="text-xs font-medium text-white/70">{t.label}</p>
-                            <p className="text-[10px] text-white/25">{t.desc}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
 
               {/* Suggestions */}
@@ -904,13 +834,6 @@ export default function FenBot() {
           <div className="relative z-10 px-4 pb-4 pt-2 shrink-0">
             <div className="max-w-3xl mx-auto">
               <div className="relative bg-[#141926] rounded-2xl border border-white/5 overflow-hidden shadow-2xl shadow-black/40">
-                {attachedFile && (
-                  <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-white/5">
-                    <FileText className="w-4 h-4 text-indigo-400" />
-                    <span className="text-xs text-white/60 truncate flex-1">{attachedFile.name}</span>
-                    <button onClick={() => setAttachedFile(null)} className="p-0.5 rounded hover:bg-white/10"><X className="w-3 h-3 text-white/40" /></button>
-                  </div>
-                )}
                 <div className="flex items-center gap-2 px-4 py-2">
                   {listening && (
                     <div className="flex items-center gap-2 flex-1">
@@ -946,8 +869,6 @@ export default function FenBot() {
           </div>
         )}
       </div>
-
-      <input ref={fileInputRef} type="file" accept=".txt,.pdf,.doc,.docx,.csv,.md,.json,.js,.ts,.py,.html,.css" className="hidden" onChange={handleFileImport} />
 
       {/* Settings Panel */}
       {showSettings && (
