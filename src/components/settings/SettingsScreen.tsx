@@ -8,6 +8,7 @@ import {
   Sun, Moon, Globe, Bell, User, HelpCircle, ChevronDown, Check, Info,
   Shield, Palette, Volume2, VolumeX, Bot,
 } from 'lucide-react';
+import ChatWallpaperPicker from './ChatWallpaperPicker';
 
 const FENBOT_SETTINGS_KEY = 'fenbot_settings';
 const SPEED_PRESETS = [
@@ -87,6 +88,7 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { user } = useAuth();
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showWallpaper, setShowWallpaper] = useState(false);
   const [fenbot, setFenbot] = useState<FenBotSettings>(loadFenBotSettings);
 
   const currentLang = LANGUAGES.find((l) => l.code === language);
@@ -103,6 +105,7 @@ export default function SettingsScreen() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-8">
+      <ChatWallpaperPicker open={showWallpaper} onClose={() => setShowWallpaper(false)} />
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Settings')}</h1>
 
       {/* Appearance */}
@@ -122,8 +125,7 @@ export default function SettingsScreen() {
         <Row
           icon={Palette}
           label={t('Chat Wallpaper')}
-          onClick={() => navigate('/profile')}
-          trailing={<span className="text-xs text-gray-400">{t('Profile')}</span>}
+          onClick={() => setShowWallpaper(true)}
         />
       </Section>
 
