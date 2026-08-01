@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext';
@@ -6,8 +6,49 @@ import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
 import {
   Sun, Moon, Globe, Bell, User, HelpCircle, ChevronDown, Check, Info,
-  Shield, Palette, Volume2, VolumeX, Eye, EyeOff,
+  Shield, Palette, Volume2, VolumeX, Bot,
 } from 'lucide-react';
+
+const FENBOT_SETTINGS_KEY = 'fenbot_settings';
+const SPEED_PRESETS = [
+  { label: 'Very slow', value: 400 },
+  { label: 'Slow', value: 200 },
+  { label: 'Medium', value: 80 },
+  { label: 'Fast', value: 30 },
+  { label: 'Very fast', value: 0 },
+];
+const FONT_SIZES = [12, 13, 14, 15, 16, 18, 20];
+const FONT_FAMILIES = [
+  { label: 'Default', value: 'inherit' },
+  { label: 'Serif', value: 'Georgia, serif' },
+  { label: 'Mono', value: 'ui-monospace, monospace' },
+  { label: 'Rounded', value: 'system-ui, -apple-system, sans-serif' },
+];
+
+interface FenBotSettings {
+  speed: number;
+  fontSize: number;
+  fontFamily: string;
+  tts: boolean;
+}
+
+function loadFenBotSettings(): FenBotSettings {
+  try {
+    const raw = localStorage.getItem(FENBOT_SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const validSpeeds = SPEED_PRESETS.map((p) => p.value);
+      if (!validSpeeds.includes(parsed.speed)) parsed.speed = 30;
+      if (typeof parsed.tts !== 'boolean') parsed.tts = true;
+      return parsed;
+    }
+  } catch {}
+  return { speed: 30, fontSize: 14, fontFamily: 'inherit', tts: true };
+}
+
+function saveFenBotSettings(s: FenBotSettings) {
+  try { localStorage.setItem(FENBOT_SETTINGS_KEY, JSON.stringify(s)); } catch {}
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -46,9 +87,19 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { user } = useAuth();
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [fenbot, setFenbot] = useState<FenBotSettings>(loadFenBotSettings);
 
   const currentLang = LANGUAGES.find((l) => l.code === language);
   const displayName = storage.getDisplayName() || user?.fullName || 'Student';
+
+  const updateFenBot = (patch: Partial<FenBotSettings>) => {
+    setFenbot((prev) => {
+      const next = { ...prev, ...patch };
+      saveFenBotSettings(next);
+      return next;
+    });
+    if (patch.tts === false) window.speechSynthesis?.cancel();
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-8">
@@ -114,6 +165,103 @@ export default function SettingsScreen() {
             ))}
           </div>
         )}
+      </Section>
+
+      {/* FenBot */}
+      <Section title="FenBot">
+        {/* Streaming Speed */}
+        <div className="px-6 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block">{t('Streaming Speed')}</label>
+          <div className="flex gap-1.5">
+            {SPEED_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                onClick={() => updateFenBot({ speed: p.value })}
+                className={`flex-1 py-2 rounded-lg text-[11px] font-medium transition-all ${
+                  fenbot.speed === p.value
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Font Size */}
+        <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+          <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block">{t('Font Size')}</label>
+          <div className="flex gap-1.5">
+            {FONT_SIZES.map((size) => (
+              <button
+                key={size}
+                onClick={() => updateFenBot({ fontSize: size })}
+                className={`flex-1 py-2 rounded-lg text-[11px] font-medium transition-all ${
+                  fenbot.fontSize === size
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Font Family */}
+        <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+          <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block">{t('Font Style')}</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {FONT_FAMILIES.map((f) => (
+              <button
+                key={f.label}
+                onClick={() => updateFenBot({ fontFamily: f.value })}
+                className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                  fenbot.fontFamily === f.value
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+                style={{ fontFamily: f.value }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* TTS */}
+        <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+          <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block">{t('Voice (Text-to-Speech)')}</label>
+          <button
+            onClick={() => updateFenBot({ tts: !fenbot.tts })}
+            className={`flex items-center gap-3 w-full py-3 px-4 rounded-xl text-sm font-medium transition-all ${
+              fenbot.tts
+                ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300'
+                : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500'
+            }`}
+          >
+            {fenbot.tts ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            <div className="text-left">
+              <p className={fenbot.tts ? 'text-primary-700 dark:text-primary-300' : 'text-gray-500 dark:text-gray-400'}>
+                {fenbot.tts ? t('Voice is ON') : t('Voice is OFF')}
+              </p>
+              <p className="text-[11px] opacity-60">
+                {fenbot.tts ? t('FenBot speaks responses aloud') : t('Click to enable voice')}
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* Preview */}
+        <div className="px-6 py-4">
+          <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block">{t('Preview')}</label>
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <p className="text-gray-600 dark:text-gray-400" style={{ fontSize: fenbot.fontSize, fontFamily: fenbot.fontFamily }}>
+              This is how your FenBot chat text will look.
+            </p>
+          </div>
+        </div>
       </Section>
 
       {/* Notifications */}
