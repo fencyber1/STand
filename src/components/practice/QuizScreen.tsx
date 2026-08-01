@@ -44,7 +44,9 @@ export default function QuizScreen() {
   const { questions, topic, timeLimit = 0, instantFeedback = false, speedRound = false } = state;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
+  const selectedAnswerRef = useRef<string | string[] | null>(null);
   const [textAnswer, setTextAnswer] = useState('');
+  const textAnswerRef = useRef('');
   const [showResult, setShowResult] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
   const resultsRef = useRef<Result[]>([]);
@@ -54,6 +56,13 @@ export default function QuizScreen() {
   const [deepExplanation, setDeepExplanation] = useState('');
   const [showDeep, setShowDeep] = useState(false);
   const [grading, setGrading] = useState(false);
+
+  useEffect(() => {
+    selectedAnswerRef.current = selectedAnswer;
+  }, [selectedAnswer]);
+  useEffect(() => {
+    textAnswerRef.current = textAnswer;
+  }, [textAnswer]);
 
   const current = questions[currentIndex];
   const [bookmarked, setBookmarked] = useState(() => storage.isBookmarked(current.id));
@@ -89,20 +98,34 @@ export default function QuizScreen() {
   const handleSubmit = useCallback(async () => {
     recordTiming();
     let result: Result;
-    const stripPrefix = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+
+    const extractLetter = (s: string): string | null => {
+      const m = s.trim().match(/^([A-Za-z])/);
+      return m ? m[1].toUpperCase() : null;
+    };
+    const stripContent = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
+    const answersMatch = (user: string, correct: string) => {
+      const uLetter = extractLetter(user);
+      const cLetter = extractLetter(correct);
+      if (uLetter && cLetter && uLetter === cLetter) return true;
+      return stripContent(user) === stripContent(correct);
+    };
+
+    const currentAnswer = selectedAnswerRef.current;
+    const currentText = textAnswerRef.current;
 
     if (current.type === 'MCQ') {
       const correctStr = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
-      const userAns = Array.isArray(selectedAnswer) ? selectedAnswer[0] : (selectedAnswer || '');
-      const isCorrect = stripPrefix(userAns) === stripPrefix(correctStr);
+      const userAns = Array.isArray(currentAnswer) ? currentAnswer[0] : (currentAnswer || '');
+      const isCorrect = answersMatch(userAns, correctStr);
       result = {
         questionId: current.id,
-        userAnswer: selectedAnswer || '',
+        userAnswer: currentAnswer || '',
         correct: isCorrect,
         explanation: current.explanation,
       };
     } else if (current.type === 'Theory') {
-      if (!textAnswer.trim()) {
+      if (!currentText.trim()) {
         result = { questionId: current.id, userAnswer: '', correct: false, explanation: current.explanation, score: 0 };
       } else {
         setGrading(true);
@@ -110,7 +133,7 @@ export default function QuizScreen() {
         try {
           const graded = await gradeTheoryAnswer({
             question: current.question,
-            studentAnswer: textAnswer,
+            studentAnswer: currentText,
             modelAnswer,
             subject: state.sector,
             level: state.level,
@@ -118,7 +141,7 @@ export default function QuizScreen() {
           });
           result = {
             questionId: current.id,
-            userAnswer: textAnswer,
+            userAnswer: currentText,
             correct: graded.score >= 50,
             explanation: current.explanation,
             score: graded.score,
@@ -126,7 +149,7 @@ export default function QuizScreen() {
           };
         } catch {
           const normalize = (s: string) => s.replace(/^[A-Za-z][.\s]+/, '').trim().toLowerCase();
-          const userNorm = normalize(textAnswer);
+          const userNorm = normalize(currentText);
           const correctNorm = normalize(modelAnswer);
           const userWords = new Set(userNorm.split(/\s+/));
           const correctWords = new Set(correctNorm.split(/\s+/));
@@ -134,25 +157,25 @@ export default function QuizScreen() {
           correctWords.forEach((w) => { if (userWords.has(w)) overlap++; });
           const ratio = correctWords.size > 0 ? overlap / correctWords.size : 0;
           const score = Math.round(Math.min(100, Math.max(20, ratio * 100)));
-          result = { questionId: current.id, userAnswer: textAnswer, correct: ratio >= 0.6, explanation: current.explanation, score };
+          result = { questionId: current.id, userAnswer: currentText, correct: ratio >= 0.6, explanation: current.explanation, score };
         }
         setGrading(false);
       }
     } else if (current.type === 'TrueFalse') {
       const correctStr = String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer);
-      const userAns = Array.isArray(selectedAnswer) ? selectedAnswer[0] : (selectedAnswer || '');
-      const isCorrect = stripPrefix(userAns) === stripPrefix(correctStr);
+      const userAns = Array.isArray(currentAnswer) ? currentAnswer[0] : (currentAnswer || '');
+      const isCorrect = answersMatch(userAns, correctStr);
       result = {
         questionId: current.id,
-        userAnswer: selectedAnswer || '',
+        userAnswer: currentAnswer || '',
         correct: isCorrect,
         explanation: current.explanation,
       };
     } else {
-      const isCorrect = textAnswer.trim().toLowerCase() === (current.correctAnswer as string).toLowerCase();
+      const isCorrect = currentText.trim().toLowerCase() === (current.correctAnswer as string).toLowerCase();
       result = {
         questionId: current.id,
-        userAnswer: textAnswer,
+        userAnswer: currentText,
         correct: isCorrect,
         explanation: current.explanation,
       };
@@ -162,7 +185,7 @@ export default function QuizScreen() {
     resultsRef.current = newResults;
     setResults(newResults);
     setShowResult(true);
-  }, [current, selectedAnswer, textAnswer, recordTiming]);
+  }, [current, recordTiming]);
 
   const handleNext = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -191,6 +214,7 @@ export default function QuizScreen() {
   const handleMCQSelect = (option: string) => {
     if (showResult) return;
     setSelectedAnswer(option);
+    selectedAnswerRef.current = option;
     if (instantFeedback && (current.type === 'MCQ' || current.type === 'TrueFalse')) {
       setTimeout(() => {
         handleSubmit();
@@ -529,7 +553,7 @@ export default function QuizScreen() {
           <div className="mb-6">
             <textarea
               value={textAnswer}
-              onChange={(e) => setTextAnswer(e.target.value)}
+              onChange={(e) => { setTextAnswer(e.target.value); textAnswerRef.current = e.target.value; }}
               disabled={showResult}
               placeholder={current.type === 'Theory' ? 'Type your answer here...' : 'Enter your answer...'}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition resize-none h-32"
