@@ -295,6 +295,13 @@ export default function SettingsScreen() {
         />
         <Row
           icon={Shield}
+          iconColor="bg-teal-500"
+          label={t('Privacy')}
+          onClick={() => navigate('/privacy')}
+          trailing={<span className="text-xs text-gray-400">{t('Settings')}</span>}
+        />
+        <Row
+          icon={Shield}
           iconColor="bg-red-500"
           label={t('Account Info')}
           trailing={<span className="text-xs text-gray-400">{user?.email}</span>}

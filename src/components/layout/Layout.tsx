@@ -178,7 +178,6 @@ export default function Layout() {
   const bottomItems: NavItem[] = [
     { to: '/profile', label: t('Profile'), icon: User },
     { to: '/settings', label: t('Settings'), icon: Settings },
-    { to: '/privacy', label: t('Privacy'), icon: Shield },
     { to: '/import', label: t('Import'), icon: Upload },
   ];
 
