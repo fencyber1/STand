@@ -79,7 +79,11 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
                 }`
               }
             >
-              <ItemIcon size={16} />
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                'shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700'
+              }`}>
+                <ItemIcon size={15} className="text-gray-500 dark:text-gray-300" />
+              </div>
               <span className="truncate">{label}</span>
             </NavLink>
           ))}
@@ -199,11 +203,15 @@ export default function Layout() {
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-            <LayoutDashboard size={16} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
+              <LayoutDashboard size={15} className="text-gray-500 dark:text-gray-300" />
+            </div>
             <span className="truncate">{t('Dashboard')}</span>
           </NavLink>
           <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-            <FenBotNavIcon size={16} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
+              <FenBotNavIcon size={15} />
+            </div>
             <span className="truncate">FenBot</span>
           </NavLink>
 
@@ -222,7 +230,9 @@ export default function Layout() {
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 mt-2 space-y-0.5">
             {bottomItems.map(({ to, label, icon: ItemIcon }) => (
               <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                <ItemIcon size={16} />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
+                  <ItemIcon size={15} className="text-gray-500 dark:text-gray-300" />
+                </div>
                 <span className="truncate">{label}</span>
               </NavLink>
             ))}
