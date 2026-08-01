@@ -145,7 +145,7 @@ export async function joinGroup(code: string, member: { uid: string; name: strin
   if (chatGroupId) {
     try {
       const { addGroupMember } = await import('./socialService');
-      await addGroupMember(chatGroupId, { uid: member.uid, name: member.name, photo: member.photoURL });
+      await addGroupMember(chatGroupId, { uid: member.uid, name: member.name, photo: member.photoURL }, member.uid);
     } catch (e) { console.error('Failed to add to chat group:', e); }
   }
 

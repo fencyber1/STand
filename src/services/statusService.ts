@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Status, StatusComment } from '../types';
+import { getUserPrivacy, type PrivacySettings } from './privacyService';
 
 function ts(): string {
   return new Date().toISOString();
@@ -161,4 +162,34 @@ export async function deleteExpiredStatuses(): Promise<void> {
     toDelete.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
     await batch.commit();
   }
+}
+
+// ── Privacy helpers ──
+
+export async function canSeeUserStatus(targetUid: string, viewerUid: string, areFriends: boolean): Promise<boolean> {
+  if (targetUid === viewerUid) return true;
+  const privacy = await getUserPrivacy(targetUid);
+  switch (privacy.status) {
+    case 'everyone': return true;
+    case 'friends': return areFriends;
+    case 'nobody': return false;
+    default: return true;
+  }
+}
+
+export async function canReshareStatus(targetUid: string): Promise<boolean> {
+  const privacy = await getUserPrivacy(targetUid);
+  return privacy.allowStatusResharing;
+}
+
+export async function filterVisibleStatuses(statuses: Status[], viewerUid: string, friendUids: Set<string>): Promise<Status[]> {
+  const results = await Promise.all(
+    statuses.map(async (s) => {
+      if (s.uid === viewerUid) return s;
+      const areFriends = friendUids.has(s.uid);
+      const canSee = await canSeeUserStatus(s.uid, viewerUid, areFriends);
+      return canSee ? s : null;
+    })
+  );
+  return results.filter((s): s is Status => s !== null);
 }

@@ -158,7 +158,7 @@ export default function GroupSettingsScreen() {
     if (!groupId || addingMember) return;
     setAddingMember(true);
     try {
-      await addGroupMember(groupId, { uid: friend.uid, name: friend.displayName, photo: friend.photoURL || null });
+      await addGroupMember(groupId, { uid: friend.uid, name: friend.displayName, photo: friend.photoURL || null }, user?.uid);
       setSuccess(`${t('Added')} ${friend.displayName}`);
       setTimeout(() => setSuccess(''), 2000);
     } catch { setError(t('Failed to add member')); }

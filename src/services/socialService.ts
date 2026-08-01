@@ -236,6 +236,14 @@ export async function removeFriend(myUid: string, friendUid: string): Promise<vo
   await batch.commit();
 }
 
+export async function checkAreFriends(uid1: string, uid2: string): Promise<boolean> {
+  const q1 = query(collection(db, 'friendRequests'), where('from', '==', uid1), where('to', '==', uid2));
+  const q2 = query(collection(db, 'friendRequests'), where('from', '==', uid2), where('to', '==', uid1));
+  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+  const all = [...snap1.docs, ...snap2.docs];
+  return all.some((d) => d.data().status === 'accepted');
+}
+
 export function subscribeToFriendRequests(uid: string, cb: (requests: FriendRequest[]) => void): () => void {
   const q1 = query(collection(db, 'friendRequests'), where('to', '==', uid));
   const q2 = query(collection(db, 'friendRequests'), where('from', '==', uid));
@@ -669,16 +677,26 @@ export async function createChatGroup(creator: { uid: string; name: string; phot
   return ref.id;
 }
 
-export async function addGroupMember(groupId: string, member: { uid: string; name: string; photo: string | null }): Promise<void> {
+export async function addGroupMember(groupId: string, member: { uid: string; name: string; photo: string | null }, adderUid?: string): Promise<{ success: boolean; error?: string }> {
   const snap = await getDoc(doc(db, 'chatGroups', groupId));
-  if (!snap.exists()) return;
+  if (!snap.exists()) return { success: false, error: 'Group not found' };
   const data = snap.data();
   const members = data.members || [];
   const memberUids = data.memberUids || [];
-  if (members.some((m: any) => m.uid === member.uid)) return;
+  if (members.some((m: any) => m.uid === member.uid)) return { success: false, error: 'Already a member' };
+
+  // Privacy check: can the adder add this member?
+  if (adderUid && adderUid !== member.uid) {
+    const { canAddToGroup } = await import('./privacyService');
+    const areFriends = await checkAreFriends(adderUid, member.uid);
+    const allowed = await canAddToGroup(member.uid, adderUid, areFriends);
+    if (!allowed) return { success: false, error: 'This user does not allow being added to groups' };
+  }
+
   members.push({ uid: member.uid, name: member.name, photoURL: member.photo, role: 'member' });
   memberUids.push(member.uid);
   await updateDoc(doc(db, 'chatGroups', groupId), { members, memberUids });
+  return { success: true };
 }
 
 export async function removeGroupMember(groupId: string, uid: string): Promise<void> {
