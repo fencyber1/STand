@@ -38,6 +38,7 @@ const GroupChatScreen = lazy(() => import('./components/social/GroupChatScreen')
 const GroupSettingsScreen = lazy(() => import('./components/social/GroupSettingsScreen'));
 const StatusScreen = lazy(() => import('./components/social/StatusScreen'));
 const StatusComposer = lazy(() => import('./components/social/StatusComposer'));
+const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen'));
 const FenBot = lazy(() => import('./components/practice/FenBot'));
 
 function RouteSpinner() {
@@ -133,6 +134,7 @@ export default function App() {
                 <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
                 <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
                 <Route path="profile" element={<ProfileScreen />} />
+                <Route path="settings" element={<SettingsScreen />} />
                 <Route path="friends" element={<FriendsScreen />} />
                 <Route path="feed" element={<FeedScreen />} />
                 <Route path="statuses" element={<StatusScreen />} />

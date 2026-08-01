@@ -27,6 +27,7 @@ import {
   Circle,
   ChevronDown,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -176,6 +177,7 @@ export default function Layout() {
 
   const bottomItems: NavItem[] = [
     { to: '/profile', label: t('Profile'), icon: User },
+    { to: '/settings', label: t('Settings'), icon: Settings },
     { to: '/import', label: t('Import'), icon: Upload },
   ];
 
