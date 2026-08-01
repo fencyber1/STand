@@ -90,12 +90,12 @@ function ExcludeFriendsPicker({ selected, onChange, friends }: {
   );
 }
 
-function Section({ title, icon: Icon, color, children }: { title: string; icon: any; color: string; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
       <div className="px-6 pt-5 pb-3 flex items-center gap-2">
-        <div className={`p-1.5 rounded-lg ${color}`}>
-          <Icon size={14} className="text-white" />
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-[2px_2px_6px_rgba(0,0,0,0.08),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[2px_2px_6px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
+          <Icon size={18} className="text-gray-500 dark:text-gray-300" />
         </div>
         <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{title}</h3>
       </div>
@@ -163,7 +163,7 @@ export default function PrivacySettingsScreen() {
       <p className="text-sm text-gray-500 dark:text-gray-400 -mt-4">{t('Control who can see your information')}</p>
 
       {/* ── Last Seen & Online ── */}
-      <Section title={t('Last Seen & Online')} icon={Clock} color="bg-blue-500">
+      <Section title={t('Last Seen & Online')} icon={Clock}>
         <Field label={t('Who can see my last seen')} description={t('Controls when others can see your last active time')}>
           <PrivacyRadio
             value={settings.lastSeen}
@@ -199,7 +199,7 @@ export default function PrivacySettingsScreen() {
       </Section>
 
       {/* ── Profile Info ── */}
-      <Section title={t('Profile Info')} icon={Eye} color="bg-purple-500">
+      <Section title={t('Profile Info')} icon={Eye}>
         <Field label={t('Who can see my profile picture')} description={t('Controls visibility of your avatar')}>
           <PrivacyRadio
             value={settings.profilePhoto}
@@ -232,7 +232,7 @@ export default function PrivacySettingsScreen() {
       </Section>
 
       {/* ── Status ── */}
-      <Section title={t('Status')} icon={Circle} color="bg-green-500">
+      <Section title={t('Status')} icon={Circle}>
         <Field label={t('Who can see my status')} description={t('Controls who sees your status updates')}>
           <PrivacyRadio
             value={settings.status}
@@ -258,7 +258,7 @@ export default function PrivacySettingsScreen() {
       </Section>
 
       {/* ── Messaging ── */}
-      <Section title={t('Messaging')} icon={MessageSquare} color="bg-amber-500">
+      <Section title={t('Messaging')} icon={MessageSquare}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('Read Receipts')}</p>
@@ -269,7 +269,7 @@ export default function PrivacySettingsScreen() {
       </Section>
 
       {/* ── Groups ── */}
-      <Section title={t('Groups')} icon={Users} color="bg-cyan-500">
+      <Section title={t('Groups')} icon={Users}>
         <Field label={t('Who can add me to groups')} description={t('Controls who can add you to study groups and group chats')}>
           <PrivacyRadio
             value={settings.groupAdd}

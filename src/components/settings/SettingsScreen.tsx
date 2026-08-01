@@ -59,8 +59,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ icon: Icon, iconColor, label, onClick, trailing }: {
-  icon: any; iconColor: string; label: string; onClick?: () => void; trailing?: React.ReactNode;
+function Row({ icon: Icon, iconBg, label, onClick, trailing }: {
+  icon: any; iconBg?: string; label: string; onClick?: () => void; trailing?: React.ReactNode;
 }) {
   return (
     <button
@@ -71,8 +71,8 @@ function Row({ icon: Icon, iconColor, label, onClick, trailing }: {
       } border-b border-gray-100 dark:border-gray-700 last:border-0`}
     >
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${iconColor}`}>
-          <Icon size={16} className="text-white" />
+        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-[2px_2px_6px_rgba(0,0,0,0.08),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[2px_2px_6px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700 ${iconBg || ''}`}>
+          <Icon size={20} className="text-gray-500 dark:text-gray-300" />
         </div>
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
       </div>
@@ -109,7 +109,6 @@ export default function SettingsScreen() {
       <Section title={t('Appearance')}>
         <Row
           icon={theme === 'dark' ? Moon : Sun}
-          iconColor={theme === 'dark' ? 'bg-indigo-500' : 'bg-amber-500'}
           label={t('Theme')}
           trailing={
             <button
@@ -122,7 +121,6 @@ export default function SettingsScreen() {
         />
         <Row
           icon={Palette}
-          iconColor="bg-pink-500"
           label={t('Chat Wallpaper')}
           onClick={() => navigate('/profile')}
           trailing={<span className="text-xs text-gray-400">{t('Profile')}</span>}
@@ -136,8 +134,8 @@ export default function SettingsScreen() {
           className="w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition border-b border-gray-100 dark:border-gray-700 last:border-0"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500">
-              <Globe size={16} className="text-white" />
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-[2px_2px_6px_rgba(0,0,0,0.08),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[2px_2px_6px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
+              <Globe size={20} className="text-gray-500 dark:text-gray-300" />
             </div>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('Language')}</span>
           </div>
@@ -268,7 +266,6 @@ export default function SettingsScreen() {
       <Section title={t('Notifications')}>
         <Row
           icon={Bell}
-          iconColor="bg-green-500"
           label={t('Notification Sounds')}
           trailing={
             <span className="text-xs text-gray-400 dark:text-gray-500">{t('On')}</span>
@@ -276,7 +273,6 @@ export default function SettingsScreen() {
         />
         <Row
           icon={Bell}
-          iconColor="bg-emerald-500"
           label={t('Push Notifications')}
           trailing={
             <span className="text-xs text-green-500 dark:text-green-400">{t('Enabled')}</span>
@@ -288,21 +284,18 @@ export default function SettingsScreen() {
       <Section title={t('Account')}>
         <Row
           icon={User}
-          iconColor="bg-purple-500"
           label={t('Edit Profile')}
           onClick={() => navigate('/profile')}
           trailing={<span className="text-xs text-gray-400">{displayName}</span>}
         />
         <Row
           icon={Shield}
-          iconColor="bg-teal-500"
           label={t('Privacy')}
           onClick={() => navigate('/privacy')}
           trailing={<span className="text-xs text-gray-400">{t('Settings')}</span>}
         />
         <Row
           icon={Shield}
-          iconColor="bg-red-500"
           label={t('Account Info')}
           trailing={<span className="text-xs text-gray-400">{user?.email}</span>}
         />
@@ -312,13 +305,11 @@ export default function SettingsScreen() {
       <Section title={t('Help & Support')}>
         <Row
           icon={HelpCircle}
-          iconColor="bg-cyan-500"
           label={t('Onboarding Tour')}
           onClick={() => window.dispatchEvent(new Event('start-tour'))}
         />
         <Row
           icon={Info}
-          iconColor="bg-gray-500"
           label={t('About')}
           trailing={
             <span className="text-xs text-gray-400">STand v1.0</span>
