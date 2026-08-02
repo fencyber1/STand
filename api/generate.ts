@@ -51,6 +51,7 @@ export default async function handler(req: any, res: any) {
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
           res.write(chunk);
+          if (typeof (res as any).flush === 'function') (res as any).flush();
         }
       } catch {
         // Stream interrupted

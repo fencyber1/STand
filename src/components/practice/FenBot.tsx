@@ -489,61 +489,63 @@ export default function FenBot() {
       let streamDone = false;
       let ttsBuffer = '';
 
+      const processLine = (line: string) => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === 'data: [DONE]') return;
+        let data = '';
+        if (trimmed.startsWith('data: ')) data = trimmed.slice(6);
+        else if (trimmed.startsWith('data:')) data = trimmed.slice(5);
+        else return;
+        if (!data) return;
+        try {
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            for (const ch of delta) {
+              tokenQueueRef.current.push(ch);
+            }
+          }
+        } catch {}
+      };
+
       // Cancel any ongoing speech when new message starts
       if (settings.tts) window.speechSynthesis?.cancel();
 
       if (renderTimerRef.current) clearInterval(renderTimerRef.current);
       renderTimerRef.current = setInterval(() => {
-        if (settings.speed === 0) {
-          if (tokenQueueRef.current.length > 0) {
-            const batch = tokenQueueRef.current.splice(0).join('');
-            fullReplyRef.current += batch;
-            setStreamingContent(fullReplyRef.current);
-            if (settings.tts) {
-              ttsBuffer += batch;
-              const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
-              if (sentences) {
-                const speakText = sentences.join(' ').trim();
-                if (speakText.length > 3) {
-                  const utt = new SpeechSynthesisUtterance(speakText);
-                  utt.rate = 1.0;
-                  utt.pitch = 1.0;
-                  window.speechSynthesis?.speak(utt);
-                }
-                ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
+        if (tokenQueueRef.current.length > 0) {
+          let newTokens = '';
+          if (settings.speed === 0) {
+            newTokens = tokenQueueRef.current.splice(0).join('');
+          } else {
+            newTokens = tokenQueueRef.current.shift()!;
+          }
+          fullReplyRef.current += newTokens;
+          setStreamingContent(fullReplyRef.current);
+          if (settings.tts) {
+            ttsBuffer += newTokens;
+            const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
+            if (sentences) {
+              const speakText = sentences.join(' ').trim();
+              if (speakText.length > 3) {
+                const utt = new SpeechSynthesisUtterance(speakText);
+                utt.rate = 1.0;
+                utt.pitch = 1.0;
+                window.speechSynthesis?.speak(utt);
               }
+              ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
             }
           }
-        } else {
-          if (tokenQueueRef.current.length > 0) {
-            const token = tokenQueueRef.current.shift()!;
-            fullReplyRef.current += token;
-            setStreamingContent(fullReplyRef.current);
-            if (settings.tts) {
-              ttsBuffer += token;
-              const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
-              if (sentences) {
-                const speakText = sentences.join(' ').trim();
-                if (speakText.length > 3) {
-                  const utt = new SpeechSynthesisUtterance(speakText);
-                  utt.rate = 1.0;
-                  utt.pitch = 1.0;
-                  window.speechSynthesis?.speak(utt);
-                }
-                ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
-              }
-            }
-          } else if (streamDone) {
-            if (settings.tts && ttsBuffer.trim().length > 3) {
-              const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
-              utt.rate = 1.0;
-              utt.pitch = 1.0;
-              window.speechSynthesis?.speak(utt);
-              ttsBuffer = '';
-            }
-            if (renderTimerRef.current) clearInterval(renderTimerRef.current);
-            renderTimerRef.current = null;
+        } else if (streamDone) {
+          if (settings.tts && ttsBuffer.trim().length > 3) {
+            const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
+            utt.rate = 1.0;
+            utt.pitch = 1.0;
+            window.speechSynthesis?.speak(utt);
+            ttsBuffer = '';
           }
+          if (renderTimerRef.current) clearInterval(renderTimerRef.current);
+          renderTimerRef.current = null;
         }
       }, settings.speed);
 
@@ -557,24 +559,17 @@ export default function FenBot() {
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('data: ')) continue;
-            const data = trimmed.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const json = JSON.parse(data);
-              const delta = json.choices?.[0]?.delta?.content;
-              if (delta) {
-                for (const ch of delta) {
-                  tokenQueueRef.current.push(ch);
-                }
-              }
-            } catch {}
+            processLine(line);
           }
         }
       } catch (streamErr) {
         // Stream interrupted — keep whatever was rendered so far
+      }
+
+      // Process any remaining buffer data
+      if (buffer.trim()) {
+        processLine(buffer);
+        buffer = '';
       }
 
       streamDone = true;
