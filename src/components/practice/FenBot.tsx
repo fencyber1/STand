@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -253,6 +253,7 @@ export default function FenBot() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const conversationsRef = useRef<Conversation[]>([]);
   const activeIdRef = useRef<string | null>(null);
 
@@ -302,6 +303,7 @@ export default function FenBot() {
     return () => {
       window.speechSynthesis?.cancel();
       recognitionRef.current?.abort();
+      abortRef.current?.abort();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (renderTimerRef.current) clearInterval(renderTimerRef.current);
     };
@@ -411,6 +413,14 @@ export default function FenBot() {
     });
   }, [activeId, uid]);
 
+  const stopGenerating = useCallback(() => {
+    abortRef.current?.abort();
+    if (renderTimerRef.current) { clearInterval(renderTimerRef.current); renderTimerRef.current = null; }
+    window.speechSynthesis?.cancel();
+    setLoading(false);
+    setTimeout(() => setStreamingContent(''), 100);
+  }, []);
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     window.speechSynthesis?.cancel();
@@ -424,6 +434,10 @@ export default function FenBot() {
     setInput('');
     setLoading(true);
     setStreamingContent('');
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let fullReply = '';
 
     updateAndSave((prev) =>
       prev.map((c) => {
@@ -450,6 +464,7 @@ export default function FenBot() {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ model: 'meta/llama-3.1-8b-instruct', messages: apiMessages, temperature: 0.7, max_tokens: 4096, stream: true }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -464,7 +479,6 @@ export default function FenBot() {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let fullReply = '';
       let tokenQueue: string[] = [];
       let streamDone = false;
       let ttsBuffer = '';
@@ -579,15 +593,27 @@ export default function FenBot() {
           })
         );
       }
-    } catch {
-      // Only show error if we have no partial content
-      updateAndSave((prev) =>
-        prev.map((c) => {
-          if (c.id !== convoId) return c;
-          return { ...c, messages: [...c.messages, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }], updatedAt: Date.now() };
-        })
-      );
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // User stopped — save whatever partial content was rendered
+        if (fullReply) {
+          updateAndSave((prev) =>
+            prev.map((c) => {
+              if (c.id !== convoId) return c;
+              return { ...c, messages: [...c.messages, { role: 'assistant', content: fullReply }], updatedAt: Date.now() };
+            })
+          );
+        }
+      } else {
+        updateAndSave((prev) =>
+          prev.map((c) => {
+            if (c.id !== convoId) return c;
+            return { ...c, messages: [...c.messages, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }], updatedAt: Date.now() };
+          })
+        );
+      }
     } finally {
+      abortRef.current = null;
       setLoading(false);
       setTimeout(() => setStreamingContent(''), 100);
     }
@@ -782,9 +808,15 @@ export default function FenBot() {
                         <Mic className={`w-4 h-4 ${listening ? 'text-white animate-pulse' : 'text-white/60'}`} />
                       </button>
                     )}
-                    <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading} className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
-                      {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
-                    </button>
+                    {loading ? (
+                      <button onClick={stopGenerating} className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center transition-all flex-shrink-0 shadow-lg shadow-red-500/30" title="Stop generating">
+                        <StopCircle className="w-4 h-4 text-white" />
+                      </button>
+                    ) : (
+                      <button onClick={() => sendMessage(input)} disabled={!input.trim()} className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
+                        <ArrowUp className="w-4 h-4 text-white" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -868,9 +900,15 @@ export default function FenBot() {
                       <Mic className={`w-4 h-4 ${listening ? 'text-white animate-pulse' : 'text-white/60'}`} />
                     </button>
                   )}
-                  <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading} className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
-                    {loading ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <ArrowUp className="w-4 h-4 text-white" />}
-                  </button>
+                  {loading ? (
+                    <button onClick={stopGenerating} className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center transition-all flex-shrink-0 shadow-lg shadow-red-500/30" title="Stop generating">
+                      <StopCircle className="w-4 h-4 text-white" />
+                    </button>
+                  ) : (
+                    <button onClick={() => sendMessage(input)} disabled={!input.trim()} className="w-8 h-8 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0">
+                      <ArrowUp className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
