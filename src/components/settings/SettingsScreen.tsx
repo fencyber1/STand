@@ -313,6 +313,7 @@ export default function SettingsScreen() {
         <Row
           icon={Info}
           label={t('About')}
+          onClick={() => navigate('/about')}
           trailing={
             <span className="text-xs text-gray-400">STand v1.0</span>
           }

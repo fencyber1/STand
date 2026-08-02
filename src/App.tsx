@@ -40,6 +40,7 @@ const StatusScreen = lazy(() => import('./components/social/StatusScreen'));
 const StatusComposer = lazy(() => import('./components/social/StatusComposer'));
 const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen'));
 const PrivacySettingsScreen = lazy(() => import('./components/settings/PrivacySettingsScreen'));
+const AboutScreen = lazy(() => import('./components/settings/AboutScreen'));
 const FenBot = lazy(() => import('./components/practice/FenBot'));
 
 function RouteSpinner() {
@@ -137,6 +138,7 @@ export default function App() {
                 <Route path="profile" element={<ProfileScreen />} />
                 <Route path="settings" element={<SettingsScreen />} />
                 <Route path="privacy" element={<PrivacySettingsScreen />} />
+                <Route path="about" element={<AboutScreen />} />
                 <Route path="friends" element={<FriendsScreen />} />
                 <Route path="feed" element={<FeedScreen />} />
                 <Route path="statuses" element={<StatusScreen />} />
