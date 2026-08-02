@@ -25,6 +25,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // Don't intercept Firebase/FCM requests
+  if (event.request.url.includes('firebaseio.com') || event.request.url.includes('firebase') || event.request.url.includes('gstatic.com')) {
+    return;
+  }
+
   // Network-first for API calls
   if (event.request.url.includes('/api/') || event.request.url.includes('nvidia')) {
     event.respondWith(

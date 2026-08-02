@@ -12,6 +12,7 @@ import { auth, googleProvider } from '../services/firebase';
 import { storage } from '../services/storage';
 import { loadUserDataFromFirestore, saveUserDataToFirestore, scheduleSync } from '../services/firestoreSync';
 import { upsertUserProfile } from '../services/socialService';
+import { requestPushPermission } from '../services/pushService';
 
 interface AuthUser {
   uid: string;
@@ -128,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: firebaseUser.email || '',
           status: 'Available',
         }).catch(() => {});
+
+        // Request push notification permission
+        requestPushPermission(firebaseUser.uid).catch(() => {});
 
         setUser(mapped);
       } else {
