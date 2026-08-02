@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { ChatTheme } from '../types';
 import { storage } from '../services/storage';
 
@@ -191,6 +191,13 @@ export function ChatThemeProvider({ children }: { children: ReactNode }) {
   const removeWallpaper = useCallback(() => {
     setWallpaperState(null);
     storage.removeChatWallpaper();
+  }, []);
+
+  // Sync wallpaper when changed from Settings picker
+  useEffect(() => {
+    const handler = () => setWallpaperState(storage.getChatWallpaper());
+    window.addEventListener('chat-wallpaper-changed', handler);
+    return () => window.removeEventListener('chat-wallpaper-changed', handler);
   }, []);
 
   return (

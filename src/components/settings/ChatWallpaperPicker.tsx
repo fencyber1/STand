@@ -33,11 +33,13 @@ export default function ChatWallpaperPicker({ open, onClose }: Props) {
   const selectPreset = (gradient: string) => {
     storage.setChatWallpaper(gradient);
     setCurrent(gradient);
+    window.dispatchEvent(new Event('chat-wallpaper-changed'));
   };
 
   const selectImage = (dataUrl: string) => {
     storage.setChatWallpaper(dataUrl);
     setCurrent(dataUrl);
+    window.dispatchEvent(new Event('chat-wallpaper-changed'));
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,6 +58,7 @@ export default function ChatWallpaperPicker({ open, onClose }: Props) {
   const removeWallpaper = () => {
     storage.removeChatWallpaper();
     setCurrent(null);
+    window.dispatchEvent(new Event('chat-wallpaper-changed'));
   };
 
   const isActive = (val: string) => current === val;

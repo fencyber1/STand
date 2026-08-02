@@ -207,7 +207,15 @@ export default function ChatScreen() {
   if (!chatId) {
     return (
       <div className="h-full relative overflow-y-auto" style={{ background: theme.gradient }}>
-        {wallpaper && <div className="fixed inset-0 opacity-20 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
+        {wallpaper && (
+          <div className="fixed inset-0 opacity-20 pointer-events-none">
+            {wallpaper.startsWith('linear-gradient') || wallpaper.startsWith('radial-gradient') ? (
+              <div className="w-full h-full" style={{ background: wallpaper }} />
+            ) : (
+              <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+            )}
+          </div>
+        )}
         <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
             <div className="flex items-center gap-3">
@@ -266,7 +274,15 @@ export default function ChatScreen() {
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden" style={{ background: theme.gradient }}>
-      {wallpaper && <div className="absolute inset-0 opacity-15 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
+      {wallpaper && (
+        <div className="absolute inset-0 opacity-15 pointer-events-none">
+          {wallpaper.startsWith('linear-gradient') || wallpaper.startsWith('radial-gradient') ? (
+            <div className="w-full h-full" style={{ background: wallpaper }} />
+          ) : (
+            <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+          )}
+        </div>
+      )}
 
       {/* Header */}
       <div className={`relative z-10 ${theme.headerBg} px-4 py-3 flex items-center gap-3 shrink-0`}>

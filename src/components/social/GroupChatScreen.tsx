@@ -236,7 +236,15 @@ export default function GroupChatScreen() {
   if (!groupId) {
     return (
       <div className="h-full relative overflow-y-auto" style={{ background: theme.gradient }}>
-        {wallpaper && <div className="fixed inset-0 opacity-20 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
+        {wallpaper && (
+          <div className="fixed inset-0 opacity-20 pointer-events-none">
+            {wallpaper.startsWith('linear-gradient') || wallpaper.startsWith('radial-gradient') ? (
+              <div className="w-full h-full" style={{ background: wallpaper }} />
+            ) : (
+              <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+            )}
+          </div>
+        )}
         <div className="relative max-w-2xl mx-auto p-4">
           <div className="flex items-center justify-between mb-6 pt-2">
             <div className="flex items-center gap-3">
@@ -324,7 +332,15 @@ export default function GroupChatScreen() {
 
   return (
     <div className="flex h-full relative overflow-hidden" style={{ background: theme.gradient }}>
-      {wallpaper && <div className="absolute inset-0 opacity-15 pointer-events-none"><img src={wallpaper} alt="" className="w-full h-full object-cover" /></div>}
+      {wallpaper && (
+        <div className="absolute inset-0 opacity-15 pointer-events-none">
+          {wallpaper.startsWith('linear-gradient') || wallpaper.startsWith('radial-gradient') ? (
+            <div className="w-full h-full" style={{ background: wallpaper }} />
+          ) : (
+            <img src={wallpaper} alt="" className="w-full h-full object-cover" />
+          )}
+        </div>
+      )}
 
       <div className="relative z-10 flex flex-col flex-1 min-w-0 min-h-0">
         {/* Header */}
