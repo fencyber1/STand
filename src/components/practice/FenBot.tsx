@@ -254,6 +254,8 @@ export default function FenBot() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const tokenQueueRef = useRef<string[]>([]);
+  const fullReplyRef = useRef('');
   const conversationsRef = useRef<Conversation[]>([]);
   const activeIdRef = useRef<string | null>(null);
 
@@ -414,6 +416,10 @@ export default function FenBot() {
   }, [activeId, uid]);
 
   const stopGenerating = useCallback(() => {
+    // Drain remaining tokens into fullReply before stopping
+    if (tokenQueueRef.current.length > 0) {
+      fullReplyRef.current += tokenQueueRef.current.splice(0).join('');
+    }
     abortRef.current?.abort();
     if (renderTimerRef.current) { clearInterval(renderTimerRef.current); renderTimerRef.current = null; }
     window.speechSynthesis?.cancel();
@@ -437,7 +443,8 @@ export default function FenBot() {
 
     const controller = new AbortController();
     abortRef.current = controller;
-    let fullReply = '';
+    fullReplyRef.current = '';
+    tokenQueueRef.current = [];
 
     updateAndSave((prev) =>
       prev.map((c) => {
@@ -479,7 +486,6 @@ export default function FenBot() {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let tokenQueue: string[] = [];
       let streamDone = false;
       let ttsBuffer = '';
 
@@ -489,11 +495,10 @@ export default function FenBot() {
       if (renderTimerRef.current) clearInterval(renderTimerRef.current);
       renderTimerRef.current = setInterval(() => {
         if (settings.speed === 0) {
-          if (tokenQueue.length > 0) {
-            const batch = tokenQueue.splice(0).join('');
-            fullReply += batch;
-            setStreamingContent(fullReply);
-            // TTS: accumulate and speak sentences
+          if (tokenQueueRef.current.length > 0) {
+            const batch = tokenQueueRef.current.splice(0).join('');
+            fullReplyRef.current += batch;
+            setStreamingContent(fullReplyRef.current);
             if (settings.tts) {
               ttsBuffer += batch;
               const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
@@ -510,11 +515,10 @@ export default function FenBot() {
             }
           }
         } else {
-          if (tokenQueue.length > 0) {
-            const token = tokenQueue.shift()!;
-            fullReply += token;
-            setStreamingContent(fullReply);
-            // TTS: accumulate and speak sentences
+          if (tokenQueueRef.current.length > 0) {
+            const token = tokenQueueRef.current.shift()!;
+            fullReplyRef.current += token;
+            setStreamingContent(fullReplyRef.current);
             if (settings.tts) {
               ttsBuffer += token;
               const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
@@ -530,7 +534,6 @@ export default function FenBot() {
               }
             }
           } else if (streamDone) {
-            // Speak any remaining buffer
             if (settings.tts && ttsBuffer.trim().length > 3) {
               const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
               utt.rate = 1.0;
@@ -564,7 +567,7 @@ export default function FenBot() {
               const delta = json.choices?.[0]?.delta?.content;
               if (delta) {
                 for (const ch of delta) {
-                  tokenQueue.push(ch);
+                  tokenQueueRef.current.push(ch);
                 }
               }
             } catch {}
@@ -579,28 +582,33 @@ export default function FenBot() {
       // Wait for queue to drain
       await new Promise<void>((resolve) => {
         const check = setInterval(() => {
-          if (tokenQueue.length === 0 || !renderTimerRef.current) { clearInterval(check); resolve(); }
+          if (tokenQueueRef.current.length === 0 || !renderTimerRef.current) { clearInterval(check); resolve(); }
         }, 50);
         setTimeout(() => { clearInterval(check); resolve(); }, 30000);
       });
 
       // Save whatever we got (even partial)
-      if (fullReply) {
+      if (fullReplyRef.current) {
+        const saved = fullReplyRef.current;
         updateAndSave((prev) =>
           prev.map((c) => {
             if (c.id !== convoId) return c;
-            return { ...c, messages: [...c.messages, { role: 'assistant', content: fullReply }], updatedAt: Date.now() };
+            return { ...c, messages: [...c.messages, { role: 'assistant', content: saved }], updatedAt: Date.now() };
           })
         );
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        // User stopped — save whatever partial content was rendered
-        if (fullReply) {
+        // User stopped — drain remaining tokens and save
+        if (tokenQueueRef.current.length > 0) {
+          fullReplyRef.current += tokenQueueRef.current.splice(0).join('');
+        }
+        if (fullReplyRef.current) {
+          const saved = fullReplyRef.current;
           updateAndSave((prev) =>
             prev.map((c) => {
               if (c.id !== convoId) return c;
-              return { ...c, messages: [...c.messages, { role: 'assistant', content: fullReply }], updatedAt: Date.now() };
+              return { ...c, messages: [...c.messages, { role: 'assistant', content: saved }], updatedAt: Date.now() };
             })
           );
         }
