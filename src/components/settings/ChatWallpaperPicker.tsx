@@ -4,17 +4,17 @@ import { storage } from '../../services/storage';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const PRESET_WALLPAPERS = [
+  { id: 'blue-neon-tubes', gradient: 'radial-gradient(ellipse at 20% 50%, #0044cc 0%, transparent 50%), radial-gradient(ellipse at 80% 60%, #0033aa 0%, transparent 45%), radial-gradient(ellipse at 50% 80%, #0055ee 0%, transparent 40%), linear-gradient(180deg, #000000 0%, #000a1a 100%)', label: 'Blue Neon Tubes' },
+  { id: 'glass-abstract', gradient: 'radial-gradient(ellipse at 40% 40%, rgba(180,120,200,0.4) 0%, transparent 50%), radial-gradient(ellipse at 60% 50%, rgba(200,100,80,0.3) 0%, transparent 45%), radial-gradient(ellipse at 50% 60%, rgba(100,80,160,0.3) 0%, transparent 40%), linear-gradient(160deg, #0a0008 0%, #1a0a15 50%, #000000 100%)', label: 'Glass Abstract' },
+  { id: 'dark-geometric', gradient: 'linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 25%, #1a1a1a 50%, #c0392b 55%, #e0e0e0 60%, #2d2d2d 70%, #1a1a1a 100%)', label: 'Dark Geometric' },
+  { id: 'fire-swirl', gradient: 'radial-gradient(ellipse at 55% 45%, #ff6600 0%, #cc3300 25%, transparent 55%), radial-gradient(ellipse at 45% 55%, #ff8800 0%, #993300 30%, transparent 50%), linear-gradient(160deg, #000000 0%, #0a0020 40%, #1a0040 70%, #000000 100%)', label: 'Fire Swirl' },
+  { id: 'blue-wave', gradient: 'radial-gradient(ellipse at 30% 60%, #0055ff 0%, transparent 50%), radial-gradient(ellipse at 70% 40%, #0033cc 0%, transparent 45%), linear-gradient(135deg, #000000 0%, #001133 50%, #000000 100%)', label: 'Blue Wave' },
+  { id: 'blue-gradient', gradient: 'radial-gradient(ellipse at 60% 50%, #0066ff 0%, transparent 55%), radial-gradient(ellipse at 30% 70%, #0044cc 0%, transparent 50%), linear-gradient(145deg, #000833 0%, #001144 40%, #000a2a 100%)', label: 'Blue Gradient' },
+  { id: 'blue-horizon', gradient: 'radial-gradient(ellipse at 50% 30%, #0066ff 0%, transparent 60%), linear-gradient(180deg, #000000 0%, #001133 40%, #003366 70%, #000000 100%)', label: 'Blue Horizon' },
+  { id: 'blue-streak', gradient: 'radial-gradient(ellipse at 40% 50%, #00aaff 0%, transparent 30%), radial-gradient(ellipse at 45% 50%, #0066cc 0%, transparent 40%), linear-gradient(160deg, #000000 0%, #001133 60%, #000000 100%)', label: 'Blue Streak' },
+  { id: 'blue-dune', gradient: 'radial-gradient(ellipse at 50% 70%, #0044cc 0%, transparent 55%), radial-gradient(ellipse at 60% 50%, #003399 0%, transparent 50%), linear-gradient(180deg, #000822 0%, #001144 50%, #000033 100%)', label: 'Blue Dune' },
   { id: 'sunset-waves', gradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #e94560 100%)', label: 'Sunset Waves' },
-  { id: 'dark-flow', gradient: 'linear-gradient(160deg, #0a0a0a 0%, #1a1a2e 40%, #e2703a 70%, #0a0a0a 100%)', label: 'Dark Flow' },
-  { id: 'midnight-leaf', gradient: 'linear-gradient(145deg, #0d1117 0%, #161b22 30%, #21262d 60%, #30363d 100%)', label: 'Midnight Leaf' },
-  { id: 'abstract-red', gradient: 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 40%, #8b3a3a 70%, #2d2d2d 100%)', label: 'Abstract Red' },
   { id: 'purple-glow', gradient: 'linear-gradient(160deg, #0a0015 0%, #1a0033 30%, #6b21a8 60%, #0a0015 100%)', label: 'Purple Glow' },
-  { id: 'blue-neon', gradient: 'linear-gradient(145deg, #000000 0%, #001133 40%, #0066ff 70%, #000000 100%)', label: 'Blue Neon' },
-  { id: 'fire-dark', gradient: 'linear-gradient(135deg, #0a0a0a 0%, #1a0a00 30%, #ff6600 60%, #0a0a0a 100%)', label: 'Fire Dark' },
-  { id: 'ocean-dark', gradient: 'linear-gradient(160deg, #000428 0%, #001845 40%, #001d3d 70%, #000428 100%)', label: 'Ocean Dark' },
-  { id: 'aurora', gradient: 'linear-gradient(135deg, #0a0a0a 0%, #1a0033 25%, #00ff88 50%, #0066ff 75%, #0a0a0a 100%)', label: 'Aurora' },
-  { id: 'rose-dark', gradient: 'linear-gradient(145deg, #1a0a15 0%, #2d1025 40%, #8b2252 70%, #1a0a15 100%)', label: 'Rose Dark' },
-  { id: 'emerald-night', gradient: 'linear-gradient(160deg, #001a00 0%, #003300 40%, #006633 70%, #001a00 100%)', label: 'Emerald Night' },
   { id: 'void', gradient: 'linear-gradient(180deg, #000000 0%, #0a0a0a 50%, #111111 100%)', label: 'Void' },
 ];
 
