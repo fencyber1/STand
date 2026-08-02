@@ -5,8 +5,8 @@
   "description": "AI-powered exam practice platform with personalized question generation, study plans, multiplayer quizzes, and FenBot AI tutor.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0e1a",
-  "theme_color": "#6366f1",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "any",
   "categories": ["education", "productivity"],
   "icons": [
