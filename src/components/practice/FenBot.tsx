@@ -536,25 +536,29 @@ export default function FenBot() {
               ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
             }
           }
-        } else if (streamDone) {
-          if (settings.tts && ttsBuffer.trim().length > 3) {
-            const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
-            utt.rate = 1.0;
-            utt.pitch = 1.0;
-            window.speechSynthesis?.speak(utt);
-            ttsBuffer = '';
-          }
-          if (renderTimerRef.current) clearInterval(renderTimerRef.current);
-          renderTimerRef.current = null;
         }
       }, settings.speed);
 
+      let lastChunkTime = Date.now();
+      const STALL_TIMEOUT = 8000;
+
       try {
         while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          const result = await Promise.race([
+            reader.read(),
+            new Promise<{ done: true; value: undefined }>((resolve) => {
+              const check = setInterval(() => {
+                if (Date.now() - lastChunkTime > STALL_TIMEOUT) {
+                  clearInterval(check);
+                  resolve({ done: true, value: undefined });
+                }
+              }, 1000);
+            }),
+          ]);
+          if (result.done) break;
+          lastChunkTime = Date.now();
 
-          buffer += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(result.value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
@@ -574,13 +578,25 @@ export default function FenBot() {
 
       streamDone = true;
 
-      // Wait for queue to drain
+      // Wait for queue to fully drain (only resolve when queue is truly empty)
       await new Promise<void>((resolve) => {
         const check = setInterval(() => {
-          if (tokenQueueRef.current.length === 0 || !renderTimerRef.current) { clearInterval(check); resolve(); }
-        }, 50);
+          if (tokenQueueRef.current.length === 0) { clearInterval(check); resolve(); }
+        }, 30);
         setTimeout(() => { clearInterval(check); resolve(); }, 30000);
       });
+
+      // Clean up render timer
+      if (renderTimerRef.current) { clearInterval(renderTimerRef.current); renderTimerRef.current = null; }
+
+      // Speak any remaining TTS buffer
+      if (settings.tts && ttsBuffer.trim().length > 3) {
+        const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
+        utt.rate = 1.0;
+        utt.pitch = 1.0;
+        window.speechSynthesis?.speak(utt);
+        ttsBuffer = '';
+      }
 
       // Save whatever we got (even partial)
       if (fullReplyRef.current) {
