@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle, RotateCw, Copy, Check, Clock } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -20,6 +20,7 @@ function getHeaders(): Record<string, string> {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  createdAt?: number;
 }
 
 interface Conversation {
@@ -248,6 +249,9 @@ export default function FenBot() {
   const [showSettings, setShowSettings] = useState(false);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -431,7 +435,7 @@ export default function FenBot() {
 
     let finalText = text.trim();
 
-    const userMsg: Message = { role: 'user', content: finalText };
+    const userMsg: Message = { role: 'user', content: finalText, createdAt: Date.now() };
     setInput('');
     setLoading(true);
     setStreamingContent('');
@@ -604,7 +608,7 @@ export default function FenBot() {
         updateAndSave((prev) =>
           prev.map((c) => {
             if (c.id !== convoId) return c;
-            return { ...c, messages: [...c.messages, { role: 'assistant', content: saved }], updatedAt: Date.now() };
+            return { ...c, messages: [...c.messages, { role: 'assistant', content: saved, createdAt: Date.now() }], updatedAt: Date.now() };
           })
         );
       }
@@ -616,7 +620,7 @@ export default function FenBot() {
           updateAndSave((prev) =>
             prev.map((c) => {
               if (c.id !== convoId) return c;
-              return { ...c, messages: [...c.messages, { role: 'assistant', content: saved }], updatedAt: Date.now() };
+              return { ...c, messages: [...c.messages, { role: 'assistant', content: saved, createdAt: Date.now() }], updatedAt: Date.now() };
             })
           );
         }
@@ -624,7 +628,7 @@ export default function FenBot() {
         updateAndSave((prev) =>
           prev.map((c) => {
             if (c.id !== convoId) return c;
-            return { ...c, messages: [...c.messages, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }], updatedAt: Date.now() };
+              return { ...c, messages: [...c.messages, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.', createdAt: Date.now() }], updatedAt: Date.now() };
           })
         );
       }
@@ -634,6 +638,42 @@ export default function FenBot() {
       setTimeout(() => setStreamingContent(''), 100);
     }
   };
+
+  const handleCopy = useCallback((content: string, idx: number) => {
+    navigator.clipboard.writeText(content).catch(() => {});
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  }, []);
+
+  const handleRegenerate = useCallback((msgIdx: number) => {
+    if (loading) return;
+    const convo = conversations.find((c) => c.id === activeId);
+    if (!convo) return;
+    const userMsg = convo.messages[msgIdx - 1];
+    if (!userMsg || userMsg.role !== 'user') return;
+    // Remove the assistant message at msgIdx
+    updateAndSave((prev) =>
+      prev.map((c) => {
+        if (c.id !== activeId) return c;
+        return { ...c, messages: c.messages.filter((_, i) => i !== msgIdx), updatedAt: Date.now() };
+      })
+    );
+    // Re-send the user message
+    setTimeout(() => sendMessage(userMsg.content), 100);
+  }, [loading, conversations, activeId, updateAndSave, sendMessage]);
+
+  const handleEditSave = useCallback((msgIdx: number) => {
+    if (!editContent.trim()) return;
+    updateAndSave((prev) =>
+      prev.map((c) => {
+        if (c.id !== activeId) return c;
+        const msgs = c.messages.map((m, i) => i === msgIdx ? { ...m, content: editContent.trim() } : m);
+        return { ...c, messages: msgs, updatedAt: Date.now() };
+      })
+    );
+    setEditingIdx(null);
+    setEditContent('');
+  }, [editContent, activeId, updateAndSave]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -859,9 +899,57 @@ export default function FenBot() {
                         <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
                       </div>
                     )}
-                    <div className="text-sm leading-relaxed">
-                      {msg.role === 'assistant' ? <div className="space-y-0">{parseMarkdown(msg.content)}</div> : <TwemojiText className="text-white">{msg.content}</TwemojiText>}
-                    </div>
+                    {editingIdx === idx ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none resize-none"
+                          rows={4}
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(idx); } if (e.key === 'Escape') { setEditingIdx(null); setEditContent(''); } }}
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => { setEditingIdx(null); setEditContent(''); }} className="px-3 py-1.5 rounded-lg text-xs text-white/50 hover:bg-white/10">Cancel</button>
+                          <button onClick={() => handleEditSave(idx)} className="px-3 py-1.5 rounded-lg text-xs bg-indigo-500 text-white hover:bg-indigo-400">Save</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm leading-relaxed">
+                        {msg.role === 'assistant' ? <div className="space-y-0">{parseMarkdown(msg.content)}</div> : <TwemojiText className="text-white">{msg.content}</TwemojiText>}
+                      </div>
+                    )}
+                    {msg.role === 'assistant' && !loading && editingIdx !== idx && (
+                      <div className="flex items-center gap-1 mt-2 pt-1 border-t border-white/5">
+                        <button
+                          onClick={() => handleRegenerate(idx)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                          title="Regenerate"
+                        >
+                          <RotateCw className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
+                        </button>
+                        <button
+                          onClick={() => handleCopy(msg.content, idx)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                          title="Copy"
+                        >
+                          {copiedIdx === idx ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />}
+                        </button>
+                        <button
+                          onClick={() => { setEditingIdx(idx); setEditContent(msg.content); }}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
+                        </button>
+                        {msg.createdAt && (
+                          <span className="ml-auto flex items-center gap-1 text-[10px] text-white/20">
+                            <Clock className="w-3 h-3" />
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
