@@ -919,15 +919,17 @@ export default function FenBot() {
                         {msg.role === 'assistant' ? <div className="space-y-0">{parseMarkdown(msg.content)}</div> : <TwemojiText className="text-white">{msg.content}</TwemojiText>}
                       </div>
                     )}
-                    {msg.role === 'assistant' && !loading && editingIdx !== idx && (
-                      <div className="flex items-center gap-1 mt-2 pt-1 border-t border-white/5">
-                        <button
-                          onClick={() => handleRegenerate(idx)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                          title="Regenerate"
-                        >
-                          <RotateCw className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
-                        </button>
+                    {!loading && editingIdx !== idx && (
+                      <div className={`flex items-center gap-1 mt-2 pt-1 border-t border-white/5 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                        {msg.role === 'assistant' && (
+                          <button
+                            onClick={() => handleRegenerate(idx)}
+                            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                            title="Regenerate"
+                          >
+                            <RotateCw className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleCopy(msg.content, idx)}
                           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -943,7 +945,7 @@ export default function FenBot() {
                           <Pencil className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
                         </button>
                         {msg.createdAt && (
-                          <span className="ml-auto flex items-center gap-1 text-[10px] text-white/20">
+                          <span className={`flex items-center gap-1 text-[10px] text-white/20 ${msg.role === 'user' ? '' : 'ml-auto'}`}>
                             <Clock className="w-3 h-3" />
                             {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
