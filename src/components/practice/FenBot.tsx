@@ -664,16 +664,34 @@ export default function FenBot() {
 
   const handleEditSave = useCallback((msgIdx: number) => {
     if (!editContent.trim()) return;
-    updateAndSave((prev) =>
-      prev.map((c) => {
-        if (c.id !== activeId) return c;
-        const msgs = c.messages.map((m, i) => i === msgIdx ? { ...m, content: editContent.trim() } : m);
-        return { ...c, messages: msgs, updatedAt: Date.now() };
-      })
-    );
+    const convo = conversations.find((c) => c.id === activeId);
+    const editedMsg = convo?.messages[msgIdx];
+    if (!editedMsg) return;
+
     setEditingIdx(null);
     setEditContent('');
-  }, [editContent, activeId, updateAndSave]);
+
+    if (editedMsg.role === 'user') {
+      // Update the user message and remove all messages after it
+      updateAndSave((prev) =>
+        prev.map((c) => {
+          if (c.id !== activeId) return c;
+          return { ...c, messages: c.messages.slice(0, msgIdx).map((m, i) => i === msgIdx ? { ...m, content: editContent.trim() } : m), updatedAt: Date.now() };
+        })
+      );
+      // Re-send the edited message to get a new AI response
+      setTimeout(() => sendMessage(editContent.trim()), 100);
+    } else {
+      // Just update the assistant message content
+      updateAndSave((prev) =>
+        prev.map((c) => {
+          if (c.id !== activeId) return c;
+          const msgs = c.messages.map((m, i) => i === msgIdx ? { ...m, content: editContent.trim() } : m);
+          return { ...c, messages: msgs, updatedAt: Date.now() };
+        })
+      );
+    }
+  }, [editContent, activeId, updateAndSave, sendMessage, conversations]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
