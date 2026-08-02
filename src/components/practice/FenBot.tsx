@@ -252,9 +252,8 @@ export default function FenBot() {
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const renderTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const renderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const tokenQueueRef = useRef<string[]>([]);
   const fullReplyRef = useRef('');
   const conversationsRef = useRef<Conversation[]>([]);
   const activeIdRef = useRef<string | null>(null);
@@ -307,7 +306,7 @@ export default function FenBot() {
       recognitionRef.current?.abort();
       abortRef.current?.abort();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (renderTimerRef.current) clearInterval(renderTimerRef.current);
+      if (renderTimerRef.current) clearTimeout(renderTimerRef.current as unknown as number);
     };
   }, []);
 
@@ -416,12 +415,8 @@ export default function FenBot() {
   }, [activeId, uid]);
 
   const stopGenerating = useCallback(() => {
-    // Drain remaining tokens into fullReply before stopping
-    if (tokenQueueRef.current.length > 0) {
-      fullReplyRef.current += tokenQueueRef.current.splice(0).join('');
-    }
     abortRef.current?.abort();
-    if (renderTimerRef.current) { clearInterval(renderTimerRef.current); renderTimerRef.current = null; }
+    if (renderTimerRef.current) { clearTimeout(renderTimerRef.current as unknown as number); renderTimerRef.current = null; }
     window.speechSynthesis?.cancel();
     setLoading(false);
     setTimeout(() => setStreamingContent(''), 100);
@@ -444,7 +439,6 @@ export default function FenBot() {
     const controller = new AbortController();
     abortRef.current = controller;
     fullReplyRef.current = '';
-    tokenQueueRef.current = [];
 
     updateAndSave((prev) =>
       prev.map((c) => {
@@ -485,9 +479,49 @@ export default function FenBot() {
       if (!reader) throw new Error('No stream');
 
       const decoder = new TextDecoder();
-      let buffer = '';
-      let streamDone = false;
+
+      // Cancel any ongoing speech when new message starts
+      if (settings.tts) window.speechSynthesis?.cancel();
+
+      // Simple streaming: accumulate tokens directly, flush to state periodically
+      let rawBuffer = '';
+      let streamFinished = false;
       let ttsBuffer = '';
+
+      const flushToState = () => {
+        if (rawBuffer.length > fullReplyRef.current.length) {
+          const prevLen = fullReplyRef.current.length;
+          fullReplyRef.current = rawBuffer;
+          setStreamingContent(rawBuffer);
+          if (settings.tts) {
+            const newPart = rawBuffer.slice(prevLen);
+            ttsBuffer += newPart;
+            const sentences = ttsBuffer.match(/[^.!?\n]+[.!?!\n]+/g);
+            if (sentences) {
+              const speakText = sentences.join(' ').trim();
+              if (speakText.length > 3) {
+                window.speechSynthesis?.speak(new SpeechSynthesisUtterance(speakText));
+              }
+              ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!?!\n]+/g, '');
+            }
+          }
+        }
+      };
+
+      const scheduleFlush = () => {
+        if (renderTimerRef.current) return;
+        const tick = () => {
+          if (streamFinished && rawBuffer.length <= fullReplyRef.current.length) {
+            renderTimerRef.current = null;
+            return;
+          }
+          flushToState();
+          renderTimerRef.current = setTimeout(tick, settings.speed) as unknown as ReturnType<typeof setTimeout>;
+        };
+        renderTimerRef.current = setTimeout(tick, settings.speed) as unknown as ReturnType<typeof setTimeout>;
+      };
+
+      scheduleFlush();
 
       const processLine = (line: string) => {
         const trimmed = line.trim();
@@ -500,101 +534,67 @@ export default function FenBot() {
         try {
           const json = JSON.parse(data);
           const delta = json.choices?.[0]?.delta?.content;
-          if (delta) {
-            for (const ch of delta) {
-              tokenQueueRef.current.push(ch);
-            }
-          }
+          if (delta) rawBuffer += delta;
         } catch {}
       };
 
-      // Cancel any ongoing speech when new message starts
-      if (settings.tts) window.speechSynthesis?.cancel();
-
-      if (renderTimerRef.current) clearInterval(renderTimerRef.current);
-      renderTimerRef.current = setInterval(() => {
-        if (tokenQueueRef.current.length > 0) {
-          let newTokens = '';
-          if (settings.speed === 0) {
-            newTokens = tokenQueueRef.current.splice(0).join('');
-          } else {
-            newTokens = tokenQueueRef.current.shift()!;
-          }
-          fullReplyRef.current += newTokens;
-          setStreamingContent(fullReplyRef.current);
-          if (settings.tts) {
-            ttsBuffer += newTokens;
-            const sentences = ttsBuffer.match(/[^.!?\n]+[.!??\n]+/g);
-            if (sentences) {
-              const speakText = sentences.join(' ').trim();
-              if (speakText.length > 3) {
-                const utt = new SpeechSynthesisUtterance(speakText);
-                utt.rate = 1.0;
-                utt.pitch = 1.0;
-                window.speechSynthesis?.speak(utt);
-              }
-              ttsBuffer = ttsBuffer.replace(/[^.!?\n]+[.!??\n]+/g, '');
-            }
-          }
-        }
-      }, settings.speed);
-
       let lastChunkTime = Date.now();
-      const STALL_TIMEOUT = 8000;
+      let pendingBuffer = '';
 
       try {
         while (true) {
-          const result = await Promise.race([
-            reader.read(),
-            new Promise<{ done: true; value: undefined }>((resolve) => {
-              const check = setInterval(() => {
-                if (Date.now() - lastChunkTime > STALL_TIMEOUT) {
-                  clearInterval(check);
-                  resolve({ done: true, value: undefined });
-                }
-              }, 1000);
-            }),
-          ]);
+          const readPromise = reader.read();
+          const timeoutPromise = new Promise<{ done: true; value: undefined }>((resolve) => {
+            const id = setTimeout(() => resolve({ done: true, value: undefined }), 10000);
+            readPromise.then(() => clearTimeout(id)).catch(() => clearTimeout(id));
+          });
+          const result = await Promise.race([readPromise, timeoutPromise]);
           if (result.done) break;
           lastChunkTime = Date.now();
 
-          buffer += decoder.decode(result.value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          pendingBuffer += decoder.decode(result.value, { stream: true });
+          const lines = pendingBuffer.split('\n');
+          pendingBuffer = lines.pop() || '';
 
           for (const line of lines) {
             processLine(line);
           }
         }
       } catch (streamErr) {
-        // Stream interrupted — keep whatever was rendered so far
+        // Stream interrupted
       }
 
-      // Process any remaining buffer data
-      if (buffer.trim()) {
-        processLine(buffer);
-        buffer = '';
+      // Process any remaining buffer
+      if (pendingBuffer.trim()) {
+        processLine(pendingBuffer);
+        pendingBuffer = '';
       }
 
-      streamDone = true;
+      streamFinished = true;
 
-      // Wait for queue to fully drain (only resolve when queue is truly empty)
+      // Final flush — wait for timer to process everything
       await new Promise<void>((resolve) => {
-        const check = setInterval(() => {
-          if (tokenQueueRef.current.length === 0) { clearInterval(check); resolve(); }
-        }, 30);
-        setTimeout(() => { clearInterval(check); resolve(); }, 30000);
+        const check = () => {
+          flushToState();
+          if (rawBuffer.length <= fullReplyRef.current.length || !renderTimerRef.current) {
+            resolve();
+          } else {
+            setTimeout(check, 20);
+          }
+        };
+        setTimeout(check, 50);
+        setTimeout(resolve, 5000); // safety timeout
       });
 
-      // Clean up render timer
-      if (renderTimerRef.current) { clearInterval(renderTimerRef.current); renderTimerRef.current = null; }
+      // Final state update
+      flushToState();
 
-      // Speak any remaining TTS buffer
+      // Clean up render timer
+      if (renderTimerRef.current) { clearTimeout(renderTimerRef.current as unknown as number); renderTimerRef.current = null; }
+
+      // Speak any remaining TTS
       if (settings.tts && ttsBuffer.trim().length > 3) {
-        const utt = new SpeechSynthesisUtterance(ttsBuffer.trim());
-        utt.rate = 1.0;
-        utt.pitch = 1.0;
-        window.speechSynthesis?.speak(utt);
+        window.speechSynthesis?.speak(new SpeechSynthesisUtterance(ttsBuffer.trim()));
         ttsBuffer = '';
       }
 
@@ -610,10 +610,7 @@ export default function FenBot() {
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        // User stopped — drain remaining tokens and save
-        if (tokenQueueRef.current.length > 0) {
-          fullReplyRef.current += tokenQueueRef.current.splice(0).join('');
-        }
+        // User stopped — save whatever partial content was streamed
         if (fullReplyRef.current) {
           const saved = fullReplyRef.current;
           updateAndSave((prev) =>
