@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from './AuthContext';
-import { subscribeToNotifications, playNotificationSound } from '../services/notificationService';
+import { subscribeToNotifications, playNotificationSound, getPushEnabled } from '../services/notificationService';
 import type { Notification } from '../types';
 
 interface NotificationContextType {
@@ -23,7 +23,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user?.uid) { setNotifications([]); return; }
     const unsub = subscribeToNotifications(user.uid, (items) => {
       const newUnread = items.filter((n) => !n.read).length;
-      if (prevCountRef.current > 0 && newUnread > prevCountRef.current) {
+      if (prevCountRef.current > 0 && newUnread > prevCountRef.current && getPushEnabled()) {
         playNotificationSound();
       }
       prevCountRef.current = newUnread;

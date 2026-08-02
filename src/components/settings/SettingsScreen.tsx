@@ -6,9 +6,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
 import {
   Sun, Moon, Globe, Bell, User, HelpCircle, ChevronDown, Check, Info,
-  Shield, Palette, Volume2, VolumeX, Bot,
+  Shield, Palette, Volume2, VolumeX, Bot, Music, BellOff, BellRing,
 } from 'lucide-react';
 import ChatWallpaperPicker from './ChatWallpaperPicker';
+import {
+  NOTIFICATION_SOUNDS, getNotificationSoundId, setNotificationSoundId,
+  getPushEnabled, setPushEnabled,
+} from '../../services/notificationService';
 
 const FENBOT_SETTINGS_KEY = 'fenbot_settings';
 const SPEED_PRESETS = [
@@ -90,6 +94,8 @@ export default function SettingsScreen() {
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showWallpaper, setShowWallpaper] = useState(false);
   const [fenbot, setFenbot] = useState<FenBotSettings>(loadFenBotSettings);
+  const [notifSound, setNotifSound] = useState(getNotificationSoundId);
+  const [pushOn, setPushOn] = useState(getPushEnabled);
 
   const currentLang = LANGUAGES.find((l) => l.code === language);
   const displayName = storage.getDisplayName() || user?.fullName || 'Student';
@@ -266,18 +272,39 @@ export default function SettingsScreen() {
 
       {/* Notifications */}
       <Section title={t('Notifications')}>
+        {/* Sound Picker */}
+        <div className="px-6 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 block flex items-center gap-1.5">
+            <Music size={12} /> {t('Notification Sound')}
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {NOTIFICATION_SOUNDS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => { setNotificationSoundId(s.id); setNotifSound(s.id); }}
+                className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                  notifSound === s.id
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Push Notifications */}
         <Row
-          icon={Bell}
-          label={t('Notification Sounds')}
-          trailing={
-            <span className="text-xs text-gray-400 dark:text-gray-500">{t('On')}</span>
-          }
-        />
-        <Row
-          icon={Bell}
+          icon={pushOn ? BellRing : BellOff}
           label={t('Push Notifications')}
+          onClick={() => { const next = !pushOn; setPushEnabled(next); setPushOn(next); }}
           trailing={
-            <span className="text-xs text-green-500 dark:text-green-400">{t('Enabled')}</span>
+            <button
+              className={`relative w-12 h-6 rounded-full transition-colors ${pushOn ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${pushOn ? 'translate-x-6' : ''}`} />
+            </button>
           }
         />
       </Section>
