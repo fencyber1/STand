@@ -3,8 +3,7 @@ import {
   onSnapshot, query, where, orderBy, serverTimestamp,
   writeBatch, documentId,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from './firebase';
+import { db } from './firebase';
 import { createNotification } from './notificationService';
 import type { UserProfile, FriendRequest, Friend, Post, PostComment, ChatRoom, ChatMessage, ChatGroup, GroupMessage, Presence } from '../types';
 
@@ -22,7 +21,10 @@ function ts(): string {
 }
 
 export async function uploadMedia(file: Blob, path: string): Promise<string> {
-  const storageRef = ref(storage, path);
+  const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+  const { getFirebaseStorage } = await import('./firebase');
+  const storageInstance = await getFirebaseStorage();
+  const storageRef = ref(storageInstance, path);
   await uploadBytes(storageRef, file);
   return await getDownloadURL(storageRef);
 }

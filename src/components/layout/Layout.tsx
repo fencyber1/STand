@@ -97,6 +97,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const tourActiveRef = useRef(false);
   const [photoVersion, setPhotoVersion] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t } = useLanguage();
@@ -108,6 +109,17 @@ export default function Layout() {
     const handler = () => setPhotoVersion((v) => v + 1);
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
+  }, []);
+
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
   }, []);
 
   // Tour sidebar control: open sidebar + set tour-active flag
@@ -189,6 +201,13 @@ export default function Layout() {
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors overflow-hidden">
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={closeSidebar} />
+      )}
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-amber-500 text-white text-center text-xs font-medium py-1 px-4 shadow-md">
+          You're offline — using cached data
+        </div>
       )}
 
       <aside data-tour-id="tour-sidebar" className={`fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>

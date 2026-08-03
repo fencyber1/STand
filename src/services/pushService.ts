@@ -1,6 +1,5 @@
-import { getToken, onMessage } from 'firebase/messaging';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getFirebaseMessaging, db } from './firebase';
+import { db, getFirebaseMessaging } from './firebase';
 import { getPushEnabled } from './notificationService';
 
 const VAPID_KEY = import.meta.env.VITE_VAPID_KEY || '';
@@ -14,13 +13,13 @@ export async function requestPushPermission(uid: string): Promise<boolean> {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return false;
 
-    const messaging = getFirebaseMessaging();
+    const messaging = await getFirebaseMessaging();
     if (!messaging || !VAPID_KEY) return false;
 
+    const { getToken } = await import('firebase/messaging');
     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
     if (!token) return false;
 
-    // Store token in Firestore so server can send push
     await setDoc(doc(db, 'fcmTokens', uid), {
       token,
       platform: 'web',
@@ -33,9 +32,10 @@ export async function requestPushPermission(uid: string): Promise<boolean> {
   }
 }
 
-export function listenForForegroundMessages(cb: (payload: any) => void): () => void {
-  const messaging = getFirebaseMessaging();
+export async function listenForForegroundMessages(cb: (payload: any) => void): Promise<() => void> {
+  const messaging = await getFirebaseMessaging();
   if (!messaging) return () => {};
+  const { onMessage } = await import('firebase/messaging');
   return onMessage(messaging, (payload) => {
     cb(payload);
   });
