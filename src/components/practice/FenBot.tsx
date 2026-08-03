@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle, RotateCw, Copy, Check, Clock } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle, RotateCw, Copy, Check, Clock, Zap, GraduationCap } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
 import FenBotIcon from '../effects/FenBotIcon';
 import TwemojiText from '../social/TwemojiText';
@@ -64,6 +64,12 @@ For any subject structure knowledge at multiple layers: Surface Layer with defin
 You genuinely believe they can master this. You'll explain as many times as needed with fresh enthusiasm. You're fully present not rushing them. Their success genuinely matters to you. You've thought deeply about how to teach effectively. Nothing is too basic to explain clearly. You push them toward their potential while staying supportive. They can be confused and struggle without judgment. Your success is measured not by how much you know but by how effectively they learn. Be the mentor who changes how they think, not just what they know. Be the guide who helps them discover their own capability. Be the person who genuinely believes in their potential. Be FenBot - the elite educator who transforms learners into masters of their craft.
 
 IMAGE RULES: Always include [IMG: Wikipedia article title] tags when teaching topics that have visual representations. The query must be a valid English Wikipedia article title. Examples: [IMG: Mitosis], [IMG: DNA], [IMG: Photosynthesis], [IMG: Water cycle], [IMG: Neuron], [IMG: Pythagorean theorem], [IMG: Solar System], [IMG: Periodic table]. Include 1-3 images per response depending on the topic. Place each [IMG: tag on its own line.`;
+
+const FAST_SHORT = `You are FenBot in FAST MODE - SHORT. Give ONLY the direct answer. No explanation, no teaching, no examples, no preamble. Just the answer in 1-2 sentences maximum. Be direct and concise.`;
+
+const FAST_MEDIUM = `You are FenBot in FAST MODE - MEDIUM. Give the direct answer plus a brief 1-2 sentence explanation. Be concise but include just enough context to understand why. No examples, no teaching framework.`;
+
+const FAST_DETAILED = `You are FenBot in FAST MODE - DETAILED. Give the direct answer first, then a short paragraph explaining why. Be efficient and to the point. Include key reasoning but skip lengthy examples and teaching frameworks.`;
 
 const SUGGESTIONS = [
   { icon: '🎲', label: 'Surprise me', desc: 'Surprise me with a creative idea or story', topic: 'Tell me something surprising and interesting about science' },
@@ -252,6 +258,8 @@ export default function FenBot() {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [mode, setMode] = useState<'teach' | 'fast'>('teach');
+  const [fastLength, setFastLength] = useState<'short' | 'medium' | 'detailed'>('medium');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -460,8 +468,12 @@ export default function FenBot() {
       const langInstruction = language && language !== 'en'
         ? `\n\nCRITICAL LANGUAGE RULE: The user's language is "${language}". You MUST respond ENTIRELY in ${language}. Do NOT use English at all in your response. All explanations, examples, and text must be written in ${language}.`
         : '';
+      const modePrompt = mode === 'fast'
+        ? (fastLength === 'short' ? FAST_SHORT : fastLength === 'medium' ? FAST_MEDIUM : FAST_DETAILED)
+        : '';
+      const systemMsg = mode === 'fast' ? modePrompt + langInstruction : SYSTEM_PROMPT + langInstruction;
       const apiMessages = [
-        { role: 'system', content: SYSTEM_PROMPT + langInstruction },
+        { role: 'system', content: systemMsg },
         ...allMessages.map((m) => ({ role: m.role, content: m.content })),
       ];
 
@@ -855,6 +867,37 @@ export default function FenBot() {
 
               {/* Input bar */}
               <div className="w-full max-w-lg mb-6">
+                {/* Mode toggle + length selector */}
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    onClick={() => setMode(mode === 'teach' ? 'fast' : 'teach')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      mode === 'fast'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                    }`}
+                  >
+                    {mode === 'fast' ? <Zap size={12} /> : <GraduationCap size={12} />}
+                    {mode === 'fast' ? 'FAST' : 'TEACH'}
+                  </button>
+                  {mode === 'fast' && (
+                    <div className="flex gap-1">
+                      {(['short', 'medium', 'detailed'] as const).map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => setFastLength(l)}
+                          className={`px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
+                            fastLength === l
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-white/5 text-white/30 hover:bg-white/10'
+                          }`}
+                        >
+                          {l.charAt(0).toUpperCase() + l.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="relative bg-[#141926] rounded-2xl border border-white/5 overflow-hidden shadow-2xl shadow-black/40">
                   <div className="flex items-center gap-2 px-4 py-2">
                     {listening && (
@@ -997,6 +1040,37 @@ export default function FenBot() {
         {!isWelcome && (
           <div className="relative z-10 px-4 pb-4 pt-2 shrink-0">
             <div className="max-w-3xl mx-auto">
+              {/* Mode toggle + length selector */}
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  onClick={() => setMode(mode === 'teach' ? 'fast' : 'teach')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    mode === 'fast'
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                  }`}
+                >
+                  {mode === 'fast' ? <Zap size={12} /> : <GraduationCap size={12} />}
+                  {mode === 'fast' ? 'FAST' : 'TEACH'}
+                </button>
+                {mode === 'fast' && (
+                  <div className="flex gap-1">
+                    {(['short', 'medium', 'detailed'] as const).map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => setFastLength(l)}
+                        className={`px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
+                          fastLength === l
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-white/5 text-white/30 hover:bg-white/10'
+                        }`}
+                      >
+                        {l.charAt(0).toUpperCase() + l.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="relative bg-[#141926] rounded-2xl border border-white/5 overflow-hidden shadow-2xl shadow-black/40">
                 <div className="flex items-center gap-2 px-4 py-2">
                   {listening && (
