@@ -207,9 +207,8 @@ export async function generateQuestionsProgressive(params: {
   studentAge?: number;
   language?: string;
 }, onBatch: (questions: Question[], progress: { current: number; total: number }) => void): Promise<Question[]> {
-  const FIRST_BATCH = 1;
-  const NEXT_BATCH = 5;
   const totalNeeded = params.count;
+  const CONCURRENCY = 5;
   const allQuestions: Question[] = [];
 
   const topicKey = `${params.sector}__${params.topic}__${params.level}`.toLowerCase().slice(0, 120);
@@ -220,39 +219,59 @@ export async function generateQuestionsProgressive(params: {
     topic: params.topic, imageQuery: '',
   }));
 
-  // First: generate 1 question immediately (with retries)
-  let firstBatch: Question[] = [];
+  // First: generate 1 question immediately
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      firstBatch = await generateQuestionBatch(params, FIRST_BATCH, 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+      const firstBatch = await generateQuestionBatch(params, 1, 1, totalNeeded, [...previousAsQuestions]);
+      allQuestions.push(...firstBatch);
+      onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
       break;
     } catch (err) {
       if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       else throw err;
     }
   }
-  allQuestions.push(...firstBatch);
-  onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
 
-  // Then: generate remaining in batches of 2
-  for (let offset = FIRST_BATCH; offset < totalNeeded; offset += NEXT_BATCH) {
-    const batchSize = Math.min(NEXT_BATCH, totalNeeded - offset);
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
-        allQuestions.push(...batchQuestions);
-        onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
-        break;
-      } catch (err) {
-        if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+  // Remaining: generate in parallel with concurrency limit
+  const remaining = totalNeeded - allQuestions.length;
+  if (remaining > 0) {
+    const queue = Array.from({ length: remaining }, (_, i) => allQuestions.length + i);
+    let nextIdx = 0;
+
+    const worker = async () => {
+      while (nextIdx < queue.length) {
+        const myIdx = nextIdx++;
+        const questionNum = queue[myIdx] + 1;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const batch = await generateQuestionBatch(params, 1, questionNum, totalNeeded, [...previousAsQuestions, ...allQuestions]);
+            if (batch.length > 0) {
+              allQuestions.push(batch[0]);
+              onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+            }
+            break;
+          } catch {
+            if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          }
+        }
       }
-    }
-    // Always notify progress even if this batch failed, so UI stays current
-    onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+    };
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, remaining) }, () => worker());
+    await Promise.all(workers);
   }
 
-  storage.saveGeneratedQuestionHistory(topicKey, allQuestions);
-  return allQuestions;
+  // Dedup final list
+  const seen = new Set<string>();
+  const deduped = allQuestions.filter((q) => {
+    const key = q.question.toLowerCase().slice(0, 80);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  storage.saveGeneratedQuestionHistory(topicKey, deduped);
+  return deduped;
 }
 
 async function generateQuestionBatch(
