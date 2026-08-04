@@ -264,14 +264,21 @@ export default function StatusComposer() {
           style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', maxHeight: '45vh' }}
         >
           {/* Search */}
-          <div className="px-3 pt-3 pb-2">
+          <div className="flex items-center gap-2 px-3 pt-3 pb-2">
             <input
               ref={emojiInputRef}
               value={emojiSearch}
               onChange={(e) => setEmojiSearch(e.target.value)}
               placeholder="Search emoji..."
-              className="w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none placeholder-white/40"
+              className="flex-1 bg-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none placeholder-white/40"
             />
+            <button
+              onClick={() => { setShowEmoji(false); setEmojiSearch(''); }}
+              className="p-2 rounded-full hover:bg-white/15 active:bg-white/20 transition-colors shrink-0"
+              aria-label="Close emoji picker"
+            >
+              <X size={16} />
+            </button>
           </div>
           {/* Grid */}
           <div className="overflow-y-auto px-2 pb-3 flex-1 min-h-0">
