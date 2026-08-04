@@ -69,10 +69,18 @@ async function callAI(prompt: string): Promise<string> {
 
 function parseQuestions(raw: string): Question[] {
   try {
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('No JSON array found in AI response');
+    // Strip markdown code blocks if present
+    let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Try to find JSON array — find first [ and last ]
+    const firstBracket = cleaned.indexOf('[');
+    const lastBracket = cleaned.lastIndexOf(']');
+    if (firstBracket === -1 || lastBracket === -1 || lastBracket <= firstBracket) {
+      throw new Error('No JSON array found in AI response');
+    }
+
+    const jsonString = cleaned.slice(firstBracket, lastBracket + 1);
+    const parsed = JSON.parse(jsonString);
 
     if (!Array.isArray(parsed) || parsed.length === 0) {
       throw new Error('Empty or invalid array');
@@ -94,7 +102,7 @@ function parseQuestions(raw: string): Question[] {
       };
     });
   } catch (err: any) {
-    console.error('Parse error:', err.message);
+    console.error('Parse error:', err.message, 'Raw preview:', raw.slice(0, 300));
     throw new Error('Failed to parse AI response. Please try again.');
   }
 }
@@ -280,24 +288,25 @@ VIOLATION RULE: If you generate ANY matching question, the output will be reject
 
   const prompt = `Generate ${count} exam questions for ${params.sector} course, topic "${params.topic}", level ${params.level}.
 
-Rules:
-- Subject field MUST be "${params.sector}"
-- MUST include "imageQuery" field (Wikipedia article title with diagram)
-- ALL questions must be this type: ${questionFormat.toUpperCase()}
-${params.questionType === 'MCQ' ? '- EVERY question: 4 options (A,B,C,D), type "MCQ"' : ''}
-${params.questionType === 'Theory' ? '- EVERY question: open-ended, no options, type "Theory"' : ''}
-${params.questionType === 'True' ? '- EVERY question: options=["True","False"], type "TrueFalse"' : ''}
-${params.questionType === 'Fill' ? '- EVERY question: blank (___), type "FillBlank"' : ''}
-${params.questionType === 'Mixed' ? '- MIX of MCQ, Theory, TrueFalse' : ''}
+RULES:
+- Subject field MUST be exactly "${params.sector}"
+- MUST include "imageQuery" field with a Wikipedia article title that has a diagram
+- ALL questions must be this type: ${questionFormat}
+${params.questionType === 'MCQ' ? '- EVERY question needs exactly 4 options like ["A. ...", "B. ...", "C. ...", "D. ..."], correctAnswer must start with "A."/"B."/"C."/"D.", type must be "MCQ"' : ''}
+${params.questionType === 'Theory' ? '- EVERY question: open-ended, no options needed, type "Theory"' : ''}
+${params.questionType === 'True' ? '- EVERY question: options must be ["True", "False"], type "TrueFalse"' : ''}
+${params.questionType === 'Fill' ? '- EVERY question: blank (___) in question, type "FillBlank"' : ''}
+${params.questionType === 'Mixed' ? '- MIX of MCQ, Theory, and TrueFalse types' : ''}
 ${difficultyLine}
 ${ageLine}
 ${langLine}
 ${avoidDuplicates}
 
-Return ONLY a JSON array:
-[{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"Wikipedia article title"}]
+OUTPUT: ONLY a JSON array, nothing else. No markdown, no explanation text.
+Example format for MCQ:
+[{"question":"What is 2+2?","type":"MCQ","options":["A. 3","B. 4","C. 5","D. 6"],"correctAnswer":"B. 4","explanation":"2+2 equals 4.","difficulty":"easy","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"Addition"}]
 
-No markdown. No text outside JSON.`;
+No markdown code blocks. No text outside the JSON array.`;
 
   const raw = await callAI(prompt);
   return parseQuestions(raw);
