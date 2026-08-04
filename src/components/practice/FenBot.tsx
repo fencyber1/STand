@@ -432,6 +432,7 @@ export default function FenBot() {
     window.speechSynthesis?.cancel();
     setLoading(false);
     setTimeout(() => setStreamingContent(''), 100);
+    setTimeout(() => inputRef.current?.focus(), 200);
   }, []);
 
   const sendMessage = async (text: string) => {
@@ -648,6 +649,7 @@ export default function FenBot() {
       abortRef.current = null;
       setLoading(false);
       setTimeout(() => setStreamingContent(''), 100);
+      setTimeout(() => inputRef.current?.focus(), 200);
     }
   };
 
