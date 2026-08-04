@@ -14,7 +14,7 @@ async function callAI(prompt: string): Promise<string> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -25,7 +25,7 @@ async function callAI(prompt: string): Promise<string> {
           model: MODEL,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
-          max_tokens: 4096,
+          max_tokens: 3000,
         }),
         signal: controller.signal,
       });
@@ -37,7 +37,7 @@ async function callAI(prompt: string): Promise<string> {
       if (!response.ok) {
         lastError = `API error ${response.status}: ${text.slice(0, 200)}`;
         if (response.status === 429 || response.status >= 500) {
-          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
           continue;
         }
         throw new Error(lastError);
@@ -143,7 +143,7 @@ export async function generateQuestions(params: {
   studentAge?: number;
   language?: string;
 }): Promise<{ questions: Question[] }> {
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 20;
   const totalNeeded = params.count;
   const allQuestions: Question[] = [];
 
@@ -167,7 +167,7 @@ export async function generateQuestions(params: {
     allQuestions.push(...batchQuestions);
 
     if (offset + BATCH_SIZE < totalNeeded) {
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 200));
     }
   }
 
@@ -229,41 +229,35 @@ async function generateQuestionBatch(
     : '';
 
   const avoidDuplicates = existingQuestions.length > 0
-    ? `\n\n⚠️ ABSOLUTE PROHIBITION — DO NOT REPEAT QUESTIONS ⚠️
-The following questions have ALREADY been generated. You MUST NOT generate any question that is the same as, similar to, or a rephrased version of ANY of these. Every single question you generate must be COMPLETELY NEW and UNIQUE.
+    ? `\n\nABSOLUTE PROHIBITION — DO NOT REPEAT QUESTIONS.
+These questions have ALREADY been generated. You MUST NOT generate any similar or rephrased version. Every question must be COMPLETELY NEW.
 
-PREVIOUSLY GENERATED QUESTIONS (DO NOT REPEAT):
-${existingQuestions.map((q, i) => `${i + 1}. "${q.question.slice(0, 120)}"`).join('\n')}
+PREVIOUS (DO NOT REPEAT):
+${existingQuestions.slice(-30).map((q, i) => `${i + 1}. "${q.question.slice(0, 100)}"`).join('\n')}
 
-VIOLATION RULE: If you generate ANY question that matches or closely resembles any question above, the entire output will be rejected. Generate ONLY entirely new, never-before-seen questions about different aspects of the topic.`
+VIOLATION RULE: If you generate ANY matching question, the output will be rejected. Generate ONLY new questions about different aspects of the topic.`
     : '';
 
-  const prompt = `You are an exam question generator for the ${params.sector} course. Generate exactly ${count} exam questions (batch ${batchNum}/${totalBatches}).
+  const prompt = `Generate ${count} exam questions for ${params.sector} course, topic "${params.topic}", level ${params.level}.
 
-STRICT RULES:
-- Every question MUST be directly about the ${params.sector} subject.
-- The topic is "${params.topic}" — all questions must relate to this topic WITHIN the ${params.sector} curriculum.
-- The level is ${params.level} — questions must match this academic level.
-- Each question's "subject" field MUST be exactly "${params.sector}".
-- EVERY question MUST include an "imageQuery" field — this is REQUIRED.
-- The imageQuery MUST be a Wikipedia article title that has a relevant diagram.
-${avoidDuplicates}
-
-CRITICAL QUESTION TYPE RULE:
-You MUST generate ALL ${count} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
-${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ".' : ''}
-${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory".' : ''}
-${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse".' : ''}
-${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___). The "type" field MUST be "FillBlank".' : ''}
-${params.questionType === 'Mixed' ? 'Generate a MIX of question types: some MCQ, some Theory, some TrueFalse.' : ''}
+Rules:
+- Subject field MUST be "${params.sector}"
+- MUST include "imageQuery" field (Wikipedia article title with diagram)
+- ALL questions must be this type: ${questionFormat.toUpperCase()}
+${params.questionType === 'MCQ' ? '- EVERY question: 4 options (A,B,C,D), type "MCQ"' : ''}
+${params.questionType === 'Theory' ? '- EVERY question: open-ended, no options, type "Theory"' : ''}
+${params.questionType === 'True' ? '- EVERY question: options=["True","False"], type "TrueFalse"' : ''}
+${params.questionType === 'Fill' ? '- EVERY question: blank (___), type "FillBlank"' : ''}
+${params.questionType === 'Mixed' ? '- MIX of MCQ, Theory, TrueFalse' : ''}
 ${difficultyLine}
 ${ageLine}
 ${langLine}
+${avoidDuplicates}
 
-Return ONLY a JSON array. Each object:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"Wikipedia article title"}
+Return ONLY a JSON array:
+[{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"${params.sector}","topic":"${params.topic}","imageQuery":"Wikipedia article title"}]
 
-No markdown. No text outside the JSON array.`;
+No markdown. No text outside JSON.`;
 
   const raw = await callAI(prompt);
   return parseQuestions(raw);
@@ -329,7 +323,7 @@ export async function getDocumentQuestions(params: {
   difficulty?: string;
   documentName?: string;
 }): Promise<{ questions: Question[] }> {
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 20;
   const totalNeeded = params.questionCount;
   const allQuestions: Question[] = [];
 
@@ -353,7 +347,7 @@ export async function getDocumentQuestions(params: {
     allQuestions.push(...batchQuestions);
 
     if (offset + BATCH_SIZE < totalNeeded) {
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 200));
     }
   }
 
@@ -398,41 +392,24 @@ async function generateDocumentQuestionBatch(
   const truncated = params.documentText.slice(0, 15000);
 
   const avoidDuplicates = existingQuestions.length > 0
-    ? `\n\n⚠️ ABSOLUTE PROHIBITION — DO NOT REPEAT QUESTIONS ⚠️
-The following questions have ALREADY been generated. You MUST NOT generate any question that is the same as, similar to, or a rephrased version of ANY of these. Every single question you generate must be COMPLETELY NEW and UNIQUE.
-
-PREVIOUSLY GENERATED QUESTIONS (DO NOT REPEAT):
-${existingQuestions.map((q, i) => `${i + 1}. "${q.question.slice(0, 120)}"`).join('\n')}
-
-VIOLATION RULE: If you generate ANY question that matches or closely resembles any question above, the entire output will be rejected. Generate ONLY entirely new, never-before-seen questions about different aspects of the document.`
+    ? `\n\nDO NOT REPEAT QUESTIONS. These have been generated:
+${existingQuestions.slice(-30).map((q, i) => `${i + 1}. "${q.question.slice(0, 80)}"`).join('\n')}
+Generate ONLY new questions about different aspects.`
     : '';
 
-  const prompt = `You are an expert exam question generator. Generate exactly ${count} questions based SOLELY on this document (batch ${batchNum}/${totalBatches}).
-
-CRITICAL RULES:
-- Every question MUST be directly about specific content in this document
-- Questions must reference actual terms, names, numbers, or details from the document
-- The correct answer must be explicitly stated or clearly implied in the document
+  const prompt = `Generate ${count} exam questions based SOLELY on this document. Questions must reference actual content from the document. Correct answers must be explicitly stated or clearly implied.
+${difficultyLine}
 ${avoidDuplicates}
 
-CRITICAL QUESTION TYPE RULE:
-You MUST generate ALL ${count} questions as EXACTLY this type: ${questionFormat.toUpperCase()}
-${params.questionType === 'MCQ' ? 'EVERY question MUST have exactly 4 options (A, B, C, D). The "type" field MUST be "MCQ".' : ''}
-${params.questionType === 'Theory' ? 'EVERY question MUST be open-ended with NO options. The "type" field MUST be "Theory".' : ''}
-${params.questionType === 'True' ? 'EVERY question MUST be true/false with options=["True","False"]. The "type" field MUST be "TrueFalse".' : ''}
-${params.questionType === 'Fill' ? 'EVERY question MUST have a blank (___). The "type" field MUST be "FillBlank".' : ''}
-${params.questionType === 'Mixed' ? 'Generate a MIX of question types.' : ''}
-${difficultyLine}
-
-DOCUMENT TEXT:
+DOCUMENT:
 ---
 ${truncated}
 ---
 
-Return ONLY a JSON array. Each object:
-{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"[subtopic from document]"}
+Return ONLY a JSON array:
+[{"question":"...","type":"MCQ|Theory|TrueFalse|FillBlank","options":["A. ...","B. ...","C. ...","D. ..."],"correctAnswer":"A. ...","explanation":"...","difficulty":"easy|medium|hard","subject":"Document-Based","topic":"[subtopic]"}]
 
-No markdown. No text outside the JSON array.`;
+No markdown. No text outside JSON.`;
 
   const raw = await callAI(prompt);
   return parseQuestions(raw);
