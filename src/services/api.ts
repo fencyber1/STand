@@ -224,14 +224,19 @@ export async function generateQuestionsProgressive(params: {
   // Then: generate remaining in batches of 2
   for (let offset = FIRST_BATCH; offset < totalNeeded; offset += NEXT_BATCH) {
     const batchSize = Math.min(NEXT_BATCH, totalNeeded - offset);
-    try {
-      const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
-      allQuestions.push(...batchQuestions);
-      onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
-    } catch (err) {
-      console.error(`Background batch failed at offset ${offset}:`, err);
-      // Continue with whatever questions we have — don't kill the whole generation
-      break;
+    let retries = 0;
+    while (retries < 3) {
+      try {
+        const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+        allQuestions.push(...batchQuestions);
+        onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+        break;
+      } catch (err) {
+        retries++;
+        if (retries < 3) {
+          await new Promise((r) => setTimeout(r, 1000 * retries));
+        }
+      }
     }
   }
 
