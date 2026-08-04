@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Type, Settings, Smile, Paperclip, Palette, MoreHorizontal, Check } from 'lucide-react';
+import { X, Settings, Smile, Send as SendIcon, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { postStatus } from '../../services/statusService';
 
@@ -20,6 +20,19 @@ const FONT_STYLES = [
   { label: 'Script', css: "'Brush Script MT', 'Segoe Script', cursive", weight: '400', size: 28 },
 ];
 
+const EMOJI_ROWS = [
+  ['😀','😂','😍','🥰','😎','🤩','😇','🥳','😏','😅','😭','🔥','❤️','💯','✨','🎉','👍','🙌','💪','🤔','😴','🙄','😤','🥺'],
+  ['😊','🤪','😜','🤗','🫡','🤡','💀','👻','😈','🫠','🥶','🤯','😱','😰','😥','🫣','🧐','🤓','😈','👹','👺','🎃','🍭','🍬'],
+  ['🙏','👏','🤝','🫶','✌️','🤟','🤙','👋','🫰','🤌','☝️','👀','👁️','🧠','💎','🏆','🎯','🚀','💡','📚','🎓','✏️','🎨','🎵'],
+  ['🌸','🌺','🌻','🌹','🍀','🌈','☀️','🌙','⭐','🌊','🔥','❄️','🍃','🌴','🪷','🦋','🐱','🐶','🦊','🐻','🐼','🐨','🦁','🐸'],
+];
+
+const VISIBILITY_OPTIONS = [
+  { key: 'everyone', label: 'Everyone', icon: '🌍', desc: 'Anyone can see this status' },
+  { key: 'friends', label: 'Friends Only', icon: '👥', desc: 'Only your friends can see this status' },
+  { key: 'only_me', label: 'Only Me', icon: '🔒', desc: 'Only you can see this status' },
+];
+
 function getCounterColor(count: number) {
   if (count <= MAX_CHARS * 0.7) return '#4CAF50';
   if (count <= MAX_CHARS * 0.9) return '#FFC107';
@@ -36,6 +49,9 @@ function getCounterHint(count: number) {
 export default function StatusComposer() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiPanelRef = useRef<HTMLDivElement>(null);
+
   const [text, setText] = useState('');
   const [bgColor, setBgColor] = useState('#6366f1');
   const [textColor, setTextColor] = useState('#ffffff');
@@ -44,11 +60,41 @@ export default function StatusComposer() {
   const [loading, setLoading] = useState(false);
   const [postedCount, setPostedCount] = useState(0);
 
+  // Emoji picker
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [emojiSearch, setEmojiSearch] = useState('');
+  const emojiInputRef = useRef<HTMLInputElement>(null);
+
+  // Visibility / privacy
+  const [showVisibility, setShowVisibility] = useState(false);
+  const [visibility, setVisibility] = useState('everyone');
+
   const font = FONT_STYLES[fontIndex];
   const charCount = text.length;
   const counterColor = getCounterColor(charCount);
   const counterHint = getCounterHint(charCount);
   const canPost = text.trim().length > 0 && charCount <= MAX_CHARS;
+  const visOption = VISIBILITY_OPTIONS.find((v) => v.key === visibility)!;
+
+  // Focus emoji search when panel opens
+  useEffect(() => {
+    if (showEmoji) {
+      setTimeout(() => emojiInputRef.current?.focus(), 100);
+    }
+  }, [showEmoji]);
+
+  // Close panels on outside click
+  useEffect(() => {
+    if (!showEmoji) return;
+    const handler = (e: MouseEvent) => {
+      if (emojiPanelRef.current && !emojiPanelRef.current.contains(e.target as Node)) {
+        setShowEmoji(false);
+        setEmojiSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showEmoji]);
 
   const handlePost = async () => {
     if (!user || !canPost) return;
@@ -75,6 +121,21 @@ export default function StatusComposer() {
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     if (val.length <= MAX_CHARS) setText(val);
+  };
+
+  const insertEmoji = (emoji: string) => {
+    const ta = textareaRef.current;
+    if (!ta) { setText((p) => p + emoji); return; }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const newVal = text.slice(0, start) + emoji + text.slice(end);
+    if (newVal.length <= MAX_CHARS) {
+      setText(newVal);
+      setTimeout(() => {
+        ta.selectionStart = ta.selectionEnd = start + emoji.length;
+        ta.focus();
+      }, 0);
+    }
   };
 
   return (
@@ -112,13 +173,41 @@ export default function StatusComposer() {
             <span className="text-base font-bold" style={{ fontFamily: font.css, fontWeight: 700 }}>Aa</span>
           </button>
           <button
+            onClick={() => { setShowVisibility(!showVisibility); setShowEmoji(false); setShowColors(false); }}
             className="p-3 rounded-full hover:bg-white/10 active:bg-white/15 transition-colors"
-            aria-label="Settings"
+            aria-label="Visibility settings"
+            title="Who can see this"
           >
             <Settings size={20} />
           </button>
         </div>
       </div>
+
+      {/* ── Visibility Panel ── */}
+      {showVisibility && (
+        <div
+          ref={emojiPanelRef}
+          className="mx-4 mb-3 rounded-xl overflow-hidden shrink-0"
+          style={{ backgroundColor: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(20px)' }}
+        >
+          {VISIBILITY_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => { setVisibility(opt.key); setShowVisibility(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                visibility === opt.key ? 'bg-white/15' : 'hover:bg-white/10'
+              }`}
+            >
+              <span className="text-xl">{opt.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold" style={{ color: textColor }}>{opt.label}</p>
+                <p className="text-xs opacity-60">{opt.desc}</p>
+              </div>
+              {visibility === opt.key && <Check size={16} className="text-green-400 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Color Picker ── */}
       {showColors && (
@@ -150,6 +239,7 @@ export default function StatusComposer() {
       {/* ── Input Area ── */}
       <div className="flex-1 flex items-center justify-center min-h-0 px-5 py-4">
         <textarea
+          ref={textareaRef}
           value={text}
           onChange={handleTextChange}
           placeholder="Type a status"
@@ -166,27 +256,66 @@ export default function StatusComposer() {
         />
       </div>
 
+      {/* ── Emoji Picker Panel ── */}
+      {showEmoji && (
+        <div
+          ref={emojiPanelRef}
+          className="mx-4 mb-3 rounded-xl overflow-hidden shrink-0 flex flex-col"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', maxHeight: '45vh' }}
+        >
+          {/* Search */}
+          <div className="px-3 pt-3 pb-2">
+            <input
+              ref={emojiInputRef}
+              value={emojiSearch}
+              onChange={(e) => setEmojiSearch(e.target.value)}
+              placeholder="Search emoji..."
+              className="w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none placeholder-white/40"
+            />
+          </div>
+          {/* Grid */}
+          <div className="overflow-y-auto px-2 pb-3 flex-1 min-h-0">
+            {EMOJI_ROWS.map((row, ri) => {
+              const filtered = row.filter((e) => !emojiSearch || e.includes(emojiSearch));
+              if (filtered.length === 0) return null;
+              return (
+                <div key={ri} className="flex flex-wrap gap-1 py-1">
+                  {filtered.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => insertEmoji(emoji)}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-xl hover:bg-white/15 active:bg-white/20 transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Toolbar ── */}
       <div
         className="flex items-center justify-around px-2 shrink-0"
         style={{ minHeight: 52, borderTop: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <button className="p-3 rounded-full hover:bg-white/10 active:bg-white/15 transition-colors opacity-50 pointer-events-none" aria-label="Emoji" title="Emoji">
+        <button
+          onClick={() => { setShowEmoji(!showEmoji); setShowColors(false); setShowVisibility(false); setEmojiSearch(''); }}
+          className={`p-3 rounded-full transition-colors ${showEmoji ? 'bg-white/20' : 'hover:bg-white/10 active:bg-white/15'}`}
+          aria-label="Emoji"
+          title="Emoji"
+        >
           <Smile size={22} />
         </button>
-        <button className="p-3 rounded-full hover:bg-white/10 active:bg-white/15 transition-colors opacity-40 pointer-events-none" aria-label="Attachment" title="Attachment (coming soon)">
-          <Paperclip size={22} />
-        </button>
         <button
-          onClick={() => setShowColors(!showColors)}
-          className="p-3 rounded-full hover:bg-white/10 active:bg-white/15 transition-colors"
+          onClick={() => { setShowColors(!showColors); setShowEmoji(false); setShowVisibility(false); }}
+          className={`p-3 rounded-full transition-colors ${showColors ? 'bg-white/20' : 'hover:bg-white/10 active:bg-white/15'}`}
           aria-label="Background color"
           title="Background color"
         >
-          <Palette size={22} />
-        </button>
-        <button className="p-3 rounded-full hover:bg-white/10 active:bg-white/15 transition-colors opacity-50 pointer-events-none" aria-label="More options" title="More options">
-          <MoreHorizontal size={22} />
+          <span className="text-lg">🎨</span>
         </button>
       </div>
 
@@ -217,16 +346,19 @@ export default function StatusComposer() {
         <button
           onClick={handlePost}
           disabled={loading || !canPost}
-          className="flex-1 h-12 rounded-xl font-semibold text-sm transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
+          className="flex-1 h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
           style={{
             backgroundColor: canPost ? '#007AFF' : 'rgba(255,255,255,0.12)',
             color: canPost ? '#fff' : 'rgba(255,255,255,0.35)',
           }}
         >
           {loading ? (
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : (
-            'Post'
+            <>
+              <SendIcon size={16} />
+              <span>Send</span>
+            </>
           )}
         </button>
       </div>
