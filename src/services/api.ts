@@ -36,31 +36,35 @@ async function callAI(prompt: string): Promise<string> {
 
       if (!response.ok) {
         lastError = `API error ${response.status}: ${text.slice(0, 200)}`;
-        if (response.status === 429 || response.status >= 500) {
-          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-          continue;
-        }
-        throw new Error(lastError);
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
       }
 
       let data;
       try {
         data = JSON.parse(text);
       } catch {
-        throw new Error(`AI returned invalid JSON: ${text.slice(0, 200)}`);
+        lastError = `AI returned invalid JSON`;
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
       }
 
       if (!data.choices || !data.choices[0]) {
-        throw new Error(`AI returned no choices: ${JSON.stringify(data).slice(0, 200)}`);
+        lastError = `AI returned no choices`;
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
       }
 
       return data.choices[0].message.content;
     } catch (err: any) {
       if (err.name === 'AbortError') {
         lastError = 'AI service timed out. Please try again.';
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-      throw err;
+      lastError = err.message || 'Unknown API error';
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      continue;
     }
   }
 
@@ -216,28 +220,35 @@ export async function generateQuestionsProgressive(params: {
     topic: params.topic, imageQuery: '',
   }));
 
-  // First: generate 1 question immediately
-  const firstBatch = await generateQuestionBatch(params, FIRST_BATCH, 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+  // First: generate 1 question immediately (with retries)
+  let firstBatch: Question[] = [];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      firstBatch = await generateQuestionBatch(params, FIRST_BATCH, 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+      break;
+    } catch (err) {
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      else throw err;
+    }
+  }
   allQuestions.push(...firstBatch);
   onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
 
   // Then: generate remaining in batches of 2
   for (let offset = FIRST_BATCH; offset < totalNeeded; offset += NEXT_BATCH) {
     const batchSize = Math.min(NEXT_BATCH, totalNeeded - offset);
-    let retries = 0;
-    while (retries < 3) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
         allQuestions.push(...batchQuestions);
         onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
         break;
       } catch (err) {
-        retries++;
-        if (retries < 3) {
-          await new Promise((r) => setTimeout(r, 1000 * retries));
-        }
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       }
     }
+    // Always notify progress even if this batch failed, so UI stays current
+    onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
   }
 
   storage.saveGeneratedQuestionHistory(topicKey, allQuestions);

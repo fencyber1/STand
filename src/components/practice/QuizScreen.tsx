@@ -65,32 +65,32 @@ export default function QuizScreen() {
   const [showDeep, setShowDeep] = useState(false);
   const [grading, setGrading] = useState(false);
 
+  const genIdRef = useRef(0);
+
   useEffect(() => {
     if (!state.progressive || !state.params) return;
-    let cancelled = false;
+    const myId = ++genIdRef.current;
 
     (async () => {
       try {
         const allQuestions = await generateQuestionsProgressive(state.params!, (batch, progress) => {
-          if (cancelled) return;
+          if (genIdRef.current !== myId) return;
           setQuestions(batch);
           setGenProgress(progress);
         });
-        if (!cancelled) {
+        if (genIdRef.current === myId) {
           let final = allQuestions;
           if (state.shuffle) final = [...final].sort(() => Math.random() - 0.5);
           setQuestions(final);
           setGenerating(false);
         }
       } catch (err: any) {
-        if (!cancelled) {
+        if (genIdRef.current === myId) {
           setGenError(err.message || 'Failed to generate questions');
           setGenerating(false);
         }
       }
     })();
-
-    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
