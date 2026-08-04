@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, MoreHorizontal, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle, RotateCw, Copy, Check, Clock, Zap, GraduationCap } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
@@ -71,13 +71,33 @@ const FAST_MEDIUM = `You are FenBot in FAST MODE - MEDIUM. Give the direct answe
 
 const FAST_DETAILED = `You are FenBot in FAST MODE - DETAILED. Give the direct answer first, then a short paragraph explaining why. Be efficient and to the point. Include key reasoning but skip lengthy examples and teaching frameworks.`;
 
-const SUGGESTIONS = [
+const ALL_SUGGESTIONS = [
   { icon: '🎲', label: 'Surprise me', desc: 'Surprise me with a creative idea or story', topic: 'Tell me something surprising and interesting about science' },
   { icon: '🧬', label: 'How DNA works', desc: 'Learn about DNA replication', topic: 'Explain how DNA replication works' },
   { icon: '⚛️', label: 'Quantum computing', desc: 'Learn quantum computing basics', topic: 'Explain quantum computing in simple terms' },
   { icon: '🧮', label: 'Calculus basics', desc: 'Understand derivatives', topic: 'Explain the concept of derivatives in calculus' },
   { icon: '🧠', label: 'Machine learning', desc: 'How neural networks learn', topic: 'Explain how neural networks learn' },
   { icon: '⚡', label: 'Electricity', desc: 'How circuits work', topic: 'Explain how electricity and circuits work' },
+  { icon: '🌍', label: 'Climate change', desc: 'Why is the planet warming?', topic: 'Explain the science behind climate change' },
+  { icon: '🔬', label: 'Photosynthesis', desc: 'How plants make food', topic: 'Explain how photosynthesis works' },
+  { icon: '💡', label: 'Relativity', desc: 'Einstein\'s theory explained', topic: 'Explain Einstein\'s theory of relativity in simple terms' },
+  { icon: '🏗️', label: 'How bridges work', desc: 'Structural engineering basics', topic: 'Explain how bridges support weight' },
+  { icon: '🧬', label: 'Evolution', desc: 'How species change over time', topic: 'Explain the theory of evolution by natural selection' },
+  { icon: '🦠', label: 'How viruses spread', desc: 'Epidemiology basics', topic: 'Explain how viruses spread and how vaccines work' },
+  { icon: '🎯', label: 'Study tips', desc: 'Better learning strategies', topic: 'Give me evidence-based study tips to learn faster' },
+  { icon: '💰', label: 'Economics 101', desc: 'Supply and demand basics', topic: 'Explain supply and demand in simple terms' },
+  { icon: '🧪', label: 'Chemistry basics', desc: 'Atoms and molecules', topic: 'Explain atoms, elements, and how they form molecules' },
+];
+
+const WELCOME_GREETINGS = [
+  { title: (name: string) => `Hey, ${name}!`, sub: "What shall we explore today?", desc: "I'm your learning partner — ask me anything, big or small." },
+  { title: (name: string) => `Welcome back, ${name}`, sub: "What's on your mind?", desc: "From quick questions to deep dives — I'm ready." },
+  { title: (name: string) => `Hi ${name}!`, sub: "Ready to learn something new?", desc: "Pick a topic or just ask — I'll meet you where you are." },
+  { title: (name: string) => `Hello, ${name}`, sub: "What are you curious about?", desc: "I adapt to your pace — fast answers or deep explanations." },
+  { title: (name: string) => `Good to see you, ${name}`, sub: "What should we tackle?", desc: "I'm here for whatever you need — no question is too simple." },
+  { title: (name: string) => `Hey ${name}!`, sub: "Let's learn something great today.", desc: "Tell me what you're working on and I'll help you level up." },
+  { title: (name: string) => `Yo ${name}!`, sub: "What's the mission today?", desc: "Quick answer or deep lesson — your call." },
+  { title: (name: string) => `Hi there, ${name}`, sub: "What would you like to understand better?", desc: "I explain things the way that works best for you." },
 ];
 
 interface FenBotSettings {
@@ -273,6 +293,12 @@ export default function FenBot() {
   const activeConvo = conversations.find((c) => c.id === activeId);
   const messages = activeConvo?.messages || [];
   const isWelcome = !activeConvo || messages.length === 0;
+
+  const welcomeGreeting = useMemo(() => WELCOME_GREETINGS[Math.floor(Math.random() * WELCOME_GREETINGS.length)], [isWelcome]);
+  const suggestions = useMemo(() => {
+    const shuffled = [...ALL_SUGGESTIONS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+  }, [isWelcome]);
 
   useEffect(() => {
     if (!uid) return;
@@ -862,10 +888,10 @@ export default function FenBot() {
                 <FenBotLogo size={180} />
               </div>
               <h1 className="text-3xl font-bold text-white mb-1">
-                Hi, <span className="text-white/70">{user?.fullName || 'there'}</span>
+                {welcomeGreeting.title(user?.fullName || 'there')}
               </h1>
-              <h2 className="text-xl font-semibold text-white mb-2">How can I help today?</h2>
-              <p className="text-sm text-white/30 mb-8 max-w-md">I'm here to help — from quick answers to smart recommendations.</p>
+              <h2 className="text-xl font-semibold text-white mb-2">{welcomeGreeting.sub}</h2>
+              <p className="text-sm text-white/30 mb-8 max-w-md">{welcomeGreeting.desc}</p>
 
               {/* Input bar */}
               <div className="w-full max-w-lg mb-6">
@@ -942,7 +968,7 @@ export default function FenBot() {
 
               {/* Suggestions */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
-                {SUGGESTIONS.slice(0, 3).map((s) => (
+                {suggestions.map((s) => (
                   <button key={s.label} onClick={() => sendMessage(s.topic)} className="flex flex-col items-start p-4 rounded-2xl bg-[#141926]/80 hover:bg-[#1a2030] border border-white/5 hover:border-indigo-500/20 transition-all text-left group">
                     <span className="text-lg mb-2">{s.icon}</span>
                     <span className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">{s.label}</span>
