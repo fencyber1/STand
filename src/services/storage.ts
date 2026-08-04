@@ -108,6 +108,12 @@ export const storage = {
     notifyChange();
   },
 
+  deleteHistoryItem(id: string): void {
+    const history = this.getHistory();
+    writeJson('stand_history', history.filter((h) => h.id !== id));
+    notifyChange();
+  },
+
   setHistory(data: SessionData[]): void {
     writeJson('stand_history', data);
   },

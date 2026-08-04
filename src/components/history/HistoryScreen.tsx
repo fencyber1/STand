@@ -23,6 +23,11 @@ export default function HistoryScreen() {
     }
   };
 
+  const handleDelete = (id: string) => {
+    storage.deleteHistoryItem(id);
+    setHistory((prev) => prev.filter((h) => h.id !== id));
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -83,19 +88,28 @@ export default function HistoryScreen() {
                   })}
                 </p>
               </div>
-              <div className="text-right ml-4">
-                <p
-                  className={`text-xl font-bold ${
-                    (session.score || 0) >= 70 ? 'text-green-600 dark:text-green-400' : (session.score || 0) >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {session.score != null ? `${session.score}%` : 'N/A'}
-                </p>
-                {session.totalQuestions && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {session.correctAnswers}/{session.totalQuestions}
+              <div className="flex items-center gap-3 ml-4">
+                <div className="text-right">
+                  <p
+                    className={`text-xl font-bold ${
+                      (session.score || 0) >= 70 ? 'text-green-600 dark:text-green-400' : (session.score || 0) >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
+                    }`}
+                  >
+                    {session.score != null ? `${session.score}%` : 'N/A'}
                   </p>
-                )}
+                  {session.totalQuestions && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {session.correctAnswers}/{session.totalQuestions}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                  className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-lg transition-colors"
+                  title={t('Delete')}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           ))}
