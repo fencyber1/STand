@@ -6,17 +6,16 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
 }
 
 export default class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -39,11 +38,6 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             >
               Refresh Page
             </button>
-            {this.state.error && (
-              <p className="mt-4 text-xs text-gray-400 dark:text-gray-500 break-all">
-                {this.state.error.message}
-              </p>
-            )}
           </div>
         </div>
       );
