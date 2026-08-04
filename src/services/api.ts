@@ -208,7 +208,7 @@ export async function generateQuestionsProgressive(params: {
   language?: string;
 }, onBatch: (questions: Question[], progress: { current: number; total: number }) => void): Promise<Question[]> {
   const FIRST_BATCH = 1;
-  const NEXT_BATCH = 2;
+  const NEXT_BATCH = 5;
   const totalNeeded = params.count;
   const allQuestions: Question[] = [];
 
