@@ -649,6 +649,22 @@ export async function editGroupMessage(messageId: string, newText: string): Prom
   await updateDoc(doc(db, 'groupMessages', messageId), sanitize({ text: newText, edited: true }));
 }
 
+export async function pinChatMessage(chatId: string, messageId: string): Promise<void> {
+  await updateDoc(doc(db, 'chatRooms', chatId), sanitize({ pinnedMessageId: messageId, pinnedAt: ts() }));
+}
+
+export async function unpinChatMessage(chatId: string): Promise<void> {
+  await updateDoc(doc(db, 'chatRooms', chatId), { pinnedMessageId: null, pinnedAt: null });
+}
+
+export async function pinGroupMessage(groupId: string, messageId: string): Promise<void> {
+  await updateDoc(doc(db, 'chatGroups', groupId), sanitize({ pinnedMessageId: messageId, pinnedAt: ts() }));
+}
+
+export async function unpinGroupMessage(groupId: string): Promise<void> {
+  await updateDoc(doc(db, 'chatGroups', groupId), { pinnedMessageId: null, pinnedAt: null });
+}
+
 export async function getUserProfile(uid: string): Promise<{ uid: string; displayName: string; photoURL: string | null; email: string; bio: string; surname: string; role: string; hobby: string; country: string } | null> {
   try {
     const snap = await getDoc(doc(db, 'userProfiles', uid));

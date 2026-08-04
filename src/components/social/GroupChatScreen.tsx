@@ -12,6 +12,8 @@ import {
   subscribeToFriends,
   subscribeToPresence,
   setTyping,
+  pinGroupMessage,
+  unpinGroupMessage,
 } from '../../services/socialService';
 import type { ChatGroup, GroupMessage, Friend, Presence } from '../../types';
 import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette, Pencil, Settings, Lock } from 'lucide-react';
@@ -22,6 +24,7 @@ import MediaMessage from './MediaMessage';
 import ChatProfileModal from './ChatProfileModal';
 import TwemojiText from './TwemojiText';
 import ChatInputBar from './ChatInputBar';
+import MessageContextMenu from './MessageContextMenu';
 
 function timeAgo(dateStr: string): string {
   if (!dateStr) return '';
@@ -78,6 +81,7 @@ export default function GroupChatScreen() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingAttachRef = useRef<{ type: string; file?: File } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ msg: GroupMessage; isOwn: boolean } | null>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -214,6 +218,25 @@ export default function GroupChatScreen() {
   const handleContactSend = async (contact: { name: string; phone: string; email: string }) => {
     setShowContactForm(false);
     await doSend('', { type: 'contact', mediaUrl: '', contact });
+  };
+
+  const handleContextMenu = (msg: GroupMessage, isOwn: boolean, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ msg, isOwn });
+  };
+
+  const handlePin = async (msg: GroupMessage) => {
+    if (!groupId) return;
+    try {
+      if (currentGroup?.pinnedMessageId === msg.id) {
+        await unpinGroupMessage(groupId);
+      } else {
+        await pinGroupMessage(groupId, msg.id);
+      }
+    } catch (err) {
+      console.error('Failed to pin message:', err);
+    }
   };
 
   const handleCreateGroup = async () => {
@@ -405,7 +428,15 @@ export default function GroupChatScreen() {
                         </div>
                       </div>
                     ) : (
-                      <div className={`relative ${isOwn ? theme.bubbleOwn : theme.bubbleReceived} ${isMedia ? 'px-2 py-2' : 'px-4 py-3'}`}>
+                      <div
+                        className={`relative ${isOwn ? theme.bubbleOwn : theme.bubbleReceived} ${isMedia ? 'px-2 py-2' : 'px-4 py-3'}`}
+                        onContextMenu={(e) => handleContextMenu(msg, isOwn, e)}
+                        onTouchStart={(e) => {
+                          const timer = setTimeout(() => handleContextMenu(msg, isOwn, e), 500);
+                          const cancel = () => { clearTimeout(timer); document.removeEventListener('touchend', cancel); };
+                          document.addEventListener('touchend', cancel, { once: true });
+                        }}
+                      >
                         {isMedia ? (
                           <MediaMessage type={msg.type!} mediaUrl={msg.mediaUrl} mediaType={msg.mediaType} fileName={msg.fileName} fileSize={msg.fileSize} contact={msg.contact} location={msg.location} isOwn={isOwn} />
                         ) : (
@@ -469,6 +500,22 @@ export default function GroupChatScreen() {
 
       {/* Profile modal */}
       {profileModal && <ChatProfileModal uid={profileModal.uid} name={profileModal.name} photo={profileModal.photo} online={profileModal.online} onClose={() => setProfileModal(null)} />}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <MessageContextMenu
+          isOwn={contextMenu.isOwn}
+          messageText={contextMenu.msg.text}
+          messageType={contextMenu.msg.type}
+          readBy={contextMenu.msg.readBy}
+          createdAt={contextMenu.msg.createdAt}
+          isGroup
+          isPinned={currentGroup?.pinnedMessageId === contextMenu.msg.id}
+          onEdit={() => { setEditingMsg(contextMenu.msg); setEditText(contextMenu.msg.text); }}
+          onPin={() => handlePin(contextMenu.msg)}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       <ChatThemePicker open={showThemePicker} onClose={() => setShowThemePicker(false)} />
     </div>

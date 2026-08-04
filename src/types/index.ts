@@ -265,6 +265,8 @@ export interface ChatRoom {
   lastMessageBy: string;
   lastMessageAt: string;
   createdAt: string;
+  pinnedMessageId?: string;
+  pinnedAt?: string;
 }
 
 export interface ChatMessage {
@@ -284,6 +286,7 @@ export interface ChatMessage {
   edited?: boolean;
   createdAt: string;
   read: boolean;
+  pinned?: boolean;
 }
 
 export interface ChatGroup {
@@ -302,6 +305,8 @@ export interface ChatGroup {
   lastMessageBy: string;
   lastMessageAt: string;
   createdAt: string;
+  pinnedMessageId?: string;
+  pinnedAt?: string;
 }
 
 export interface GroupMessage {
@@ -321,6 +326,7 @@ export interface GroupMessage {
   edited?: boolean;
   createdAt: string;
   readBy: string[];
+  pinned?: boolean;
 }
 
 export interface Presence {
