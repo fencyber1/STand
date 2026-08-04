@@ -25,6 +25,7 @@ import ChatProfileModal from './ChatProfileModal';
 import TwemojiText from './TwemojiText';
 import ChatInputBar from './ChatInputBar';
 import MessageContextMenu from './MessageContextMenu';
+import SwipeableMessage from './SwipeableMessage';
 
 function timeAgo(dateStr: string): string {
   if (!dateStr) return '';
@@ -82,6 +83,7 @@ export default function GroupChatScreen() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingAttachRef = useRef<{ type: string; file?: File } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ msg: GroupMessage; isOwn: boolean } | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; senderName: string; text: string } | null>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -145,11 +147,12 @@ export default function GroupChatScreen() {
     if (!groupId || !uid || sending || !canSendMessages) return;
     setSending(true);
     try {
-      await sendGroupMessage(groupId, { uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, text, media);
+      await sendGroupMessage(groupId, { uid, name: user?.fullName || 'Student', photo: user?.photoURL || null }, text, media, replyTo || undefined);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setTyping(uid, null);
+      setReplyTo(null);
     } catch { } finally { setSending(false); }
-  }, [groupId, uid, user, sending]);
+  }, [groupId, uid, user, sending, replyTo]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -237,6 +240,10 @@ export default function GroupChatScreen() {
     } catch (err) {
       console.error('Failed to pin message:', err);
     }
+  };
+
+  const handleReply = (msg: GroupMessage) => {
+    setReplyTo({ id: msg.id, senderName: msg.senderName, text: msg.text || '📎 Media' });
   };
 
   const handleCreateGroup = async () => {
@@ -407,7 +414,8 @@ export default function GroupChatScreen() {
               const senderMember = members.find((m) => m.uid === msg.senderUid);
 
               return (
-                <div key={msg.id} className={`relative group ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
+                <SwipeableMessage key={msg.id} isOwn={isOwn} onSwipeReply={() => handleReply(msg)}>
+                <div className={`relative group ${isOwn ? 'flex justify-end' : 'flex justify-start'}`} style={{ marginBottom: showAvatar ? 16 : 2 }}>
                   {!isOwn && (
                     <div className="flex-shrink-0 self-end" style={{ width: 40, marginRight: -8, zIndex: 2 }}>
                       {showAvatar ? <UserAvatar photo={msg.senderPhoto || null} name={senderName} size={40} ring={theme.avatarRing} onClick={() => setProfileModal({ uid: msg.senderUid, name: senderName, photo: msg.senderPhoto || null, online: false })} /> : <div style={{ width: 40 }} />}
@@ -437,6 +445,13 @@ export default function GroupChatScreen() {
                           document.addEventListener('touchend', cancel, { once: true });
                         }}
                       >
+                        {/* Reply Quote */}
+                        {msg.replyTo && (
+                          <div className="mb-2 px-3 py-1.5 rounded-lg bg-white/5 border-l-2 border-indigo-400">
+                            <p className="text-[10px] font-bold text-indigo-400">{msg.replyTo.senderName}</p>
+                            <p className="text-[10px] text-white/40 truncate">{msg.replyTo.text}</p>
+                          </div>
+                        )}
                         {isMedia ? (
                           <MediaMessage type={msg.type!} mediaUrl={msg.mediaUrl} mediaType={msg.mediaType} fileName={msg.fileName} fileSize={msg.fileSize} contact={msg.contact} location={msg.location} isOwn={isOwn} />
                         ) : (
@@ -463,6 +478,7 @@ export default function GroupChatScreen() {
                     </div>
                   )}
                 </div>
+                </SwipeableMessage>
               );
             })}
           </div>
@@ -484,6 +500,8 @@ export default function GroupChatScreen() {
               onAttach={() => setShowAttach(!showAttach)}
               disabled={sending || !canSendMessages}
               sending={sending}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(null)}
             />
           )}
         </div>
@@ -513,6 +531,7 @@ export default function GroupChatScreen() {
           isPinned={currentGroup?.pinnedMessageId === contextMenu.msg.id}
           onEdit={() => { setEditingMsg(contextMenu.msg); setEditText(contextMenu.msg.text); }}
           onPin={() => handlePin(contextMenu.msg)}
+          onReply={() => handleReply(contextMenu.msg)}
           onClose={() => setContextMenu(null)}
         />
       )}

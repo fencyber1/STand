@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Info, Copy, Pencil, Pin, X, Check, CheckCheck, Clock } from 'lucide-react';
+import { Info, Copy, Pencil, Pin, X, Check, CheckCheck, Clock, Reply } from 'lucide-react';
 
 interface MessageContextMenuProps {
   isOwn: boolean;
@@ -12,6 +12,7 @@ interface MessageContextMenuProps {
   isPinned?: boolean;
   onEdit: () => void;
   onPin: () => void;
+  onReply: () => void;
   onClose: () => void;
 }
 
@@ -36,6 +37,7 @@ export default function MessageContextMenu({
   isPinned = false,
   onEdit,
   onPin,
+  onReply,
   onClose,
 }: MessageContextMenuProps) {
   const [showInfo, setShowInfo] = useState(false);
@@ -115,6 +117,15 @@ export default function MessageContextMenu({
         ) : (
           /* Menu Items */
           <div className="py-1">
+            {/* Reply */}
+            <button
+              onClick={() => { onReply(); onClose(); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/10 transition-colors"
+            >
+              <Reply className="w-4 h-4 text-white/50" />
+              <span>Reply</span>
+            </button>
+
             {/* Info */}
             <button
               onClick={() => setShowInfo(true)}

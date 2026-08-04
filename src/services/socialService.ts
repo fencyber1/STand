@@ -590,7 +590,7 @@ export function subscribeToChatMessages(chatId: string, cb: (messages: ChatMessa
   });
 }
 
-export async function sendChatMessage(chatId: string, sender: { uid: string; name: string; photo: string | null }, text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }): Promise<void> {
+export async function sendChatMessage(chatId: string, sender: { uid: string; name: string; photo: string | null }, text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }, replyTo?: { id: string; senderName: string; text: string }): Promise<void> {
   const ref = doc(collection(db, 'chatMessages'));
   await setDoc(ref, sanitize({
     chatId,
@@ -599,6 +599,7 @@ export async function sendChatMessage(chatId: string, sender: { uid: string; nam
     senderPhoto: sender.photo,
     text,
     ...(media || {}),
+    ...(replyTo ? { replyTo } : {}),
     createdAt: ts(),
     read: false,
   }));
@@ -796,7 +797,7 @@ export function subscribeToGroupMessages(groupId: string, cb: (messages: GroupMe
   });
 }
 
-export async function sendGroupMessage(groupId: string, sender: { uid: string; name: string; photo: string | null }, text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }): Promise<void> {
+export async function sendGroupMessage(groupId: string, sender: { uid: string; name: string; photo: string | null }, text: string, media?: { type: string; mediaUrl: string; mediaType?: string; fileName?: string; fileSize?: number; contact?: { name: string; phone: string; email: string }; location?: { lat: number; lng: number; name: string } }, replyTo?: { id: string; senderName: string; text: string }): Promise<void> {
   const ref = doc(collection(db, 'groupMessages'));
   await setDoc(ref, sanitize({
     groupId,
@@ -805,6 +806,7 @@ export async function sendGroupMessage(groupId: string, sender: { uid: string; n
     senderPhoto: sender.photo,
     text,
     ...(media || {}),
+    ...(replyTo ? { replyTo } : {}),
     createdAt: ts(),
     readBy: [sender.uid],
   }));

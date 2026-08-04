@@ -287,6 +287,7 @@ export interface ChatMessage {
   createdAt: string;
   read: boolean;
   pinned?: boolean;
+  replyTo?: { id: string; senderName: string; text: string };
 }
 
 export interface ChatGroup {
@@ -327,6 +328,7 @@ export interface GroupMessage {
   createdAt: string;
   readBy: string[];
   pinned?: boolean;
+  replyTo?: { id: string; senderName: string; text: string };
 }
 
 export interface Presence {

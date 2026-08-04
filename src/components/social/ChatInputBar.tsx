@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatTheme } from '../../contexts/ChatThemeContext';
-import { Send, Paperclip, Smile, Mic, X, Loader2, Square } from 'lucide-react';
+import { Send, Paperclip, Smile, Mic, X, Loader2, Square, Reply } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
+
+interface ReplyPreview {
+  senderName: string;
+  text: string;
+}
 
 interface Props {
   userPhoto: string | null;
@@ -11,9 +16,11 @@ interface Props {
   onAttach: () => void;
   disabled?: boolean;
   sending?: boolean;
+  replyTo?: ReplyPreview | null;
+  onCancelReply?: () => void;
 }
 
-export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia, onAttach, disabled, sending }: Props) {
+export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia, onAttach, disabled, sending, replyTo, onCancelReply }: Props) {
   const { theme } = useChatTheme();
   const [text, setText] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -158,6 +165,20 @@ export default function ChatInputBar({ userPhoto, userName, onSend, onSendMedia,
 
   return (
     <div className="relative">
+      {/* Reply Preview */}
+      {replyTo && (
+        <div className="flex items-center gap-2 px-4 py-2 mb-1 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+          <Reply className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold text-indigo-400">{replyTo.senderName}</p>
+            <p className="text-[11px] text-white/50 truncate">{replyTo.text}</p>
+          </div>
+          <button onClick={onCancelReply} className="p-1 rounded-full hover:bg-white/10">
+            <X className="w-3.5 h-3.5 text-white/40" />
+          </button>
+        </div>
+      )}
+
       {/* Emoji Picker */}
       {showEmoji && (
         <div className="absolute bottom-full left-0 right-0 z-30 mb-2 px-1">
