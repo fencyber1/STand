@@ -288,6 +288,7 @@ export interface ChatMessage {
   read: boolean;
   pinned?: boolean;
   replyTo?: { id: string; senderName: string; text: string };
+  deletedBy?: string[];
 }
 
 export interface ChatGroup {
@@ -329,6 +330,7 @@ export interface GroupMessage {
   readBy: string[];
   pinned?: boolean;
   replyTo?: { id: string; senderName: string; text: string };
+  deletedBy?: string[];
 }
 
 export interface Presence {

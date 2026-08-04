@@ -14,6 +14,7 @@ import {
   setTyping,
   pinGroupMessage,
   unpinGroupMessage,
+  deleteGroupMessage,
 } from '../../services/socialService';
 import type { ChatGroup, GroupMessage, Friend, Presence } from '../../types';
 import { Send, ArrowLeft, Users, Plus, X, Loader2, Crown, Palette, Pencil, Settings, Lock } from 'lucide-react';
@@ -105,7 +106,7 @@ export default function GroupChatScreen() {
 
   useEffect(() => {
     if (!groupId || !uid) { setMessages([]); return; }
-    const unsub = subscribeToGroupMessages(groupId, (msgs) => setMessages(msgs));
+    const unsub = subscribeToGroupMessages(groupId, (msgs) => setMessages(msgs.filter((m) => !(m.deletedBy || []).includes(uid))));
     return unsub;
   }, [groupId, uid]);
 
@@ -244,6 +245,14 @@ export default function GroupChatScreen() {
 
   const handleReply = (msg: GroupMessage) => {
     setReplyTo({ id: msg.id, senderName: msg.senderName, text: msg.text || '📎 Media' });
+  };
+
+  const handleDeleteForMe = async (msg: GroupMessage) => {
+    try { await deleteGroupMessage(msg.id, uid, false); } catch {}
+  };
+
+  const handleDeleteForEveryone = async (msg: GroupMessage) => {
+    try { await deleteGroupMessage(msg.id, uid, true); } catch {}
   };
 
   const handleCreateGroup = async () => {
@@ -532,6 +541,8 @@ export default function GroupChatScreen() {
           onEdit={() => { setEditingMsg(contextMenu.msg); setEditText(contextMenu.msg.text); }}
           onPin={() => handlePin(contextMenu.msg)}
           onReply={() => handleReply(contextMenu.msg)}
+          onDeleteForMe={() => handleDeleteForMe(contextMenu.msg)}
+          onDeleteForEveryone={() => handleDeleteForEveryone(contextMenu.msg)}
           onClose={() => setContextMenu(null)}
         />
       )}

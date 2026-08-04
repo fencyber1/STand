@@ -13,6 +13,7 @@ import {
   setTyping,
   pinChatMessage,
   unpinChatMessage,
+  deleteChatMessage,
 } from '../../services/socialService';
 import type { ChatRoom, ChatMessage, Presence } from '../../types';
 import { Send, ArrowLeft, MessageCircle, Loader2, Palette, Check, CheckCheck, Pencil, X } from 'lucide-react';
@@ -99,7 +100,7 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (!chatId || !uid) { setMessages([]); return; }
-    const unsubMsgs = subscribeToChatMessages(chatId, (msgs) => setMessages(msgs));
+    const unsubMsgs = subscribeToChatMessages(chatId, (msgs) => setMessages(msgs.filter((m) => !(m.deletedBy || []).includes(uid))));
     markChatRead(chatId, uid).catch(() => {});
     return unsubMsgs;
   }, [chatId, uid]);
@@ -224,6 +225,14 @@ export default function ChatScreen() {
 
   const handleReply = (msg: ChatMessage) => {
     setReplyTo({ id: msg.id, senderName: msg.senderName, text: msg.text || '📎 Media' });
+  };
+
+  const handleDeleteForMe = async (msg: ChatMessage) => {
+    try { await deleteChatMessage(msg.id, uid, false); } catch {}
+  };
+
+  const handleDeleteForEveryone = async (msg: ChatMessage) => {
+    try { await deleteChatMessage(msg.id, uid, true); } catch {}
   };
 
   const getOtherInfo = (chat: ChatRoom) => {
@@ -461,6 +470,8 @@ export default function ChatScreen() {
           onEdit={() => { setEditingMsg(contextMenu.msg); setEditText(contextMenu.msg.text); }}
           onPin={() => handlePin(contextMenu.msg)}
           onReply={() => handleReply(contextMenu.msg)}
+          onDeleteForMe={() => handleDeleteForMe(contextMenu.msg)}
+          onDeleteForEveryone={() => handleDeleteForEveryone(contextMenu.msg)}
           onClose={() => setContextMenu(null)}
         />
       )}

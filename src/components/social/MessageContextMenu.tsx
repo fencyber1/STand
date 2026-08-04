@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Info, Copy, Pencil, Pin, X, Check, CheckCheck, Clock, Reply } from 'lucide-react';
+import { Info, Copy, Pencil, Pin, X, Check, CheckCheck, Clock, Reply, Trash2 } from 'lucide-react';
 
 interface MessageContextMenuProps {
   isOwn: boolean;
@@ -13,6 +13,8 @@ interface MessageContextMenuProps {
   onEdit: () => void;
   onPin: () => void;
   onReply: () => void;
+  onDeleteForMe: () => void;
+  onDeleteForEveryone: () => void;
   onClose: () => void;
 }
 
@@ -38,9 +40,12 @@ export default function MessageContextMenu({
   onEdit,
   onPin,
   onReply,
+  onDeleteForMe,
+  onDeleteForEveryone,
   onClose,
 }: MessageContextMenuProps) {
   const [showInfo, setShowInfo] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +119,36 @@ export default function MessageContextMenu({
               </div>
             </div>
           </div>
+        ) : showDelete ? (
+          /* Delete Sub-menu */
+          <div className="py-1">
+            <div className="px-4 py-2">
+              <p className="text-xs text-white/40 font-medium">Delete message</p>
+            </div>
+            <button
+              onClick={() => { onDeleteForMe(); onClose(); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/10 transition-colors"
+            >
+              <Trash2 className="w-4 h-4 text-amber-400" />
+              <span>Delete for me</span>
+            </button>
+            {isOwn && (
+              <button
+                onClick={() => { onDeleteForEveryone(); onClose(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-4 h-4 text-red-400" />
+                <span>Delete for everyone</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowDelete(false)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/50 hover:bg-white/10 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              <span>Cancel</span>
+            </button>
+          </div>
         ) : (
           /* Menu Items */
           <div className="py-1">
@@ -162,6 +197,15 @@ export default function MessageContextMenu({
             >
               <Pin className="w-4 h-4 text-white/50" />
               <span>{isPinned ? 'Unpin' : 'Pin'}</span>
+            </button>
+
+            {/* Delete */}
+            <button
+              onClick={() => setShowDelete(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
             </button>
           </div>
         )}

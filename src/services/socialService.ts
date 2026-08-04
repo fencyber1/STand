@@ -1,7 +1,7 @@
 import {
   collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
   onSnapshot, query, where, orderBy, serverTimestamp,
-  writeBatch, documentId,
+  writeBatch, documentId, arrayUnion,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { createNotification } from './notificationService';
@@ -664,6 +664,64 @@ export async function pinGroupMessage(groupId: string, messageId: string): Promi
 
 export async function unpinGroupMessage(groupId: string): Promise<void> {
   await updateDoc(doc(db, 'chatGroups', groupId), { pinnedMessageId: null, pinnedAt: null });
+}
+
+export async function deleteChatMessage(messageId: string, uid: string, forEveryone: boolean): Promise<void> {
+  if (forEveryone) {
+    const msgSnap = await getDoc(doc(db, 'chatMessages', messageId));
+    if (msgSnap.exists()) {
+      const msgData = msgSnap.data();
+      if (msgData.senderUid !== uid) return;
+      await deleteDoc(doc(db, 'chatMessages', messageId));
+      if (msgData.chatId) {
+        const roomSnap = await getDoc(doc(db, 'chatRooms', msgData.chatId));
+        if (roomSnap.exists()) {
+          const roomData = roomSnap.data();
+          if (roomData.lastMessageAt === msgData.createdAt) {
+            const msgsQ = query(collection(db, 'chatMessages'), where('chatId', '==', msgData.chatId), orderBy('createdAt', 'desc'));
+            const msgsSnap = await getDocs(msgsQ);
+            const latest = msgsSnap.docs.find((d) => d.id !== messageId);
+            await updateDoc(doc(db, 'chatRooms', msgData.chatId), sanitize({
+              lastMessage: latest ? (latest.data().text || '📎 Media') : '',
+              lastMessageBy: latest ? latest.data().senderUid : '',
+              lastMessageAt: latest ? latest.data().createdAt : '',
+            }));
+          }
+        }
+      }
+    }
+  } else {
+    await updateDoc(doc(db, 'chatMessages', messageId), { deletedBy: arrayUnion(uid) });
+  }
+}
+
+export async function deleteGroupMessage(messageId: string, uid: string, forEveryone: boolean): Promise<void> {
+  if (forEveryone) {
+    const msgSnap = await getDoc(doc(db, 'groupMessages', messageId));
+    if (msgSnap.exists()) {
+      const msgData = msgSnap.data();
+      if (msgData.senderUid !== uid) return;
+      await deleteDoc(doc(db, 'groupMessages', messageId));
+      if (msgData.groupId) {
+        const groupSnap = await getDoc(doc(db, 'chatGroups', msgData.groupId));
+        if (groupSnap.exists()) {
+          const groupData = groupSnap.data();
+          if (groupData.lastMessageAt === msgData.createdAt) {
+            const msgsQ = query(collection(db, 'groupMessages'), where('groupId', '==', msgData.groupId), orderBy('createdAt', 'desc'));
+            const msgsSnap = await getDocs(msgsQ);
+            const latest = msgsSnap.docs.find((d) => d.id !== messageId);
+            await updateDoc(doc(db, 'chatGroups', msgData.groupId), sanitize({
+              lastMessage: latest ? (latest.data().text || '📎 Media') : '',
+              lastMessageBy: latest ? latest.data().senderUid : '',
+              lastMessageAt: latest ? latest.data().createdAt : '',
+            }));
+          }
+        }
+      }
+    }
+  } else {
+    await updateDoc(doc(db, 'groupMessages', messageId), { deletedBy: arrayUnion(uid) });
+  }
 }
 
 export async function getUserProfile(uid: string): Promise<{ uid: string; displayName: string; photoURL: string | null; email: string; bio: string; surname: string; role: string; hobby: string; country: string } | null> {
