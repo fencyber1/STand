@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Timer, Shuffle, Zap, BarChart3, Rocket, ChevronRight, ChevronLeft } from 'lucide-react';
+import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -78,19 +79,21 @@ export default function HomeScreen() {
     try {
       const actualSector = sector === 'Other' ? (customSector.trim() || 'General') : sector;
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
+      setQuestionProgressCallback((current, total) => setProgress({ current, total }));
+      const { questions } = await generateQuestions({
+        topic,
+        sector: actualSector,
+        level,
+        questionType: questionType.split(' ')[0],
+        count,
+        difficulty,
+        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+        language,
+      });
+      setQuestionProgressCallback(null);
       navigate('/quiz', {
         state: {
-          progressive: true,
-          params: {
-            topic,
-            sector: actualSector,
-            level,
-            questionType: questionType.split(' ')[0],
-            count,
-            difficulty,
-            studentAge: age && age >= 4 && age <= 12 ? age : undefined,
-            language,
-          },
+          questions,
           topic,
           sector: actualSector,
           level,

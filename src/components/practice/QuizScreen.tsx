@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
-import { getDeepExplanation, gradeTheoryAnswer, generateQuestionsProgressive } from '../../services/api';
+import { getDeepExplanation, gradeTheoryAnswer } from '../../services/api';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -11,9 +11,7 @@ import CheatSheet from './CheatSheet';
 import QuestionImage from './QuestionImage';
 
 interface QuizState {
-  questions?: Question[];
-  progressive?: boolean;
-  params?: { topic: string; sector: string; level: string; questionType: string; count: number; difficulty?: string; studentAge?: number; language?: string };
+  questions: Question[];
   shuffle?: boolean;
   topic: string;
   sector: string;
@@ -39,19 +37,18 @@ export default function QuizScreen() {
   const { t } = useLanguage();
   const state = location.state as QuizState | null;
 
-  if (!state || (!state.questions?.length && !state.progressive)) {
+  if (!state?.questions?.length) {
     navigate('/practice');
     return null;
   }
 
-  const { topic, timeLimit = 0, instantFeedback = false, speedRound = false } = state;
+  const { questions: rawQuestions, topic, timeLimit = 0, instantFeedback = false, speedRound = false } = state;
 
-  // Progressive generation state
-  const [questions, setQuestions] = useState<Question[]>(state.questions || []);
-  const [generating, setGenerating] = useState(state.progressive || false);
-  const [genProgress, setGenProgress] = useState<{ current: number; total: number } | null>(null);
-  const [genError, setGenError] = useState('');
-  const generatingRef = useRef(true);
+  const [questions] = useState<Question[]>(() => {
+    let qs = rawQuestions;
+    if (state.shuffle) qs = [...qs].sort(() => Math.random() - 0.5);
+    return qs;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const selectedAnswerRef = useRef<string | string[] | null>(null);
@@ -66,50 +63,6 @@ export default function QuizScreen() {
   const [deepExplanation, setDeepExplanation] = useState('');
   const [showDeep, setShowDeep] = useState(false);
   const [grading, setGrading] = useState(false);
-
-  // Progressive question generation
-  useEffect(() => {
-    if (!state.progressive || !state.params) return;
-    let cancelled = false;
-    generatingRef.current = true;
-
-    (async () => {
-      try {
-        const allQuestions = await generateQuestionsProgressive(state.params!, (batch, progress) => {
-          if (cancelled) return;
-          setQuestions(batch);
-          setGenProgress(progress);
-        });
-        if (!cancelled) {
-          let final = allQuestions;
-          if (state.shuffle) final = [...final].sort(() => Math.random() - 0.5);
-          setQuestions(final);
-          setGenerating(false);
-          generatingRef.current = false;
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          setGenError(err.message || 'Failed to generate questions');
-          setGenerating(false);
-          generatingRef.current = false;
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, []);
-
-  // Show loading state while generating first question
-  if (generating && questions.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto flex flex-col items-center justify-center h-[60vh]">
-        <Loader2 size={40} className="text-primary-500 animate-spin mb-4" />
-        <p className="text-gray-600 dark:text-gray-300 font-medium">Generating your questions...</p>
-        {genProgress && <p className="text-sm text-gray-400 mt-2">{genProgress.current} / {genProgress.total}</p>}
-        {genError && <p className="text-sm text-red-500 mt-2">{genError}</p>}
-      </div>
-    );
-  }
 
   useEffect(() => {
     selectedAnswerRef.current = selectedAnswer;
@@ -417,7 +370,7 @@ export default function QuizScreen() {
               </span>
             )}
             <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-              {currentIndex + 1} / {questions.length}{generating ? ' ...' : ''}
+              {currentIndex + 1} / {questions.length}
             </span>
           </div>
         </div>
@@ -683,24 +636,12 @@ export default function QuizScreen() {
           ) : (
             <button
               onClick={handleNext}
-              disabled={generating && !isLast && !questions[currentIndex + 1]}
-              className={`flex-1 py-3 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
-                generating && !isLast && !questions[currentIndex + 1]
-                  ? 'bg-gray-500 cursor-wait'
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
+              className="flex-1 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
             >
-              {generating && !isLast && !questions[currentIndex + 1] ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  {t('Generating...')}
-                </>
-              ) : (
-                <>
+              <>
                   {isLast ? t('Results') : t('Next Question')}
                   <ArrowRight size={18} />
                 </>
-              )}
             </button>
           )}
         </div>

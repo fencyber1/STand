@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Shield, Timer, AlertTriangle } from 'lucide-react';
+import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
 import { SECTORS, LEVELS, COUNT_OPTIONS } from '../../constants';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -70,18 +71,20 @@ export default function ExamSetupScreen() {
     try {
       const actualSector = sector === 'Other' ? (customSector.trim() || 'General') : sector;
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
+      setQuestionProgressCallback((current, total) => setProgress({ current, total }));
+      const { questions } = await generateQuestions({
+        topic,
+        sector: actualSector,
+        level,
+        questionType: 'MCQ',
+        count,
+        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+        language,
+      });
+      setQuestionProgressCallback(null);
       navigate('/exam', {
         state: {
-          progressive: true,
-          params: {
-            topic,
-            sector: actualSector,
-            level,
-            questionType: 'MCQ',
-            count,
-            studentAge: age && age >= 4 && age <= 12 ? age : undefined,
-            language,
-          },
+          questions,
           topic,
           sector: actualSector,
           level,
