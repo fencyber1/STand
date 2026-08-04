@@ -185,6 +185,46 @@ export async function generateQuestions(params: {
   return { questions: final };
 }
 
+export async function generateQuestionsProgressive(params: {
+  topic: string;
+  sector: string;
+  level: string;
+  questionType: string;
+  count: number;
+  difficulty?: string;
+  studentAge?: number;
+  language?: string;
+}, onBatch: (questions: Question[], progress: { current: number; total: number }) => void): Promise<Question[]> {
+  const FIRST_BATCH = 1;
+  const NEXT_BATCH = 2;
+  const totalNeeded = params.count;
+  const allQuestions: Question[] = [];
+
+  const topicKey = `${params.sector}__${params.topic}__${params.level}`.toLowerCase().slice(0, 120);
+  const previousQuestions = storage.getGeneratedQuestionHistory(topicKey);
+  const previousAsQuestions: Question[] = previousQuestions.map((q, i) => ({
+    id: `hist-${i}`, question: q, type: 'MCQ', options: undefined,
+    correctAnswer: '', explanation: '', difficulty: 'medium', subject: params.sector,
+    topic: params.topic, imageQuery: '',
+  }));
+
+  // First: generate 1 question immediately
+  const firstBatch = await generateQuestionBatch(params, FIRST_BATCH, 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+  allQuestions.push(...firstBatch);
+  onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+
+  // Then: generate remaining in batches of 2
+  for (let offset = FIRST_BATCH; offset < totalNeeded; offset += NEXT_BATCH) {
+    const batchSize = Math.min(NEXT_BATCH, totalNeeded - offset);
+    const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+    allQuestions.push(...batchQuestions);
+    onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+  }
+
+  storage.saveGeneratedQuestionHistory(topicKey, allQuestions);
+  return allQuestions;
+}
+
 async function generateQuestionBatch(
   params: {
     topic: string;

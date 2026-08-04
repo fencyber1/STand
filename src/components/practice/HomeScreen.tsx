@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Timer, Shuffle, Zap, BarChart3, Rocket, ChevronRight, ChevronLeft } from 'lucide-react';
 import { SECTORS, LEVELS, QUESTION_TYPES, COUNT_OPTIONS } from '../../constants';
-import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const TIMER_PRESETS = [
@@ -76,33 +75,36 @@ export default function HomeScreen() {
     setError('');
     setLoading(true);
     setProgress(null);
-    setQuestionProgressCallback((current, total) => setProgress({ current, total }));
     try {
       const actualSector = sector === 'Other' ? (customSector.trim() || 'General') : sector;
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
-      const result = await generateQuestions({
-        topic,
-        sector: actualSector,
-        level,
-        questionType: questionType.split(' ')[0],
-        count,
-        difficulty,
-        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
-        language,
-      });
-      let questions = result.questions;
-      if (shuffle) {
-        questions = [...questions].sort(() => Math.random() - 0.5);
-      }
       navigate('/quiz', {
-        state: { questions, topic, sector, level, questionType, timeLimit, instantFeedback, speedRound },
+        state: {
+          progressive: true,
+          params: {
+            topic,
+            sector: actualSector,
+            level,
+            questionType: questionType.split(' ')[0],
+            count,
+            difficulty,
+            studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+            language,
+          },
+          topic,
+          sector: actualSector,
+          level,
+          questionType,
+          timeLimit,
+          instantFeedback,
+          speedRound,
+          shuffle,
+        },
       });
     } catch (err: any) {
       console.error('Question generation error:', err);
       setError(err.message || t('Failed to generate questions. Please try again.'));
     } finally {
-      setQuestionProgressCallback(null);
-      setProgress(null);
       setLoading(false);
     }
   };

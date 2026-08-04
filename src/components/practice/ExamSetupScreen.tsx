@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Shield, Timer, AlertTriangle } from 'lucide-react';
 import { SECTORS, LEVELS, COUNT_OPTIONS } from '../../constants';
-import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const TIMER_PRESETS = [
@@ -68,27 +67,30 @@ export default function ExamSetupScreen() {
 
     setLoading(true);
     setProgress(null);
-    setQuestionProgressCallback((current, total) => setProgress({ current, total }));
     try {
       const actualSector = sector === 'Other' ? (customSector.trim() || 'General') : sector;
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
-      const result = await generateQuestions({
-        topic,
-        sector: actualSector,
-        level,
-        questionType: 'MCQ',
-        count,
-        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
-        language,
-      });
       navigate('/exam', {
-        state: { questions: result.questions, topic, sector: actualSector, level, timeLimit },
+        state: {
+          progressive: true,
+          params: {
+            topic,
+            sector: actualSector,
+            level,
+            questionType: 'MCQ',
+            count,
+            studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+            language,
+          },
+          topic,
+          sector: actualSector,
+          level,
+          timeLimit,
+        },
       });
     } catch (err: any) {
       setError(err.message || 'Failed to generate questions.');
     } finally {
-      setQuestionProgressCallback(null);
-      setProgress(null);
       setLoading(false);
     }
   };
