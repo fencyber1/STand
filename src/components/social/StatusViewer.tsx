@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check, Plus } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check, Plus, Reply } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { markStatusViewed, toggleStatusLike, addStatusComment, subscribeToStatusComments, deleteStatus } from '../../services/statusService';
 import { getUserProfile } from '../../services/socialService';
@@ -23,6 +23,7 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<StatusComment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<StatusComment | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -128,7 +129,11 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
     if (!current || !user || !commentText.trim()) return;
     const text = commentText.trim();
     setCommentText('');
-    await addStatusComment(current.id, { uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, text);
+    const replyPayload = replyingTo
+      ? { id: replyingTo.id, displayName: replyingTo.displayName, text: replyingTo.text }
+      : undefined;
+    setReplyingTo(null);
+    await addStatusComment(current.id, { uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, text, replyPayload);
     setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
@@ -302,34 +307,75 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
               <p className="text-white/30 text-center text-sm py-6">No comments yet. Be the first!</p>
             ) : (
               comments.map((c) => (
-                <div key={c.id} className="flex items-start gap-2.5">
-                  {c.photoURL ? (
-                    <img src={c.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {c.displayName.charAt(0)}
+                <div key={c.id} className="group">
+                  <div className="flex items-start gap-2.5">
+                    {c.photoURL ? (
+                      <img src={c.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {c.displayName.charAt(0)}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-xs font-semibold">{c.displayName.split(' ')[0]}</span>
+                        <span className="text-white/30 text-[10px]">
+                          {(() => {
+                            const diff = Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 1000);
+                            if (diff < 60) return 'now';
+                            if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+                            if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+                            return `${Math.floor(diff / 86400)}d`;
+                          })()}
+                        </span>
+                        <button
+                          onClick={() => setReplyingTo(c)}
+                          className="text-white/0 group-hover:text-white/50 hover:!text-white/80 transition-colors ml-1"
+                          title={`Reply to ${c.displayName.split(' ')[0]}`}
+                        >
+                          <Reply size={12} />
+                        </button>
+                      </div>
+                      {/* Reply quoted preview */}
+                      {c.replyTo && (
+                        <div className="flex items-start gap-1.5 mb-1 pl-2 border-l-2 border-primary-400/50">
+                          <div className="min-w-0">
+                            <p className="text-primary-300/80 text-[11px] font-semibold leading-tight truncate">
+                              @{c.replyTo.displayName.split(' ')[0]}
+                            </p>
+                            <p className="text-white/30 text-[11px] leading-snug truncate">
+                              {c.replyTo.text.length > 50 ? c.replyTo.text.slice(0, 50) + '…' : c.replyTo.text}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-white/80 text-sm leading-snug">{c.text}</p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-white text-xs font-semibold">{c.displayName.split(' ')[0]}</span>
-                      <span className="text-white/30 text-[10px]">
-                        {(() => {
-                          const diff = Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 1000);
-                          if (diff < 60) return 'now';
-                          if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-                          if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-                          return `${Math.floor(diff / 86400)}d`;
-                        })()}
-                      </span>
-                    </div>
-                    <p className="text-white/80 text-sm leading-snug">{c.text}</p>
                   </div>
                 </div>
               ))
             )}
             <div ref={commentsEndRef} />
           </div>
+
+          {/* Replying-to bar */}
+          {replyingTo && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border-t border-white/10">
+              <Reply size={13} className="text-primary-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-primary-300 text-xs font-semibold">Replying to {replyingTo.displayName.split(' ')[0]}</span>
+                <span className="text-white/30 text-xs ml-2 truncate inline-block max-w-[200px] align-bottom">
+                  {replyingTo.text}
+                </span>
+              </div>
+              <button
+                onClick={() => setReplyingTo(null)}
+                className="p-1 text-white/40 hover:text-white transition-colors shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {/* Comment input */}
           <div className="flex items-center gap-2 px-4 py-3 border-t border-white/10">
@@ -338,7 +384,7 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
-              placeholder="Write a comment..."
+              placeholder={replyingTo ? `Reply to ${replyingTo.displayName.split(' ')[0]}...` : 'Write a comment...'}
               className="flex-1 bg-white/10 text-white text-sm rounded-full px-4 py-2.5 outline-none placeholder-white/30"
             />
             <button

@@ -103,7 +103,8 @@ export async function toggleStatusLike(statusId: string, uid: string): Promise<v
 export async function addStatusComment(
   statusId: string,
   user: { uid: string; displayName: string; photoURL: string | null },
-  text: string
+  text: string,
+  replyTo?: { id: string; displayName: string; text: string }
 ): Promise<string> {
   const ref = doc(collection(db, 'statusComments'));
   await setDoc(ref, sanitize({
@@ -113,6 +114,7 @@ export async function addStatusComment(
     photoURL: user.photoURL || '',
     text,
     createdAt: ts(),
+    ...(replyTo ? { replyTo } : {}),
   }));
   return ref.id;
 }
@@ -130,6 +132,7 @@ export function subscribeToStatusComments(statusId: string, cb: (comments: Statu
         photoURL: data.photoURL || null,
         text: data.text || '',
         createdAt: data.createdAt || '',
+        replyTo: data.replyTo || undefined,
       } as StatusComment;
     }).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     cb(items);

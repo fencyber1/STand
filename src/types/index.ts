@@ -408,4 +408,5 @@ export interface StatusComment {
   photoURL: string | null;
   text: string;
   createdAt: string;
+  replyTo?: { id: string; displayName: string; text: string };
 }
