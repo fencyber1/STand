@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { markStatusViewed, toggleStatusLike, addStatusComment, subscribeToStatusComments, deleteStatus } from '../../services/statusService';
 import { getUserProfile } from '../../services/socialService';
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function StatusViewer({ statuses, startIndex, onClose, onStatusUpdate }: Props) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [currentIdx, setCurrentIdx] = useState(startIndex);
   const [progress, setProgress] = useState(0);
@@ -197,9 +199,18 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
           <p className="text-white/50 text-xs">{timeAgo}</p>
         </div>
         {isOwner && (
-          <button onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="p-2 text-white/60 hover:text-red-400">
-            <Trash2 size={18} />
-          </button>
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/statuses/new'); }}
+              className="p-2 text-white/60 hover:text-white"
+              title="Add another status"
+            >
+              <Plus size={18} />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="p-2 text-white/60 hover:text-red-400">
+              <Trash2 size={18} />
+            </button>
+          </>
         )}
         <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-2 text-white/60 hover:text-white">
           <X size={20} />

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Send, Image, Palette } from 'lucide-react';
+import { X, Send, Image, Palette, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { postStatus } from '../../services/statusService';
 
@@ -30,6 +30,7 @@ export default function StatusComposer() {
   const [fontIndex, setFontIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [postedCount, setPostedCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +52,10 @@ export default function StatusComposer() {
       } else {
         await postStatus({ uid: user.uid, displayName: user.fullName, photoURL: user.photoURL || null }, 'text', text.trim(), bgColor, textColor, FONT_STYLES[fontIndex].label.toLowerCase());
       }
-      navigate('/statuses');
+      setPostedCount((c) => c + 1);
+      setText('');
+      setImagePreview(null);
+      setFontIndex(0);
     } catch {
       alert('Failed to post status');
     } finally {
@@ -69,6 +73,12 @@ export default function StatusComposer() {
         <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
           <X size={24} />
         </button>
+        {postedCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+            <Check size={14} />
+            <span className="text-sm font-medium">{postedCount} posted</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setFontIndex((i) => (i + 1) % FONT_STYLES.length)}
@@ -140,8 +150,23 @@ export default function StatusComposer() {
         )}
       </div>
 
-      {/* Send button — always above keyboard */}
-      <div className="flex justify-end p-4 shrink-0 safe-area-bottom">
+      {/* Bottom actions — always above keyboard */}
+      <div className="flex items-center justify-between p-4 shrink-0 safe-area-bottom" style={{ color: textColor }}>
+        {postedCount > 0 ? (
+          <button
+            onClick={() => navigate('/statuses')}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all"
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              color: textColor,
+            }}
+          >
+            <Check size={18} />
+            <span>Done</span>
+          </button>
+        ) : (
+          <div />
+        )}
         <button
           onClick={handlePost}
           disabled={loading || !canPost}
