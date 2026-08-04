@@ -50,7 +50,6 @@ export default function QuizScreen() {
   const [generating, setGenerating] = useState(state.progressive || false);
   const [genProgress, setGenProgress] = useState<{ current: number; total: number } | null>(null);
   const [genError, setGenError] = useState('');
-  const generatingRef = useRef(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
   const selectedAnswerRef = useRef<string | string[] | null>(null);
@@ -69,7 +68,6 @@ export default function QuizScreen() {
   useEffect(() => {
     if (!state.progressive || !state.params) return;
     let cancelled = false;
-    generatingRef.current = true;
 
     (async () => {
       try {
@@ -83,13 +81,11 @@ export default function QuizScreen() {
           if (state.shuffle) final = [...final].sort(() => Math.random() - 0.5);
           setQuestions(final);
           setGenerating(false);
-          generatingRef.current = false;
         }
       } catch (err: any) {
         if (!cancelled) {
           setGenError(err.message || 'Failed to generate questions');
           setGenerating(false);
-          generatingRef.current = false;
         }
       }
     })();

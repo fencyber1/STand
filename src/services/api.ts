@@ -224,9 +224,15 @@ export async function generateQuestionsProgressive(params: {
   // Then: generate remaining in batches of 2
   for (let offset = FIRST_BATCH; offset < totalNeeded; offset += NEXT_BATCH) {
     const batchSize = Math.min(NEXT_BATCH, totalNeeded - offset);
-    const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
-    allQuestions.push(...batchQuestions);
-    onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+    try {
+      const batchQuestions = await generateQuestionBatch(params, batchSize, Math.floor(offset / NEXT_BATCH) + 1, Math.ceil(totalNeeded / NEXT_BATCH), [...previousAsQuestions, ...allQuestions]);
+      allQuestions.push(...batchQuestions);
+      onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+    } catch (err) {
+      console.error(`Background batch failed at offset ${offset}:`, err);
+      // Continue with whatever questions we have — don't kill the whole generation
+      break;
+    }
   }
 
   storage.saveGeneratedQuestionHistory(topicKey, allQuestions);
