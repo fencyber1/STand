@@ -62,7 +62,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
     <div className="mb-1" data-tour-id={tourId}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
       >
         {group.label}
         <Icon size={12} />
@@ -75,17 +75,17 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
               to={to}
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+                    : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
                 }`
               }
             >
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                 'shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700'
               }`}>
-                <ItemIcon size={15} className="text-gray-500 dark:text-gray-300" />
+                  <ItemIcon size={15} className="text-gray-500 dark:text-gray-100" />
               </div>
               <span className="truncate">{label}</span>
             </NavLink>
@@ -225,13 +225,13 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+          <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
-              <LayoutDashboard size={15} className="text-gray-500 dark:text-gray-300" />
+              <LayoutDashboard size={15} className="text-gray-500 dark:text-gray-100" />
             </div>
             <span className="truncate">{t('Dashboard')}</span>
           </NavLink>
-          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
               <FenBotNavIcon size={15} />
             </div>
@@ -252,9 +252,9 @@ export default function Layout() {
 
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 mt-2 space-y-0.5">
             {bottomItems.map(({ to, label, icon: ItemIcon }) => (
-              <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
-                  <ItemIcon size={15} className="text-gray-500 dark:text-gray-300" />
+                <ItemIcon size={15} className="text-gray-500 dark:text-gray-100" />
                 </div>
                 <span className="truncate">{label}</span>
               </NavLink>
