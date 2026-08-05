@@ -326,12 +326,16 @@ export default function Layout() {
               end={to === '/'}
               className={({ isActive }) =>
                 `flex flex-col items-center gap-0.5 py-2 px-3 min-w-[60px] transition-colors ${
-                  isActive ? 'text-violet-400' : 'text-white/40'
+                  isActive ? 'text-violet-400' : 'text-white'
                 }`
               }
             >
-              <Icon size={22} />
-              <span className="text-[10px] font-medium">{label}</span>
+              {({ isActive }) => (
+                <>
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                  <span className="text-[10px] font-bold">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
