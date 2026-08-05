@@ -214,7 +214,14 @@ export default function DocumentQuizScreen() {
 
       navigate('/quiz', {
         state: {
-          questions,
+          progressive: true,
+          params: {
+            documentText: textToUse,
+            documentName: fileName,
+            questionCount,
+            questionType,
+            difficulty: difficulty === 'all' ? undefined : difficulty,
+          },
           topic: `Document: ${fileName}${rangeLabel}`,
           sector: 'Document-Based',
           level: 'Custom',

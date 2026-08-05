@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
-import { getDeepExplanation, gradeTheoryAnswer, generateQuestionsProgressive } from '../../services/api';
+import { getDeepExplanation, gradeTheoryAnswer, generateQuestionsProgressive, getDocumentQuestionsProgressive } from '../../services/api';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -13,7 +13,7 @@ import QuestionImage from './QuestionImage';
 interface QuizState {
   questions?: Question[];
   progressive?: boolean;
-  params?: { topic: string; sector: string; level: string; questionType: string; count: number; difficulty?: string; studentAge?: number; language?: string };
+  params?: { topic: string; sector: string; level: string; questionType: string; count: number; difficulty?: string; studentAge?: number; language?: string; documentText?: string; documentName?: string; questionCount?: number };
   shuffle?: boolean;
   topic: string;
   sector: string;
@@ -70,14 +70,23 @@ export default function QuizScreen() {
   useEffect(() => {
     if (!state.progressive || !state.params) return;
     const myId = ++genIdRef.current;
+    const isDocument = !!(state.params as any).documentText;
 
     (async () => {
       try {
-        const allQuestions = await generateQuestionsProgressive(state.params!, (batch, progress) => {
-          if (genIdRef.current !== myId) return;
-          setQuestions(batch);
-          setGenProgress(progress);
-        });
+        const genFn = isDocument
+          ? () => getDocumentQuestionsProgressive(state.params as any, (batch, progress) => {
+              if (genIdRef.current !== myId) return;
+              setQuestions(batch);
+              setGenProgress(progress);
+            })
+          : () => generateQuestionsProgressive(state.params!, (batch, progress) => {
+              if (genIdRef.current !== myId) return;
+              setQuestions(batch);
+              setGenProgress(progress);
+            });
+
+        const allQuestions = await genFn();
         if (genIdRef.current === myId) {
           let final = allQuestions;
           if (state.shuffle) final = [...final].sort(() => Math.random() - 0.5);

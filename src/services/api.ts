@@ -455,6 +455,80 @@ export async function getDocumentQuestions(params: {
   return { questions: final };
 }
 
+export async function getDocumentQuestionsProgressive(params: {
+  documentText: string;
+  questionCount: number;
+  questionType: string;
+  difficulty?: string;
+  documentName?: string;
+}, onBatch: (questions: Question[], progress: { current: number; total: number }) => void): Promise<Question[]> {
+  const totalNeeded = params.questionCount;
+  const CONCURRENCY = 5;
+  const allQuestions: Question[] = [];
+
+  const docKey = `doc__${(params.documentName || 'pasted').slice(0, 80)}`.toLowerCase();
+  const previousQuestions = storage.getGeneratedQuestionHistory(docKey);
+  const previousAsQuestions: Question[] = previousQuestions.map((q, i) => ({
+    id: `hist-${i}`, question: q, type: 'MCQ', options: undefined,
+    correctAnswer: '', explanation: '', difficulty: 'medium', subject: 'Document-Based',
+    topic: '', imageQuery: '',
+  }));
+
+  // First: generate 1 question immediately
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const firstBatch = await generateDocumentQuestionBatch(params, 1, 1, totalNeeded, [...previousAsQuestions]);
+      allQuestions.push(...firstBatch);
+      onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+      break;
+    } catch (err) {
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      else throw err;
+    }
+  }
+
+  // Remaining: generate in parallel with concurrency limit
+  const remaining = totalNeeded - allQuestions.length;
+  if (remaining > 0) {
+    const queue = Array.from({ length: remaining }, (_, i) => allQuestions.length + i);
+    let nextIdx = 0;
+
+    const worker = async () => {
+      while (nextIdx < queue.length) {
+        const myIdx = nextIdx++;
+        const questionNum = queue[myIdx] + 1;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const batch = await generateDocumentQuestionBatch(params, 1, questionNum, totalNeeded, [...previousAsQuestions, ...allQuestions]);
+            if (batch.length > 0) {
+              allQuestions.push(batch[0]);
+              onBatch([...allQuestions], { current: allQuestions.length, total: totalNeeded });
+            }
+            break;
+          } catch {
+            if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          }
+        }
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, remaining) }, () => worker());
+    await Promise.all(workers);
+  }
+
+  // Dedup final list
+  const seen = new Set<string>();
+  const deduped = allQuestions.filter((q) => {
+    const key = q.question.toLowerCase().slice(0, 80);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  storage.saveGeneratedQuestionHistory(docKey, deduped);
+  return deduped;
+}
+
 async function generateDocumentQuestionBatch(
   params: {
     documentText: string;
