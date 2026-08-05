@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../services/storage';
 import { createQuizRoom, joinQuizRoom, type QuizRoom } from '../../services/firebaseService';
-import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
+import { generateQuestionsProgressive } from '../../services/api';
 import { SECTORS, LEVELS, DIFFICULTY_LEVELS } from '../../constants';
 import BorderGlow from '../ui/BorderGlow';
 
@@ -45,11 +45,10 @@ export default function MultiplayerLobbyScreen() {
     setLoading(true);
     setError('');
     setProgress(null);
-    setQuestionProgressCallback((current, total) => setProgress({ current, total }));
     try {
       const actualSubject = subject === 'Other' ? (customSubject.trim() || 'General') : (subject || 'General');
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
-      const { questions } = await generateQuestions({
+      const questions = await generateQuestionsProgressive({
         topic: topic.trim(),
         sector: actualSubject,
         level,
@@ -58,13 +57,12 @@ export default function MultiplayerLobbyScreen() {
         difficulty,
         studentAge: age && age >= 4 && age <= 12 ? age : undefined,
         language,
-      });
+      }, (batch, p) => setProgress(p));
       const code = await createQuizRoom(userObj, { topic: topic.trim(), subject: actualSubject, level, difficulty, questionCount }, questions);
       navigate(`/multiplayer/${code}`);
     } catch (e: any) {
       setError(e.message || 'Failed to create room');
     }
-    setQuestionProgressCallback(null);
     setProgress(null);
     setLoading(false);
   };
