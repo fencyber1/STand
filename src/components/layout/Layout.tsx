@@ -75,7 +75,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
               to={to}
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${
                   isActive
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                     : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
@@ -85,7 +85,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                 'shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700'
               }`}>
-                  <ItemIcon size={15} className="text-gray-500 dark:text-gray-100" />
+                  <ItemIcon size={17} className="text-gray-500 dark:text-gray-100" />
               </div>
               <span className="truncate">{label}</span>
             </NavLink>
@@ -225,15 +225,15 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
+          <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
-              <LayoutDashboard size={15} className="text-gray-500 dark:text-gray-100" />
+              <LayoutDashboard size={17} className="text-gray-500 dark:text-gray-100" />
             </div>
             <span className="truncate">{t('Dashboard')}</span>
           </NavLink>
-          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
+          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
-              <FenBotNavIcon size={15} />
+              <FenBotNavIcon size={17} />
             </div>
             <span className="truncate">FenBot</span>
           </NavLink>
@@ -252,9 +252,9 @@ export default function Layout() {
 
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 mt-2 space-y-0.5">
             {bottomItems.map(({ to, label, icon: ItemIcon }) => (
-              <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
+              <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}`}>
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700">
-                <ItemIcon size={15} className="text-gray-500 dark:text-gray-100" />
+                <ItemIcon size={17} className="text-gray-500 dark:text-gray-100" />
                 </div>
                 <span className="truncate">{label}</span>
               </NavLink>
@@ -263,7 +263,7 @@ export default function Layout() {
         </nav>
 
         <div className="shrink-0 p-3 border-t border-gray-200 dark:border-gray-700">
-          <button onClick={handleLogout} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <button onClick={handleLogout} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-base font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
             <LogOut size={16} />
             {t('Logout')}
           </button>
