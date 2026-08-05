@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
@@ -28,6 +28,8 @@ import {
   ChevronDown,
   ChevronRight,
   Settings,
+  Home,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -35,6 +37,8 @@ import { storage } from '../../services/storage';
 import Logo from '../landing/Logo';
 import FenBotIcon from '../effects/FenBotIcon';
 import NotificationBell from '../notifications/NotificationBell';
+
+const NAVY = '#0e1627';
 
 function FenBotNavIcon({ size }: { size: number }) {
   return <FenBotIcon size={size} />;
@@ -75,12 +79,12 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${
                   isActive
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    ? 'bg-violet-500/20 text-violet-300'
+                    : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`
               }
             >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/10">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/5">
                   <ItemIcon size={17} className={group.color} />
               </div>
               <span className="truncate">{label}</span>
@@ -98,6 +102,7 @@ export default function Layout() {
   const [photoVersion, setPhotoVersion] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { t } = useLanguage();
 
@@ -121,7 +126,6 @@ export default function Layout() {
     };
   }, []);
 
-  // Tour sidebar control: open sidebar + set tour-active flag
   useEffect(() => {
     const openHandler = () => { tourActiveRef.current = true; setSidebarOpen(true); };
     const closeHandler = () => { tourActiveRef.current = false; setSidebarOpen(false); };
@@ -201,44 +205,58 @@ export default function Layout() {
     { to: '/import', label: t('Import'), icon: Upload },
   ];
 
+  const mobileTabs = [
+    { to: '/', label: t('Home'), icon: Home },
+    { to: '/practice', label: t('Practice'), icon: GraduationCap },
+    { to: '/multiplayer', label: t('Multiplayer'), icon: Users },
+    { to: '/history', label: t('Results'), icon: BarChart3 },
+    { to: '/profile', label: t('Profile'), icon: User },
+  ];
+
+  const isFullscreen = ['/chat/', '/groups-chat/', '/fenbot'].some((p) => location.pathname.startsWith(p));
+
+  if (isFullscreen) {
+    return <Outlet />;
+  }
+
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: NAVY }}>
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={closeSidebar} />
       )}
 
-      {/* Offline banner */}
       {!isOnline && (
         <div className="fixed top-0 inset-x-0 z-50 bg-amber-500 text-white text-center text-xs font-medium py-1 px-4 shadow-md">
           You're offline — using cached data
         </div>
       )}
 
-      <aside data-tour-id="tour-sidebar" className={`fixed z-40 inset-y-0 left-0 w-64 bg-primary-700 border-r border-primary-600/50 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between h-14 px-4 border-b border-primary-600/50 shrink-0">
+      {/* Desktop sidebar */}
+      <aside data-tour-id="tour-sidebar" className={`fixed z-40 inset-y-0 left-0 w-64 border-r border-white/5 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: NAVY }}>
+        <div className="flex items-center justify-between h-14 px-4 border-b border-white/5 shrink-0">
           <div className="text-white">
             <Logo size={130} />
           </div>
-          <button className="lg:hidden text-white/70 hover:text-white" onClick={closeSidebar}>
+          <button className="lg:hidden text-white/50 hover:text-white" onClick={closeSidebar}>
             <X size={20} />
           </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/10">
-              <LayoutDashboard size={17} className="text-white/80" />
+          <NavLink to="/" end onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-violet-500/20 text-violet-300' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/5">
+              <LayoutDashboard size={17} className="text-white/60" />
             </div>
             <span className="truncate">{t('Dashboard')}</span>
           </NavLink>
-          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/10">
+          <NavLink to="/fenbot" onClick={closeSidebar} data-tour-id="tour-fenbot" className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-violet-500/20 text-violet-300' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/5">
               <FenBotNavIcon size={17} />
             </div>
             <span className="truncate">FenBot</span>
           </NavLink>
 
-          <div className="pt-2 border-t border-primary-600/30 mt-2">
+          <div className="pt-2 border-t border-white/5 mt-2">
             {navGroups.map((group) => (
               <NavGroupSection
                 key={group.label}
@@ -250,11 +268,11 @@ export default function Layout() {
             ))}
           </div>
 
-          <div className="pt-2 border-t border-primary-600/30 mt-2 space-y-0.5">
+          <div className="pt-2 border-t border-white/5 mt-2 space-y-0.5">
             {bottomItems.map(({ to, label, icon: ItemIcon }) => (
-              <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/10">
-                  <ItemIcon size={17} className="text-white/80" />
+              <NavLink key={to} to={to} onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-violet-500/20 text-violet-300' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/5">
+                  <ItemIcon size={17} className="text-white/60" />
                 </div>
                 <span className="truncate">{label}</span>
               </NavLink>
@@ -262,32 +280,61 @@ export default function Layout() {
           </div>
         </nav>
 
-        <div className="shrink-0 p-3 border-t border-primary-600/50">
-          <button onClick={handleLogout} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-base font-medium text-red-300 hover:bg-red-500/20 transition-colors">
+        <div className="shrink-0 p-3 border-t border-white/5">
+          <button onClick={handleLogout} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-base font-medium text-red-400/80 hover:bg-red-500/10 transition-colors">
             <LogOut size={16} />
             {t('Logout')}
           </button>
         </div>
       </aside>
 
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="flex items-center h-14 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 lg:px-6 transition-colors shrink-0">
-          <button data-tour-id="tour-hamburger" className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-3" onClick={() => setSidebarOpen(true)}>
-            <Menu size={22} />
-          </button>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex-1">STand Exam Practice</h2>
+        {/* Desktop header */}
+        <header className="hidden lg:flex items-center h-14 px-6 border-b border-white/5 shrink-0" style={{ background: NAVY }}>
+          <h2 className="text-lg font-semibold text-white flex-1">STand Exam Practice</h2>
           {user && (
-            <div className="flex items-center gap-2 mr-3 hidden sm:flex">
+            <div className="flex items-center gap-2 mr-3">
               {displayPhoto ? <img key={photoVersion} src={displayPhoto} alt="" className="w-6 h-6 rounded-full object-cover" /> : null}
-              <span className="text-sm text-gray-500 dark:text-gray-400">{displayName}</span>
+              <span className="text-sm text-white/60">{displayName}</span>
             </div>
           )}
           <NotificationBell />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        {/* Mobile top bar */}
+        <header className="flex lg:hidden items-center h-14 px-4 border-b border-white/5 shrink-0" style={{ background: NAVY }}>
+          <button data-tour-id="tour-hamburger" className="text-white/60 hover:text-white mr-3" onClick={() => setSidebarOpen(true)}>
+            <Menu size={22} />
+          </button>
+          <div className="flex-1">
+            <Logo size={100} />
+          </div>
+          <NotificationBell />
+        </header>
+
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
+
+        {/* Mobile bottom tab bar */}
+        <nav className="lg:hidden flex items-center justify-around border-t border-white/5 safe-area-bottom shrink-0" style={{ background: NAVY }}>
+          {mobileTabs.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `flex flex-col items-center gap-0.5 py-2 px-3 min-w-[60px] transition-colors ${
+                  isActive ? 'text-violet-400' : 'text-white/40'
+                }`
+              }
+            >
+              <Icon size={22} />
+              <span className="text-[10px] font-medium">{label}</span>
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </div>
   );
