@@ -28,12 +28,9 @@ import {
   ChevronDown,
   ChevronRight,
   Settings,
-  Sun,
-  Moon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { storage } from '../../services/storage';
 import Logo from '../landing/Logo';
 import FenBotIcon from '../effects/FenBotIcon';
@@ -105,7 +102,6 @@ export default function Layout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
 
   const displayPhoto = storage.getProfilePhoto() || user?.photoURL || null;
   const displayName = storage.getDisplayName() || user?.fullName || 'Student';
@@ -289,13 +285,6 @@ export default function Layout() {
             </div>
           )}
           <NotificationBell />
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-1"
-            title={theme === 'dark' ? 'Switch to day mode' : 'Switch to night mode'}
-          >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
