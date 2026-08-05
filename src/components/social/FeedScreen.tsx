@@ -71,7 +71,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
         <div className="flex items-center gap-3">
           {getAvatar(post.authorPhoto, post.authorName, 'w-9 h-9')}
           <div>
-            <p className="text-sm font-semibold text-white">{post.authorName}</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-white">{post.authorName}</p>
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">{timeAgo(post.createdAt)}</p>
           </div>
         </div>
@@ -95,7 +95,7 @@ function PostCard({ post, uid, onLike, onDelete, onComment, onRepost, onShare, o
 
       {/* Content */}
       <div className="px-4 pb-3">
-        <p className="text-[15px] text-gray-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+        <p className="text-[15px] text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
       </div>
 
       {/* Action bar */}
