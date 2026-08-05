@@ -86,7 +86,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                 'shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.07),-1.5px_-1.5px_4px_rgba(255,255,255,0.9)] dark:shadow-[1.5px_1.5px_4px_rgba(0,0,0,0.25),-1.5px_-1.5px_4px_rgba(255,255,255,0.05)] bg-gray-100 dark:bg-gray-700'
               }`}>
-                  <ItemIcon size={17} className="text-gray-500 dark:text-gray-100" />
+                  <ItemIcon size={17} className={group.color} />
               </div>
               <span className="truncate">{label}</span>
             </NavLink>
