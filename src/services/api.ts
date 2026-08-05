@@ -35,7 +35,7 @@ async function callAI(prompt: string): Promise<string> {
       const text = await response.text();
 
       if (!response.ok) {
-        lastError = `API error ${response.status}: ${text.slice(0, 200)}`;
+        lastError = 'Failed to generate content. Please try again.';
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
@@ -44,13 +44,13 @@ async function callAI(prompt: string): Promise<string> {
       try {
         data = JSON.parse(text);
       } catch {
-        lastError = `AI returned invalid JSON`;
+        lastError = 'Failed to generate content. Please try again.';
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
 
       if (!data.choices || !data.choices[0]) {
-        lastError = `AI returned no choices`;
+        lastError = 'Failed to generate content. Please try again.';
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
@@ -62,13 +62,13 @@ async function callAI(prompt: string): Promise<string> {
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-      lastError = err.message || 'Unknown API error';
+        lastError = 'Failed to generate content. Please try again.';
       await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       continue;
     }
   }
 
-  throw new Error(lastError || 'API request failed. Please try again.');
+  throw new Error(lastError || 'Failed to generate content. Please try again.');
 }
 
 function parseQuestions(raw: string): Question[] {

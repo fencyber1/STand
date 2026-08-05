@@ -72,7 +72,7 @@ export default function ExamSimScreen() {
         }
       } catch (err: any) {
         if (genIdRef.current === myId) {
-          setGenError(err.message || 'Failed to generate exam questions');
+          setGenError('Failed to generate exam questions. Please try again.');
           setGenerating(false);
         }
       }

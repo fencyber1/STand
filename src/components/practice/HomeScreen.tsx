@@ -100,7 +100,7 @@ export default function HomeScreen() {
         },
       });
     } catch (err: any) {
-      setError(err.message || t('Failed to generate questions. Please try again.'));
+      setError(t('Failed to generate questions. Please try again.'));
     } finally {
       setLoading(false);
     }

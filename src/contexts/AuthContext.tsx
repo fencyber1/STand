@@ -156,8 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         e.code === 'auth/invalid-credential' ? 'Invalid email or password.'
         : e.code === 'auth/invalid-email' ? 'Invalid email address.'
         : e.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.'
-        : e.code === 'auth/configuration-not-found' ? 'Email sign-in not configured. Enable it in Firebase Console.'
-        : `Failed to login (${e.code}).`;
+        : e.code === 'auth/configuration-not-found' ? 'Email sign-in is not available. Please try Google sign-in.'
+        : 'An error occurred. Please try again.';
       return { success: false, error: msg };
     }
   }, []);
@@ -173,8 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : e.code === 'auth/popup-closed-by-user' ? 'Sign-in cancelled. Please try again.'
         : e.code === 'auth/cancelled-popup-request' ? 'Sign-in cancelled. Please try again.'
         : e.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
-        : e.code === 'auth/configuration-not-found' ? 'Google sign-in not configured. Enable it in Firebase Console.'
-        : `Failed to sign in with Google (${e.code}).`;
+        : e.code === 'auth/configuration-not-found' ? 'Google sign-in is not available. Please try email sign-in.'
+        : 'Failed to sign in with Google. Please try again.';
       return { success: false, error: msg };
     }
   }, []);
@@ -191,8 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         e.code === 'auth/email-already-in-use' ? 'An account with this email already exists.'
         : e.code === 'auth/weak-password' ? 'Password must be at least 6 characters.'
         : e.code === 'auth/invalid-email' ? 'Invalid email address.'
-        : e.code === 'auth/configuration-not-found' ? 'Email sign-in not configured. Enable it in Firebase Console.'
-        : `Failed to register (${e.code}).`;
+        : e.code === 'auth/configuration-not-found' ? 'Email registration is not available. Please try Google sign-in.'
+        : 'An error occurred. Please try again.';
       return { success: false, error: msg };
     }
   }, []);

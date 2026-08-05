@@ -87,7 +87,7 @@ export default function ExamSetupScreen() {
         },
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to generate questions.');
+      setError('Failed to generate questions. Please try again.');
     } finally {
       setLoading(false);
     }

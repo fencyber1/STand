@@ -57,7 +57,7 @@ export default function StudyGroupsScreen() {
       const groups = await getUserGroups(userObj.uid);
       setMyGroups(groups);
     } catch (e: any) {
-      setError(e.message || t('Failed to create group'));
+      setError(t('Failed to create group. Please try again.'));
     }
     setLoading(false);
   };
@@ -78,7 +78,7 @@ export default function StudyGroupsScreen() {
         setError(result.error || t('Failed to join'));
       }
     } catch (e: any) {
-      setError(e.message || t('Failed to join group'));
+      setError(t('Failed to join group. Please try again.'));
     }
     setLoading(false);
   };

@@ -137,7 +137,7 @@ export default function DocumentQuizScreen() {
         setStep('preview');
       }
     } catch (e: any) {
-      setError(`Failed to read file: ${e.message}`);
+      setError('Failed to read the file. Please try a different file.');
     }
     setParsing(false);
   };
@@ -222,7 +222,7 @@ export default function DocumentQuizScreen() {
         },
       });
     } catch (e: any) {
-      setError(e.message || 'Failed to generate questions');
+      setError('Failed to generate questions. Please try again.');
       setStep('preview');
     }
     setQuestionProgressCallback(null);

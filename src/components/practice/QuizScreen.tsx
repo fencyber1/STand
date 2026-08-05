@@ -95,7 +95,7 @@ export default function QuizScreen() {
         }
       } catch (err: any) {
         if (genIdRef.current === myId) {
-          setGenError(err.message || 'Failed to generate questions');
+          setGenError('Failed to generate questions. Please try again.');
           setGenerating(false);
         }
       }

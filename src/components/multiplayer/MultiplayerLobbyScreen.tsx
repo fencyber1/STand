@@ -61,7 +61,7 @@ export default function MultiplayerLobbyScreen() {
       const code = await createQuizRoom(userObj, { topic: topic.trim(), subject: actualSubject, level, difficulty, questionCount }, questions);
       navigate(`/multiplayer/${code}`);
     } catch (e: any) {
-      setError(e.message || 'Failed to create room');
+      setError('Failed to create room. Please try again.');
     }
     setProgress(null);
     setLoading(false);
@@ -79,7 +79,7 @@ export default function MultiplayerLobbyScreen() {
         setError(result.error || 'Failed to join');
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to join room');
+      setError('Failed to join room. Please try again.');
     }
     setLoading(false);
   };

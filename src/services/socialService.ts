@@ -192,7 +192,7 @@ export async function sendFriendRequest(from: { uid: string; name: string; photo
       return { success: false, error: 'They already sent you a request.' };
     }
   } catch (e: any) {
-    return { success: false, error: e.message || 'Failed to check existing requests.' };
+    return { success: false, error: 'Something went wrong. Please try again.' };
   }
 
   await setDoc(doc(collection(db, 'friendRequests')), sanitize({
