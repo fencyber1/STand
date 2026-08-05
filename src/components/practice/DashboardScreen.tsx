@@ -179,7 +179,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <div className="min-h-screen -m-4 lg:-m-6 p-4 lg:p-6 pb-24 lg:pb-6 space-y-6" style={{ background: '#0e1627' }}>
+    <div className="min-h-screen px-4 py-4 lg:px-6 lg:py-6 pb-24 lg:pb-6 space-y-5" style={{ background: '#0e1627' }}>
       {/* Greeting */}
       <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="270 80 60" glowRadius={30} glowIntensity={0.5} edgeSensitivity={40} colors={['#a855f7', '#6366f1', '#ec4899']}>
         <div className="relative overflow-hidden p-4">
@@ -306,7 +306,7 @@ export default function DashboardScreen() {
               {t('View All')} <ChevronRight size={14} />
             </Link>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide">
+          <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
             {sectors.map((s) => {
               const sc = sectorColors[Object.keys(sectorColors).find((k) => s.name.toLowerCase().includes(k.toLowerCase())) || 'default'];
               return (
