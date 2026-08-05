@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Shield, Timer, AlertTriangle } from 'lucide-react';
-import { generateQuestions, setQuestionProgressCallback } from '../../services/api';
 import { SECTORS, LEVELS, COUNT_OPTIONS } from '../../constants';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -39,7 +38,6 @@ export default function ExamSetupScreen() {
   const [timerM, setTimerM] = useState(30);
   const [timerS, setTimerS] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [error, setError] = useState('');
 
   const timeLimit = hmsToSeconds(timerH, timerM, timerS);
@@ -67,24 +65,21 @@ export default function ExamSetupScreen() {
     }
 
     setLoading(true);
-    setProgress(null);
     try {
       const actualSector = sector === 'Other' ? (customSector.trim() || 'General') : sector;
       const age = level === 'PRIMARY/BASIC' ? (Number(studentAge) || 8) : undefined;
-      setQuestionProgressCallback((current, total) => setProgress({ current, total }));
-      const { questions } = await generateQuestions({
-        topic,
-        sector: actualSector,
-        level,
-        questionType: 'MCQ',
-        count,
-        studentAge: age && age >= 4 && age <= 12 ? age : undefined,
-        language,
-      });
-      setQuestionProgressCallback(null);
       navigate('/exam', {
         state: {
-          questions,
+          progressive: true,
+          params: {
+            topic,
+            sector: actualSector,
+            level,
+            questionType: 'MCQ',
+            count,
+            studentAge: age && age >= 4 && age <= 12 ? age : undefined,
+            language,
+          },
           topic,
           sector: actualSector,
           level,
@@ -273,7 +268,7 @@ export default function ExamSetupScreen() {
           className="w-full py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
         >
           {loading && <Loader2 size={18} className="animate-spin" />}
-          {loading ? (progress ? `${t('Generating Exam...')} ${progress.current}/${progress.total}` : t('Generating Exam...')) : t('Start Exam')}
+          {loading ? t('Starting Exam...') : t('Start Exam')}
         </button>
       </div>
     </div>

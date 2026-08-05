@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Timer, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
+import { Timer, AlertTriangle, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
+import { generateQuestionsProgressive } from '../../services/api';
 import { storage } from '../../services/storage';
 import QuestionImage from './QuestionImage';
 import BorderGlow from '../ui/BorderGlow';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ExamState {
-  questions: Question[];
+  questions?: Question[];
+  progressive?: boolean;
+  params?: { topic: string; sector: string; level: string; questionType: string; count: number; difficulty?: string; studentAge?: number; language?: string };
   topic: string;
   sector: string;
   level: string;
@@ -23,17 +27,23 @@ export default function ExamSimScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ExamState | null;
+  const { language } = useLanguage();
 
-  if (!state?.questions?.length) {
+  if (!state) {
     navigate('/practice');
     return null;
   }
 
-  const { questions, topic, sector, level, timeLimit } = state;
+  const { topic, sector, level, timeLimit } = state;
+  const isProgressive = state.progressive && state.params;
+
+  const [questions, setQuestions] = useState<Question[]>(state.questions || []);
+  const [generating, setGenerating] = useState(isProgressive && !state.questions?.length);
+  const [genProgress, setGenProgress] = useState<{ current: number; total: number } | null>(null);
+  const [genError, setGenError] = useState('');
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Answer[]>(
-    questions.map((q) => ({ questionId: q.id, answer: null }))
-  );
+  const [answers, setAnswers] = useState<Answer[]>([]);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -41,11 +51,45 @@ export default function ExamSimScreen() {
 
   const questionStartRef = useRef<number>(Date.now());
   const questionTimingsRef = useRef<QuestionTiming[]>([]);
+  const genIdRef = useRef(0);
+
+  // Progressive generation
+  useEffect(() => {
+    if (!isProgressive || !state.params || state.questions?.length) return;
+    const myId = ++genIdRef.current;
+
+    (async () => {
+      try {
+        const allQuestions = await generateQuestionsProgressive(state.params!, (batch, progress) => {
+          if (genIdRef.current !== myId) return;
+          setQuestions(batch);
+          setGenProgress(progress);
+        });
+        if (genIdRef.current === myId) {
+          setQuestions(allQuestions);
+          setAnswers(allQuestions.map((q) => ({ questionId: q.id, answer: null })));
+          setGenerating(false);
+        }
+      } catch (err: any) {
+        if (genIdRef.current === myId) {
+          setGenError(err.message || 'Failed to generate exam questions');
+          setGenerating(false);
+        }
+      }
+    })();
+  }, []);
+
+  // Initialize answers when questions arrive (non-progressive)
+  useEffect(() => {
+    if (!generating && questions.length > 0 && answers.length === 0) {
+      setAnswers(questions.map((q) => ({ questionId: q.id, answer: null })));
+    }
+  }, [generating, questions, answers.length]);
 
   const current = questions[currentIndex];
   const currentAnswer = answers[currentIndex]?.answer;
   const answeredCount = answers.filter((a) => a.answer !== null).length;
-  const progress = ((currentIndex + 1) / questions.length) * 100;
+  const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
 
   useEffect(() => {
     questionStartRef.current = Date.now();
@@ -63,7 +107,9 @@ export default function ExamSimScreen() {
     }
   }, [currentIndex, questions]);
 
+  // Timer — only starts when not generating and questions exist
   useEffect(() => {
+    if (generating || questions.length === 0) return;
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -77,7 +123,7 @@ export default function ExamSimScreen() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [generating, questions.length]);
 
   useEffect(() => {
     if (timeLeft === 0) {
@@ -209,6 +255,39 @@ export default function ExamSimScreen() {
 
   const isWarning = timeLeft <= 60;
   const isCritical = timeLeft <= 30;
+
+  // Loading state for progressive generation
+  if (generating) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors">
+        <div className="text-center max-w-sm mx-auto px-4">
+          <Loader2 size={40} className="animate-spin text-orange-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Generating Exam...</h2>
+          {genProgress && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {genProgress.current}/{genProgress.total} questions ready
+            </p>
+          )}
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Your exam will start as soon as questions are ready</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (genError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors">
+        <div className="text-center max-w-sm mx-auto px-4">
+          <AlertTriangle size={40} className="text-red-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Failed to Generate Exam</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{genError}</p>
+          <button onClick={() => navigate(-1)} className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
