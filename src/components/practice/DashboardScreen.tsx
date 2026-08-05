@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Trophy, Flame, Zap, Star, Clock, CheckCircle2, Award, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -32,7 +32,6 @@ function CircularProgress({ percent, size = 100, stroke = 8 }: { percent: number
 export default function DashboardScreen() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const history = useMemo(() => storage.getHistory(), []);
 
   const greeting = useMemo(() => {
@@ -43,12 +42,6 @@ export default function DashboardScreen() {
   }, []);
 
   const firstName = (user?.fullName || 'Student').split(' ')[0];
-
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(id);
-  }, []);
 
   const stats = useMemo(() => {
     const total = history.length;
