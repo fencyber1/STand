@@ -1,19 +1,38 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trophy, Target, Clock, TrendingUp, Play, Flame } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Trophy, Flame, Zap, Star, Clock, CheckCircle2, Award, TrendingUp } from 'lucide-react';
 import { storage } from '../../services/storage';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getMotivationalLines } from '../../services/api';
-import BorderGlow from '../ui/BorderGlow';
-import FenBotIcon from '../effects/FenBotIcon';
+
+function CircularProgress({ percent, size = 100, stroke = 8 }: { percent: number; size?: number; stroke?: number }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (percent / 100) * c;
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(139,92,246,0.15)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="url(#progressGradient)" strokeWidth={stroke}
+        strokeDasharray={c} strokeDashoffset={offset}
+        strokeLinecap="round" className="transition-all duration-1000"
+      />
+      <defs>
+        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#a855f7" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
 
 export default function DashboardScreen() {
-  const { theme } = useTheme();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const history = useMemo(() => storage.getHistory(), []);
 
   const greeting = useMemo(() => {
@@ -31,9 +50,6 @@ export default function DashboardScreen() {
     return () => clearInterval(id);
   }, []);
 
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
   const stats = useMemo(() => {
     const total = history.length;
     const totalQ = history.reduce((s, h) => s + (h.totalQuestions || 0), 0);
@@ -46,15 +62,49 @@ export default function DashboardScreen() {
       for (let i = 0; i < 365; i++) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        const hasSession = history.some((h) => h.date.split('T')[0] === dateStr);
-        if (hasSession) count++;
+        const ds = d.toISOString().split('T')[0];
+        if (history.some((h) => h.date.split('T')[0] === ds)) count++;
         else break;
       }
       return count;
     })();
 
-    return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(1), streak };
+    const bestStreak = (() => {
+      let best = 0;
+      let current = 0;
+      const today = new Date();
+      for (let i = 365; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().split('T')[0];
+        if (history.some((h) => h.date.split('T')[0] === ds)) {
+          current++;
+          best = Math.max(best, current);
+        } else {
+          current = 0;
+        }
+      }
+      return best;
+    })();
+
+    const todayQ = (() => {
+      const today = new Date().toISOString().split('T')[0];
+      return history
+        .filter((h) => h.date.split('T')[0] === today)
+        .reduce((s, h) => s + (h.totalQuestions || 0), 0);
+    })();
+
+    const totalMinutes = (() => {
+      const today = new Date().toISOString().split('T')[0];
+      return history
+        .filter((h) => h.date.split('T')[0] === today)
+        .reduce((s, h) => s + (h.duration || 0), 0);
+    })();
+
+    const dailyGoalTarget = 50;
+    const dailyGoalPercent = Math.min(100, Math.round((todayQ / dailyGoalTarget) * 100));
+
+    return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(0), streak, bestStreak, todayQ, dailyGoalTarget, dailyGoalPercent, totalMinutes };
   }, [history]);
 
   const [motivationalLine, setMotivationalLine] = useState(() => {
@@ -74,9 +124,7 @@ export default function DashboardScreen() {
         setMotivationalLine(lines[idx]);
         localStorage.setItem('stand_motivational_line', lines[idx]);
       }
-    } catch {
-      // keep current line
-    }
+    } catch {}
   }, [firstName, stats.total, stats.avgScore, stats.streak]);
 
   const fetchLinesRef = useRef(fetchLines);
@@ -86,7 +134,6 @@ export default function DashboardScreen() {
     const stored = localStorage.getItem('stand_motivational_lines');
     let lines: string[] = [];
     try { lines = stored ? JSON.parse(stored) : []; } catch { lines = []; }
-
     if (lines.length > 0) {
       const idx = Math.floor(Math.random() * lines.length);
       setMotivationalLine(lines[idx]);
@@ -94,7 +141,6 @@ export default function DashboardScreen() {
     } else {
       fetchLinesRef.current();
     }
-
     const interval = setInterval(() => {
       let currentLines: string[] = [];
       try { currentLines = JSON.parse(localStorage.getItem('stand_motivational_lines') || '[]'); } catch { currentLines = []; }
@@ -104,157 +150,239 @@ export default function DashboardScreen() {
         localStorage.setItem('stand_motivational_line', next);
       }
     }, 60_000);
-
-    // Refresh from API every 10 minutes — always calls latest fetchLines
     const refresh = setInterval(() => fetchLinesRef.current(), 600_000);
-
     return () => { clearInterval(interval); clearInterval(refresh); };
   }, []);
 
-  const chartData = useMemo(() => {
-    const subjectMap: Record<string, { total: number; count: number }> = {};
-    history.forEach((h) => {
-      if (!subjectMap[h.sector]) subjectMap[h.sector] = { total: 0, count: 0 };
-      subjectMap[h.sector].total += h.score || 0;
-      subjectMap[h.sector].count += 1;
-    });
-    return Object.entries(subjectMap).map(([name, data]) => ({
-      name: name.length > 12 ? name.slice(0, 12) + '...' : name,
-      score: Math.round(data.total / data.count),
-    }));
-  }, [history]);
+  const lastSession = history.length > 0 ? history[history.length - 1] : null;
 
   const recentSessions = history.slice(-5).reverse();
-  const cardBg = theme === 'dark' ? '#1f2937' : '#ffffff';
+
+  const quickActions = [
+    { label: t('Practice'), desc: t('Start practicing now'), icon: GraduationCap, color: 'from-blue-500 to-blue-600', glow: 'shadow-blue-500/20', to: '/practice' },
+    { label: 'Ask FenBot', desc: t('Your AI study assistant'), icon: Bot, color: 'from-purple-500 to-purple-600', glow: 'shadow-purple-500/20', to: '/fenbot' },
+    { label: t('Multiplayer'), desc: t('Compete with friends'), icon: Users, color: 'from-emerald-500 to-emerald-600', glow: 'shadow-emerald-500/20', to: '/multiplayer' },
+    { label: t('Document Quiz'), desc: t('Upload & quiz smartly'), icon: FileText, color: 'from-amber-500 to-orange-500', glow: 'shadow-amber-500/20', to: '/doc-quiz' },
+  ];
+
+  const sectors = useMemo(() => {
+    const map: Record<string, { count: number; avgScore: number; lastDate: string }> = {};
+    history.forEach((h) => {
+      if (!map[h.sector]) map[h.sector] = { count: 0, avgScore: 0, lastDate: h.date };
+      map[h.sector].count++;
+      map[h.sector].avgScore += h.score || 0;
+      if (h.date > map[h.sector].lastDate) map[h.sector].lastDate = h.date;
+    });
+    return Object.entries(map)
+      .map(([name, data]) => ({
+        name,
+        questions: data.count * 10,
+        avgScore: Math.round(data.avgScore / data.count),
+        difficulty: (data.avgScore / data.count) >= 80 ? 'Easy' : (data.avgScore / data.count) >= 50 ? 'Medium' : 'Hard',
+      }))
+      .sort((a, b) => b.questions - a.questions)
+      .slice(0, 6);
+  }, [history]);
+
+  const sectorColors: Record<string, string> = {
+    Science: 'from-green-500/20 to-emerald-500/20 border-green-500/30',
+    Mathematics: 'from-blue-500/20 to-indigo-500/20 border-blue-500/30',
+    English: 'from-purple-500/20 to-violet-500/20 border-purple-500/30',
+    default: 'from-gray-500/20 to-slate-500/20 border-gray-500/30',
+  };
+
+  const sectorIconColors: Record<string, string> = {
+    Science: 'text-green-400',
+    Mathematics: 'text-blue-400',
+    English: 'text-purple-400',
+    default: 'text-gray-400',
+  };
+
+  const sectorBgColors: Record<string, string> = {
+    Science: 'bg-green-500/20',
+    Mathematics: 'bg-blue-500/20',
+    English: 'bg-purple-500/20',
+    default: 'bg-gray-500/20',
+  };
 
   return (
-    <div className="space-y-6">
-      <BorderGlow
-        backgroundColor={theme === 'dark' ? '#1e1b4b' : '#eef2ff'}
-        borderRadius={16}
-        glowColor="250 80 70"
-        glowRadius={30}
-        glowIntensity={0.6}
-        edgeSensitivity={40}
-        colors={['#6366f1', '#a855f7', '#ec4899']}
-      >
-        <div className="p-6 sm:p-8">
-          <div className="flex items-start gap-4">
-            <FenBotIcon size={48} />
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                {t(greeting)}, {firstName}
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm sm:text-base">
-                {motivationalLine}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-                <span className="font-medium tracking-wide">{dateStr}</span>
-                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-                <span className="font-mono tabular-nums">{timeStr}</span>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#0a0a1a] -m-4 lg:-m-6 p-4 lg:p-6 pb-24 space-y-5">
+      {/* Greeting */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1040] via-[#15102a] to-[#0d0a20] border border-purple-500/10 p-5">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="relative">
+          <h1 className="text-2xl font-bold text-white">
+            {t(greeting)}, {firstName}! <span className="inline-block animate-[wave_2s_ease-in-out_infinite]">&#x1F44B;</span>
+          </h1>
+          <p className="text-gray-400 mt-1 text-sm">{motivationalLine}</p>
         </div>
-      </BorderGlow>
-
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          { label: t('Streak'), value: `${stats.streak}d`, icon: Flame, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30', glow: '0 80 60', colors: ['#ef4444', '#f87171', '#dc2626'] },
-          { label: t('Total Sessions'), value: stats.total, icon: Target, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', glow: '220 80 60', colors: ['#3b82f6', '#60a5fa', '#2563eb'] },
-          { label: t('Questions Done'), value: stats.totalQ, icon: Trophy, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', glow: '142 70 60', colors: ['#22c55e', '#4ade80', '#16a34a'] },
-          { label: t('Correct Answers'), value: stats.totalCorrect, icon: TrendingUp, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/30', glow: '270 70 65', colors: ['#a855f7', '#c084fc', '#7c3aed'] },
-          { label: t('Avg Score'), value: `${stats.avgScore}%`, icon: Clock, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/30', glow: '25 80 60', colors: ['#f97316', '#fb923c', '#ea580c'] },
-        ].map(({ label, value, icon: Icon, color, bg, glow, colors }) => (
-          <BorderGlow
-            key={label}
-            backgroundColor={cardBg}
-            borderRadius={12}
-            glowColor={glow}
-            glowRadius={20}
-            glowIntensity={0.6}
-            edgeSensitivity={40}
-            colors={colors}
-          >
-            <div className="p-4">
-              <div className={`inline-flex p-2 rounded-lg ${bg} mb-2`}>
-                <Icon size={18} className={color} />
-              </div>
-              <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-            </div>
-          </BorderGlow>
-        ))}
       </div>
 
-      {chartData.length > 0 && (
-        <BorderGlow
-          backgroundColor={cardBg}
-          borderRadius={12}
-          glowColor="220 70 65"
-          glowRadius={25}
-          glowIntensity={0.5}
-          edgeSensitivity={35}
-          colors={['#6366f1', '#8b5cf6', '#3b82f6']}
-        >
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{t('Subject Performance')}</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="score" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Daily Goal */}
+        <div className="relative rounded-2xl bg-gradient-to-br from-[#1a1040] to-[#120e28] border border-purple-500/10 p-4 overflow-hidden">
+          <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl" />
+          <div className="flex items-center gap-1 mb-3">
+            <Zap size={14} className="text-purple-400" />
+            <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">{t('Daily Goal')}</span>
           </div>
-        </BorderGlow>
-      )}
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <CircularProgress percent={stats.dailyGoalPercent} size={80} stroke={7} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-bold text-white">{stats.dailyGoalPercent}%</span>
+                <span className="text-[9px] text-gray-400">{t('Completed')}</span>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl font-bold text-white">{stats.todayQ} <span className="text-sm font-normal text-gray-400">/ {stats.dailyGoalTarget}</span></p>
+              <p className="text-xs text-gray-400">{t('Questions')}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <Clock size={11} className="text-gray-500" />
+                <span className="text-[11px] text-gray-500">{stats.totalMinutes} min</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <BorderGlow
-        backgroundColor={cardBg}
-        borderRadius={12}
-        glowColor="260 60 65"
-        glowRadius={25}
-        glowIntensity={0.5}
-        edgeSensitivity={35}
-        colors={['#c084fc', '#f472b6', '#38bdf8']}
-      >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('Recent Sessions')}</h3>
-            <Link to="/history" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
-              {t('View All')}
+        {/* Streak */}
+        <div className="relative rounded-2xl bg-gradient-to-br from-[#1a1040] to-[#120e28] border border-orange-500/10 p-4 overflow-hidden">
+          <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl" />
+          <div className="flex items-center gap-1 mb-3">
+            <Flame size={14} className="text-orange-400" />
+            <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider">{t('Current Streak')}</span>
+            <ChevronRight size={12} className="text-orange-400 ml-auto" />
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-white">{stats.streak} <span className="text-base font-normal text-gray-400">{t('Days')}</span></p>
+            <p className="text-xs text-gray-400 mt-1">{t('Best Streak')}: {stats.bestStreak} {t('days')}</p>
+          </div>
+          <div className="absolute -bottom-2 -right-2 text-5xl opacity-20 select-none pointer-events-none">&#x1F525;</div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold text-white">{t('Quick Actions')}</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {quickActions.map(({ label, desc, icon: Icon, color, glow, to }) => (
+            <Link
+              key={label}
+              to={to}
+              className={`relative group rounded-2xl bg-gradient-to-br from-[#1a1040] to-[#120e28] border border-white/5 p-4 overflow-hidden hover:border-white/10 transition-all active:scale-[0.97]`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-[0.06] group-hover:opacity-[0.12] transition-opacity`} />
+              <div className="relative">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-3 shadow-lg ${glow}`}>
+                  <Icon size={20} className="text-white" />
+                </div>
+                <p className="font-semibold text-white text-sm">{label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+              </div>
+              <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 group-hover:text-gray-400 transition-colors" />
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Continue Studying */}
+      {lastSession && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-white">{t('Continue Studying')}</h2>
+            <Link to="/history" className="text-xs font-semibold text-violet-400 flex items-center gap-0.5 hover:text-violet-300">
+              {t('Resume')} <ChevronRight size={14} />
             </Link>
           </div>
-          {recentSessions.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('No sessions yet. Start practicing!')}</p>
-          ) : (
-            <div className="space-y-3">
-              {recentSessions.map((s) => (
-                <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-800 dark:text-gray-100">{s.topic}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{s.sector} &middot; {s.level}</p>
-                  </div>
-                  <span className={`text-lg font-bold ${(s.score ?? 0) >= 70 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                    {s.score ?? 0}%
-                  </span>
+          <div className="rounded-2xl bg-gradient-to-br from-[#1a1040] to-[#120e28] border border-violet-500/10 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center shrink-0">
+                <BookOpen size={22} className="text-violet-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-white truncate">{lastSession.topic}</p>
+                <p className="text-xs text-gray-400">{lastSession.sector} &middot; {lastSession.totalQuestions || 10} {t('Questions')}</p>
+                <div className="mt-2 h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all"
+                    style={{ width: `${lastSession.score || 0}%` }}
+                  />
                 </div>
-              ))}
+              </div>
+              <span className="text-sm font-bold text-violet-400 shrink-0">{lastSession.score || 0}%</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recommended for You */}
+      {sectors.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-white">{t('Recommended for You')}</h2>
+            <Link to="/progress" className="text-xs font-semibold text-violet-400 flex items-center gap-0.5 hover:text-violet-300">
+              {t('View All')} <ChevronRight size={14} />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide">
+            {sectors.map((s) => {
+              const colorKey = Object.keys(sectorColors).find((k) => s.name.toLowerCase().includes(k.toLowerCase())) || 'default';
+              return (
+                <div
+                  key={s.name}
+                  className={`snap-start shrink-0 w-[140px] rounded-2xl bg-gradient-to-br ${sectorColors[colorKey]} border p-3 flex flex-col items-center text-center`}
+                >
+                  <div className={`w-14 h-14 rounded-2xl ${sectorBgColors[colorKey]} flex items-center justify-center mb-2`}>
+                    <Star size={26} className={sectorIconColors[colorKey]} />
+                  </div>
+                  <p className="font-semibold text-white text-sm leading-tight">{s.name}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{s.questions} {t('Questions')} &middot; {s.difficulty}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activity */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold text-white">{t('Recent Activity')}</h2>
+          <Link to="/history" className="text-xs font-semibold text-violet-400 flex items-center gap-0.5 hover:text-violet-300">
+            {t('View All')} <ChevronRight size={14} />
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {recentSessions.length === 0 ? (
+            <div className="rounded-2xl bg-[#120e28] border border-white/5 p-8 text-center">
+              <p className="text-gray-400 text-sm">{t('No sessions yet. Start practicing!')}</p>
+            </div>
+          ) : (
+            recentSessions.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-[#120e28] border border-white/5 p-3.5 group hover:border-white/10 transition-all">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${(s.score ?? 0) >= 70 ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
+                  {(s.score ?? 0) >= 70
+                    ? <CheckCircle2 size={20} className="text-emerald-400" />
+                    : <TrendingUp size={20} className="text-amber-400" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-white text-sm truncate">{s.topic}</p>
+                  <p className="text-xs text-gray-400">{s.sector} &middot; {new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`text-base font-bold ${(s.score ?? 0) >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>{s.score ?? 0}%</p>
+                </div>
+                <ChevronRight size={14} className="text-gray-600 shrink-0" />
+              </div>
+            ))
           )}
         </div>
-      </BorderGlow>
-
-      <Link
-        to="/practice"
-        className="flex items-center justify-center gap-2 w-full py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition"
-      >
-        <Play size={18} />
-        {t('Start New Practice')}
-      </Link>
+      </div>
     </div>
   );
 }
