@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   updateProfile,
   User as FirebaseUser,
@@ -93,6 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Handle redirect result from Google sign-in on mobile
+    getRedirectResult(auth).catch(() => {});
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const mapped = mapUser(firebaseUser);
@@ -162,8 +167,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
   const loginWithGoogle = useCallback(async () => {
     try {
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+        return { success: true };
+      }
       await signInWithPopup(auth, googleProvider);
       return { success: true };
     } catch (e: any) {
@@ -177,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : 'Failed to sign in with Google. Please try again.';
       return { success: false, error: msg };
     }
-  }, []);
+  }, [isMobile]);
 
   const register = useCallback(async (fullName: string, email: string, password: string) => {
     try {

@@ -65,7 +65,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 px-4 py-8 transition-colors overflow-y-auto">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 transition-colors overflow-y-auto" style={{ background: 'linear-gradient(to bottom right, #0e1627, #18203e)' }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
           <Logo size={160} />
@@ -108,7 +108,7 @@ export default function RegisterScreen() {
               <div className="w-full border-t border-gray-200 dark:border-gray-600" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-400">{t('or register with email')}</span>
+              <span className="px-2 text-gray-400" style={{ background: '#0e1627' }}>{t('or register with email')}</span>
             </div>
           </div>
 
