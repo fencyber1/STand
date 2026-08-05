@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
+import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, CheckCircle2, TrendingUp } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -87,17 +87,10 @@ export default function DashboardScreen() {
         .reduce((s, h) => s + (h.totalQuestions || 0), 0);
     })();
 
-    const totalMinutes = (() => {
-      const today = new Date().toISOString().split('T')[0];
-      return history
-        .filter((h) => h.date.split('T')[0] === today)
-        .reduce((s, h) => s + (h.duration || 0), 0);
-    })();
-
     const dailyGoalTarget = 50;
     const dailyGoalPercent = Math.min(100, Math.round((todayQ / dailyGoalTarget) * 100));
 
-    return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(0), streak, bestStreak, todayQ, dailyGoalTarget, dailyGoalPercent, totalMinutes };
+    return { total, totalQ, totalCorrect, avgScore: avgScore.toFixed(0), streak, bestStreak, todayQ, dailyGoalTarget, dailyGoalPercent };
   }, [history]);
 
   const [motivationalLine, setMotivationalLine] = useState(() => {
@@ -232,10 +225,6 @@ export default function DashboardScreen() {
             <div className="min-w-0">
               <p className="text-xl font-bold text-white">{stats.todayQ} <span className="text-sm font-normal text-gray-400">/ {stats.dailyGoalTarget}</span></p>
               <p className="text-xs text-gray-400">{t('Questions')}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Clock size={11} className="text-gray-500" />
-                <span className="text-[11px] text-gray-500">{stats.totalMinutes} min</span>
-              </div>
             </div>
           </div>
         </div>
