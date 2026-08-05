@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check, Plus, Reply } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, MessageCircle, Send, Check, Plus, Reply, Pencil } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { markStatusViewed, toggleStatusLike, addStatusComment, subscribeToStatusComments, deleteStatus } from '../../services/statusService';
+import { markStatusViewed, toggleStatusLike, addStatusComment, subscribeToStatusComments, deleteStatus, editStatusComment, toggleStatusCommentLike } from '../../services/statusService';
 import { getUserProfile } from '../../services/socialService';
 import type { Status, StatusComment } from '../../types';
 
@@ -24,6 +24,8 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
   const [comments, setComments] = useState<StatusComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<StatusComment | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -143,6 +145,28 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
     await deleteStatus(current.id);
     if (statuses.length <= 1) onClose();
     else if (currentIdx >= statuses.length - 1) setCurrentIdx((i) => i - 1);
+  };
+
+  const startEdit = (c: StatusComment) => {
+    setEditingId(c.id);
+    setEditingText(c.text);
+  };
+
+  const saveEdit = async (commentId: string) => {
+    if (!editingText.trim()) return;
+    await editStatusComment(commentId, editingText.trim());
+    setEditingId(null);
+    setEditingText('');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText('');
+  };
+
+  const handleToggleCommentLike = async (commentId: string) => {
+    if (!user?.uid) return;
+    await toggleStatusCommentLike(commentId, user.uid);
   };
 
   // Fetch viewer profiles when panel opens
@@ -306,8 +330,14 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
             {comments.length === 0 ? (
               <p className="text-white/30 text-center text-sm py-6">No comments yet. Be the first!</p>
             ) : (
-              comments.map((c) => (
-                <div key={c.id} className="group">
+              comments.map((c) => {
+                const isMyComment = c.uid === user?.uid;
+                const isEditing = editingId === c.id;
+                const likedByMe = c.likes?.includes(user?.uid || '');
+                const likeCount = c.likes?.length || 0;
+
+                return (
+                <div key={c.id}>
                   <div className="flex items-start gap-2.5">
                     {c.photoURL ? (
                       <img src={c.photoURL} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
@@ -327,15 +357,37 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
                             if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
                             return `${Math.floor(diff / 86400)}d`;
                           })()}
+                          {c.edited && ' · edited'}
                         </span>
+                        {/* Like button */}
+                        <button
+                          onClick={() => handleToggleCommentLike(c.id)}
+                          className={`flex items-center gap-1 transition-colors ${likedByMe ? 'text-red-400' : 'text-white/40 hover:text-red-400/80'}`}
+                          title={likedByMe ? 'Unlike' : 'Like'}
+                        >
+                          <Heart size={13} className={likedByMe ? 'fill-red-400' : ''} />
+                          {likeCount > 0 && <span className="text-[11px] font-medium">{likeCount}</span>}
+                        </button>
+                        {/* Reply button */}
                         <button
                           onClick={() => setReplyingTo(c)}
-                          className="text-white/40 hover:text-white/80 active:text-white transition-colors ml-1 flex items-center gap-1"
+                          className="text-white/40 hover:text-white/80 active:text-white transition-colors flex items-center gap-1"
                           title={`Reply to ${c.displayName.split(' ')[0]}`}
                         >
                           <Reply size={14} />
                           <span className="text-[11px] font-medium">Reply</span>
                         </button>
+                        {/* Edit button (own comments only) */}
+                        {isMyComment && !isEditing && (
+                          <button
+                            onClick={() => startEdit(c)}
+                            className="text-white/40 hover:text-white/80 active:text-white transition-colors flex items-center gap-1"
+                            title="Edit comment"
+                          >
+                            <Pencil size={13} />
+                            <span className="text-[11px] font-medium">Edit</span>
+                          </button>
+                        )}
                       </div>
                       {/* Reply quoted preview */}
                       {c.replyTo && (
@@ -350,11 +402,43 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
                           </div>
                         </div>
                       )}
-                      <p className="text-white/80 text-sm leading-snug">{c.text}</p>
+                      {/* Comment text or edit mode */}
+                      {isEditing ? (
+                        <div className="mt-1">
+                          <input
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') { e.preventDefault(); saveEdit(c.id); }
+                              if (e.key === 'Escape') cancelEdit();
+                            }}
+                            autoFocus
+                            className="w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none placeholder-white/30"
+                          />
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <button
+                              onClick={cancelEdit}
+                              className="px-3 py-1 rounded-lg text-xs font-medium text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => saveEdit(c.id)}
+                              disabled={!editingText.trim()}
+                              className="px-3 py-1 rounded-lg text-xs font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-30 transition-colors"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-white/80 text-sm leading-snug">{c.text}</p>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
             <div ref={commentsEndRef} />
           </div>

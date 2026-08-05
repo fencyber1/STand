@@ -409,4 +409,6 @@ export interface StatusComment {
   text: string;
   createdAt: string;
   replyTo?: { id: string; displayName: string; text: string };
+  edited?: boolean;
+  likes?: string[];
 }

@@ -119,6 +119,23 @@ export async function addStatusComment(
   return ref.id;
 }
 
+export async function editStatusComment(commentId: string, newText: string): Promise<void> {
+  const ref = doc(db, 'statusComments', commentId);
+  await updateDoc(ref, sanitize({ text: newText, edited: true }));
+}
+
+export async function toggleStatusCommentLike(commentId: string, uid: string): Promise<void> {
+  const ref = doc(db, 'statusComments', commentId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const likes: string[] = snap.data().likes || [];
+  if (likes.includes(uid)) {
+    await updateDoc(ref, { likes: likes.filter((l) => l !== uid) });
+  } else {
+    await updateDoc(ref, { likes: [...likes, uid] });
+  }
+}
+
 export function subscribeToStatusComments(statusId: string, cb: (comments: StatusComment[]) => void): () => void {
   const q = query(collection(db, 'statusComments'), where('statusId', '==', statusId));
   return onSnapshot(q, (snap) => {
@@ -133,6 +150,8 @@ export function subscribeToStatusComments(statusId: string, cb: (comments: Statu
         text: data.text || '',
         createdAt: data.createdAt || '',
         replyTo: data.replyTo || undefined,
+        edited: data.edited || false,
+        likes: data.likes || [],
       } as StatusComment;
     }).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     cb(items);
