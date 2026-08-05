@@ -330,20 +330,21 @@ export default function StatusViewer({ statuses, startIndex, onClose, onStatusUp
                         </span>
                         <button
                           onClick={() => setReplyingTo(c)}
-                          className="text-white/0 group-hover:text-white/50 hover:!text-white/80 transition-colors ml-1"
+                          className="text-white/40 hover:text-white/80 active:text-white transition-colors ml-1 flex items-center gap-1"
                           title={`Reply to ${c.displayName.split(' ')[0]}`}
                         >
-                          <Reply size={12} />
+                          <Reply size={14} />
+                          <span className="text-[11px] font-medium">Reply</span>
                         </button>
                       </div>
                       {/* Reply quoted preview */}
                       {c.replyTo && (
-                        <div className="flex items-start gap-1.5 mb-1 pl-2 border-l-2 border-primary-400/50">
+                        <div className="flex items-start gap-1.5 mb-1.5 pl-2 border-l-2 border-primary-400/60">
                           <div className="min-w-0">
-                            <p className="text-primary-300/80 text-[11px] font-semibold leading-tight truncate">
+                            <p className="text-primary-300 text-xs font-semibold leading-tight truncate">
                               @{c.replyTo.displayName.split(' ')[0]}
                             </p>
-                            <p className="text-white/30 text-[11px] leading-snug truncate">
+                            <p className="text-white/40 text-xs leading-snug truncate">
                               {c.replyTo.text.length > 50 ? c.replyTo.text.slice(0, 50) + '…' : c.replyTo.text}
                             </p>
                           </div>
