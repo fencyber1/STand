@@ -5,7 +5,7 @@ import {
   Trash2, Settings2, Save, FolderOpen,
   CheckCircle, X, BookOpen,
 } from 'lucide-react';
-import { getDocumentQuestions, setQuestionProgressCallback } from '../../services/api';
+import { setQuestionProgressCallback } from '../../services/api';
 import { QUESTION_TYPES, DIFFICULTY_LEVELS } from '../../constants';
 import { storage } from '../../services/storage';
 import type { SavedDocument } from '../../types';
@@ -197,14 +197,6 @@ export default function DocumentQuizScreen() {
         // Pasted text: use all
         textToUse = docText;
       }
-
-      const { questions } = await getDocumentQuestions({
-        documentText: textToUse,
-        questionCount,
-        questionType,
-        difficulty: difficulty === 'all' ? undefined : difficulty,
-        documentName: fileName,
-      });
 
       const rangeLabel = isPdf
         ? ` (Pages ${pageStart}-${Math.min(pageEnd, totalPages)})`
