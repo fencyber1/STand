@@ -179,10 +179,10 @@ export default function DashboardScreen() {
   };
 
   return (
-    <div className="min-h-screen -m-4 lg:-m-6 p-4 lg:p-6 pb-24 lg:pb-6 space-y-5" style={{ background: '#0e1627' }}>
+    <div className="min-h-screen -m-4 lg:-m-6 p-4 lg:p-6 pb-24 lg:pb-6 space-y-6" style={{ background: '#0e1627' }}>
       {/* Greeting */}
       <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="270 80 60" glowRadius={30} glowIntensity={0.5} edgeSensitivity={40} colors={['#a855f7', '#6366f1', '#ec4899']}>
-        <div className="relative overflow-hidden p-5">
+        <div className="relative overflow-hidden p-4">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl" />
           <div className="relative">
@@ -333,7 +333,7 @@ export default function DashboardScreen() {
             {t('View All')} <ChevronRight size={14} />
           </Link>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {recentSessions.length === 0 ? (
             <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="220 60 65" glowRadius={20} glowIntensity={0.3} edgeSensitivity={30} colors={['#6366f1', '#818cf8', '#4f46e5']}>
               <div className="p-8 text-center">
@@ -343,7 +343,7 @@ export default function DashboardScreen() {
           ) : (
             recentSessions.map((s) => (
               <BorderGlow key={s.id} backgroundColor="#0e1627" borderRadius={16} glowColor={(s.score ?? 0) >= 70 ? '142 70 60' : '25 80 60'} glowRadius={15} glowIntensity={0.4} edgeSensitivity={30} colors={(s.score ?? 0) >= 70 ? ['#22c55e', '#4ade80', '#16a34a'] : ['#f97316', '#fb923c', '#ea580c']}>
-                <div className="flex items-center gap-3 p-3.5 group">
+                <div className="flex items-center gap-3 p-4 group">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${(s.score ?? 0) >= 70 ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
                     {(s.score ?? 0) >= 70
                       ? <CheckCircle2 size={20} className="text-emerald-400" />
