@@ -233,7 +233,7 @@ export default function DashboardScreen() {
               <p className="text-3xl font-bold text-white">{stats.streak} <span className="text-base font-normal text-gray-400">{t('Days')}</span></p>
               <p className="text-xs text-gray-400 mt-1">{t('Best Streak')}: {stats.bestStreak} {t('days')}</p>
             </div>
-            <div className="absolute -bottom-2 -right-2 text-5xl opacity-20 select-none pointer-events-none">&#x1F525;</div>
+            <div className="absolute -bottom-2 -right-2 text-5xl opacity-100 select-none pointer-events-none drop-shadow-[0_0_12px_rgba(255,120,0,0.8)]">&#x1F525;</div>
           </div>
         </BorderGlow>
       </div>
