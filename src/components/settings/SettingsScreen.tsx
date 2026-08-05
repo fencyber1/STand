@@ -119,6 +119,7 @@ export default function SettingsScreen() {
         <Row
           icon={theme === 'dark' ? Moon : Sun}
           label={t('Theme')}
+          onClick={toggleTheme}
           trailing={
             <button
               onClick={toggleTheme}
