@@ -52,6 +52,7 @@ interface NavItem {
 interface NavGroup {
   label: string;
   items: NavItem[];
+  color: string;
 }
 
 function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: NavGroup; defaultOpen: boolean; onNavigate: () => void; tourId?: string }) {
@@ -62,7 +63,7 @@ function NavGroupSection({ group, defaultOpen, onNavigate, tourId }: { group: Na
     <div className="mb-1" data-tour-id={tourId}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+        className={`flex items-center justify-between w-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${group.color}`}
       >
         {group.label}
         <Icon size={12} />
@@ -149,6 +150,7 @@ export default function Layout() {
     {
       label: t('Practice'),
       tourId: 'tour-practice',
+      color: 'text-blue-400',
       items: [
         { to: '/practice', label: t('Practice'), icon: GraduationCap },
         { to: '/doc-quiz', label: t('Document Quiz'), icon: FileText },
@@ -158,6 +160,7 @@ export default function Layout() {
     {
       label: t('Review'),
       tourId: 'tour-review',
+      color: 'text-amber-400',
       items: [
         { to: '/history', label: t('History'), icon: Clock },
         { to: '/bookmarks', label: t('Bookmarks'), icon: Bookmark },
@@ -166,6 +169,7 @@ export default function Layout() {
     },
     {
       label: t('Progress'),
+      color: 'text-emerald-400',
       items: [
         { to: '/progress', label: t('Progress'), icon: TrendingUp },
         { to: '/achievements', label: t('Achievements'), icon: Award },
@@ -176,6 +180,7 @@ export default function Layout() {
     {
       label: t('Study'),
       tourId: 'tour-groups',
+      color: 'text-violet-400',
       items: [
         { to: '/groups', label: t('Study Groups'), icon: Users },
         { to: '/multiplayer', label: t('Multiplayer'), icon: Swords },
@@ -185,6 +190,7 @@ export default function Layout() {
     {
       label: t('Social'),
       tourId: 'tour-social',
+      color: 'text-rose-400',
       items: [
         { to: '/statuses', label: t('Status'), icon: Circle },
         { to: '/feed', label: t('Feed'), icon: Rss },
