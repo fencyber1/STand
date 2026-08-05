@@ -181,7 +181,7 @@ export default function DashboardScreen() {
   return (
     <div className="min-h-screen px-4 py-4 lg:px-6 lg:py-6 pb-24 lg:pb-6 space-y-5" style={{ background: '#0e1627' }}>
       {/* Greeting */}
-      <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="270 80 60" glowRadius={30} glowIntensity={0.5} edgeSensitivity={40} colors={['#a855f7', '#6366f1', '#ec4899']}>
+      <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="270 80 60" glowRadius={30} glowIntensity={0.5} edgeSensitivity={40} colors={['#a855f7', '#6366f1', '#ec4899']}>
         <div className="relative overflow-hidden p-4">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl" />
@@ -197,7 +197,7 @@ export default function DashboardScreen() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-3">
         {/* Daily Goal */}
-        <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="270 80 60" glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={['#a855f7', '#c084fc', '#6366f1']}>
+        <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="270 80 60" glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={['#a855f7', '#c084fc', '#6366f1']}>
           <div className="p-4 relative overflow-hidden">
             <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl" />
             <div className="flex items-center gap-1 mb-3">
@@ -221,7 +221,7 @@ export default function DashboardScreen() {
         </BorderGlow>
 
         {/* Streak */}
-        <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="25 80 60" glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={['#f97316', '#fb923c', '#ef4444']}>
+        <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="25 80 60" glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={['#f97316', '#fb923c', '#ef4444']}>
           <div className="p-4 relative overflow-hidden">
             <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl" />
             <div className="flex items-center gap-1 mb-3">
@@ -245,7 +245,7 @@ export default function DashboardScreen() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           {quickActions.map(({ label, desc, icon: Icon, color, glow, glowColor, colors, to }) => (
-            <BorderGlow key={label} backgroundColor="#0e1627" borderRadius={16} glowColor={glowColor} glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={colors}>
+            <BorderGlow key={label} backgroundColor="#141e35" borderRadius={16} glowColor={glowColor} glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={colors}>
               <Link
                 to={to}
                 className="relative group p-4 overflow-hidden block"
@@ -274,7 +274,7 @@ export default function DashboardScreen() {
               {t('Resume')} <ChevronRight size={14} />
             </Link>
           </div>
-          <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="270 70 60" glowRadius={25} glowIntensity={0.5} edgeSensitivity={35} colors={['#8b5cf6', '#c084fc', '#6366f1']}>
+          <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="270 70 60" glowRadius={25} glowIntensity={0.5} edgeSensitivity={35} colors={['#8b5cf6', '#c084fc', '#6366f1']}>
             <div className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center shrink-0">
@@ -310,7 +310,7 @@ export default function DashboardScreen() {
             {sectors.map((s) => {
               const sc = sectorColors[Object.keys(sectorColors).find((k) => s.name.toLowerCase().includes(k.toLowerCase())) || 'default'];
               return (
-                <BorderGlow key={s.name} backgroundColor="#0e1627" borderRadius={16} glowColor={sc.glow} glowRadius={20} glowIntensity={0.4} edgeSensitivity={30} colors={sc.colors}>
+                <BorderGlow key={s.name} backgroundColor="#141e35" borderRadius={16} glowColor={sc.glow} glowRadius={20} glowIntensity={0.4} edgeSensitivity={30} colors={sc.colors}>
                   <div className={`snap-start shrink-0 w-[140px] p-3 flex flex-col items-center text-center`}>
                     <div className={`w-14 h-14 rounded-2xl ${sc.bg} flex items-center justify-center mb-2`}>
                       <Star size={26} className={sc.icon} />
@@ -335,14 +335,14 @@ export default function DashboardScreen() {
         </div>
         <div className="space-y-3">
           {recentSessions.length === 0 ? (
-            <BorderGlow backgroundColor="#0e1627" borderRadius={16} glowColor="220 60 65" glowRadius={20} glowIntensity={0.3} edgeSensitivity={30} colors={['#6366f1', '#818cf8', '#4f46e5']}>
+            <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="220 60 65" glowRadius={20} glowIntensity={0.3} edgeSensitivity={30} colors={['#6366f1', '#818cf8', '#4f46e5']}>
               <div className="p-8 text-center">
                 <p className="text-gray-400 text-sm">{t('No sessions yet. Start practicing!')}</p>
               </div>
             </BorderGlow>
           ) : (
             recentSessions.map((s) => (
-              <BorderGlow key={s.id} backgroundColor="#0e1627" borderRadius={16} glowColor={(s.score ?? 0) >= 70 ? '142 70 60' : '25 80 60'} glowRadius={15} glowIntensity={0.4} edgeSensitivity={30} colors={(s.score ?? 0) >= 70 ? ['#22c55e', '#4ade80', '#16a34a'] : ['#f97316', '#fb923c', '#ea580c']}>
+              <BorderGlow key={s.id} backgroundColor="#141e35" borderRadius={16} glowColor={(s.score ?? 0) >= 70 ? '142 70 60' : '25 80 60'} glowRadius={15} glowIntensity={0.4} edgeSensitivity={30} colors={(s.score ?? 0) >= 70 ? ['#22c55e', '#4ade80', '#16a34a'] : ['#f97316', '#fb923c', '#ea580c']}>
                 <div className="flex items-center gap-3 p-4 group">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${(s.score ?? 0) >= 70 ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
                     {(s.score ?? 0) >= 70
