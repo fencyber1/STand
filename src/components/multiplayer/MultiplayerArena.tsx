@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Swords, Users, Trophy, Zap, Crown, Clock, Target,
   Flame, Timer, Award, TrendingUp, Play, Search, Plus,
+  X, LogIn, UserCheck, AlertCircle,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,6 +11,7 @@ import {
   subscribeToActiveGames,
   getAllGameModes,
   createGameRoom,
+  joinGameRoom,
   joinByCode,
   getPlayerStats,
 } from '../../services/multiplayer/multiplayerService';
@@ -31,6 +33,9 @@ export default function MultiplayerArena() {
   const [createError, setCreateError] = useState('');
   const [lastMode, setLastMode] = useState<GameMode>('1v1');
   const [debug, setDebug] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState<GameRoom | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [joinModalError, setJoinModalError] = useState('');
 
   const gameModes = getAllGameModes();
 
@@ -105,6 +110,28 @@ export default function MultiplayerArena() {
       navigate(`/multiplayer/${result.roomId}`);
     } else {
       setJoinError(result.error || 'Failed to join');
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    if (!user || !selectedRoom) return;
+    setJoining(true);
+    setJoinModalError('');
+    try {
+      const result = await joinGameRoom(selectedRoom.id, {
+        uid: user.uid,
+        name: user.fullName || 'Player',
+        photo: user.photoURL,
+      });
+      if (result.success) {
+        navigate(`/multiplayer/${selectedRoom.id}`);
+      } else {
+        setJoinModalError(result.error || 'Failed to join room');
+      }
+    } catch (e: any) {
+      setJoinModalError(e.message || 'Failed to join room');
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -256,7 +283,7 @@ export default function MultiplayerArena() {
             {activeGames.slice(0, 10).map((game) => (
               <button
                 key={game.id}
-                onClick={() => navigate(`/multiplayer/${game.id}`)}
+                onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
                 className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
               >
                 <div className="flex items-center gap-3">
@@ -278,6 +305,112 @@ export default function MultiplayerArena() {
           </div>
         )}
       </div>
+
+      {selectedRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setSelectedRoom(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Game Room</h3>
+              <button onClick={() => setSelectedRoom(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Host</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedRoom.hostName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Mode</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100 capitalize">{selectedRoom.mode}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Players</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedRoom.players.length}/{selectedRoom.maxPlayers}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
+                <span className={`text-sm font-medium ${selectedRoom.status === 'waiting' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                  {selectedRoom.status === 'waiting' ? 'Waiting' : 'In Progress'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Subject</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedRoom.subject}</span>
+              </div>
+              {selectedRoom.roomCode && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Room Code</span>
+                  <span className="text-sm font-mono font-bold text-primary-600 dark:text-primary-400">{selectedRoom.roomCode}</span>
+                </div>
+              )}
+            </div>
+
+            {joinModalError && (
+              <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-2">
+                <AlertCircle size={14} className="text-red-500 shrink-0" />
+                <span className="text-xs text-red-600 dark:text-red-400">{joinModalError}</span>
+              </div>
+            )}
+
+            {selectedRoom.host === user?.uid ? (
+              <div className="space-y-2">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center gap-2">
+                  <UserCheck size={14} className="text-blue-500 shrink-0" />
+                  <span className="text-xs text-blue-600 dark:text-blue-400">This is your room (host)</span>
+                </div>
+                <button
+                  onClick={() => navigate(`/multiplayer/${selectedRoom.id}`)}
+                  className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition flex items-center justify-center gap-2"
+                >
+                  <Play size={16} /> Enter Room
+                </button>
+              </div>
+            ) : selectedRoom.players.some((p) => p.uid === user?.uid) ? (
+              <div className="space-y-2">
+                <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center gap-2">
+                  <UserCheck size={14} className="text-green-500 shrink-0" />
+                  <span className="text-xs text-green-600 dark:text-green-400">You're already in this room</span>
+                </div>
+                <button
+                  onClick={() => navigate(`/multiplayer/${selectedRoom.id}`)}
+                  className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition flex items-center justify-center gap-2"
+                >
+                  <Play size={16} /> Enter Room
+                </button>
+              </div>
+            ) : selectedRoom.status !== 'waiting' ? (
+              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
+                <AlertCircle size={14} className="text-yellow-500 shrink-0" />
+                <span className="text-xs text-yellow-600 dark:text-yellow-400">Game already in progress</span>
+              </div>
+            ) : selectedRoom.players.length >= selectedRoom.maxPlayers ? (
+              <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-2">
+                <AlertCircle size={14} className="text-red-500 shrink-0" />
+                <span className="text-xs text-red-600 dark:text-red-400">Room is full ({selectedRoom.maxPlayers}/{selectedRoom.maxPlayers})</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleJoinRoom}
+                disabled={joining}
+                className="w-full py-2.5 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {joining ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Joining...
+                  </>
+                ) : (
+                  <>
+                    <LogIn size={16} /> JOIN GAME
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
