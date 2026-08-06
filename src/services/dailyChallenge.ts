@@ -64,7 +64,7 @@ export async function generateDailyChallenge(): Promise<DailyChallenge> {
     const result = await generateQuestions({
       topic,
       sector: topSector,
-      level: 'SSS/WAEC',
+      level: 'High School',
       questionType: 'MCQ',
       count: 5,
       difficulty: 'medium',

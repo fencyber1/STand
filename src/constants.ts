@@ -18,12 +18,12 @@ export const SECTORS = [
 ];
 
 export const LEVELS = [
-  'PRIMARY/BASIC',
-  'JSS/BECE',
-  'SSS/WAEC',
-  'SSS/NECO',
-  'University/JAMB',
-  'Professional/Certification',
+  'Primary',
+  'Middle School',
+  'High School',
+  'Entrance Exams',
+  'University',
+  'Professional Certifications',
 ];
 
 export const QUESTION_TYPES = [

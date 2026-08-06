@@ -601,9 +601,9 @@ export async function gradeTheoryAnswer(params: {
 
   let strictness = '';
 
-  if (level.includes('primary') || level.includes('basic')) {
+  if (level.includes('primary')) {
     if (difficulty === 'easy') {
-      strictness = `GRADING STRICTNESS: VERY LENIENT (PRIMARY/BASIC Level, Easy Difficulty)
+      strictness = `GRADING STRICTNESS: VERY LENIENT (Primary Level, Easy Difficulty)
 - This is a very young student (primary school age). Be extremely encouraging and lenient.
 - Reward ANY attempt to answer. Even a partially correct idea deserves generous marks.
 - Accept simple, everyday language — this is a child. No technical terminology expected.
@@ -611,23 +611,23 @@ export async function gradeTheoryAnswer(params: {
 - A reasonable attempt in simple words should score at least ${Math.round(total * 0.5)}.
 - Be warm and supportive in feedback. Encourage the child to keep learning.`;
     } else if (difficulty === 'hard') {
-      strictness = `GRADING STRICTNESS: LENIENT (PRIMARY/BASIC Level, Hard Difficulty)
+      strictness = `GRADING STRICTNESS: LENIENT (Primary Level, Hard Difficulty)
 - This is a young student attempting a harder question. Be very encouraging.
 - Reward effort and any correct ideas, even if incomplete.
 - Simple language is perfectly fine — this is a child.
 - Accept examples from everyday life.
 - A good attempt should score well. Don't penalize heavily for being young.`;
     } else {
-      strictness = `GRADING STRICTNESS: VERY LENIENT (PRIMARY/BASIC Level, Medium Difficulty)
+      strictness = `GRADING STRICTNESS: VERY LENIENT (Primary Level, Medium Difficulty)
 - This is a young primary school student. Be encouraging and supportive.
 - Accept simple language and everyday examples.
 - If the student shows understanding of the basic concept, give good marks.
 - Don't require precise definitions — this is a child learning.
 - Warm, encouraging feedback is important.`;
     }
-  } else if (level.includes('jss') || level.includes('bece')) {
+  } else if (level.includes('middle school') || level.includes('middle')) {
     if (difficulty === 'easy') {
-      strictness = `GRADING STRICTNESS: LENIENT (JSS/BECE Level, Easy Difficulty)
+      strictness = `GRADING STRICTNESS: LENIENT (Middle School Level, Easy Difficulty)
 - This is a young student at a basic education level. Be encouraging and lenient.
 - Reward effort and attempt to answer. Even a partial correct idea deserves marks.
 - Accept simple, everyday language. Do NOT require technical terminology.
@@ -636,22 +636,22 @@ export async function gradeTheoryAnswer(params: {
 - Critical analysis (Tier 3) is a bonus — don't heavily penalize its absence.
 - A reasonable attempt in simple words should score at least ${Math.round(total * 0.3)}.`;
     } else if (difficulty === 'hard') {
-      strictness = `GRADING STRICTNESS: MODERATE (JSS/BECE Level, Hard Difficulty)
+      strictness = `GRADING STRICTNESS: MODERATE (Middle School Level, Hard Difficulty)
 - This is a basic-level student attempting a harder question. Be fair but expect more effort.
 - Reward clear understanding of the core concept.
 - Simple language is acceptable, but the answer should show the student tried to explain, not just guess.
 - Basic use of relevant terms is a plus but not strictly required.
 - Accept straightforward explanations without requiring deep analysis.`;
     } else {
-      strictness = `GRADING STRICTNESS: MODERATE-LENIENT (JSS/BECE Level, Medium Difficulty)
+      strictness = `GRADING STRICTNESS: MODERATE-LENIENT (Middle School Level, Medium Difficulty)
 - This is a basic-level student. Be fair and encouraging.
 - Accept simple language. Reward understanding over terminology.
 - A clear, correct basic explanation should score well.
 - Don't penalize heavily for missing technical terms if the concept is understood.`;
     }
-  } else if (level.includes('sss') || level.includes('waec') || level.includes('neco')) {
+  } else if (level.includes('high school')) {
     if (difficulty === 'easy') {
-      strictness = `GRADING STRICTNESS: MODERATE (Senior Secondary Level, Easy Difficulty)
+      strictness = `GRADING STRICTNESS: MODERATE (High School Level, Easy Difficulty)
 - This is a secondary school student with foundational knowledge.
 - Expect basic use of subject-specific terminology.
 - The answer should demonstrate understanding beyond just everyday language.
@@ -659,7 +659,7 @@ export async function gradeTheoryAnswer(params: {
 - Simple but correct explanations score well.
 - Penalize answers that are clearly guessing or off-topic.`;
     } else if (difficulty === 'hard') {
-      strictness = `GRADING STRICTNESS: STRICT (Senior Secondary Level, Hard Difficulty)
+      strictness = `GRADING STRICTNESS: STRICT (High School Level, Hard Difficulty)
 - This is a secondary school student attempting an advanced question.
 - Expect clear use of technical terminology relevant to the subject.
 - The answer should show the student can connect concepts.
@@ -667,13 +667,39 @@ export async function gradeTheoryAnswer(params: {
 - Require specific examples or mechanisms, not just general statements.
 - For ${subject}: expect subject-appropriate language and reasoning.`;
     } else {
-      strictness = `GRADING STRICTNESS: MODERATE-STRICT (Senior Secondary Level, Medium Difficulty)
+      strictness = `GRADING STRICTNESS: MODERATE-STRICT (High School Level, Medium Difficulty)
 - Expect the student to use relevant terminology and explain concepts clearly.
 - The answer should show understanding of mechanisms, not just definitions.
 - Accept well-structured explanations that demonstrate study of the topic.
 - Penalize vague or incomplete answers appropriately.`;
     }
-  } else if (level.includes('university') || level.includes('jamb')) {
+  } else if (level.includes('entrance') || level.includes('exam')) {
+    if (difficulty === 'easy') {
+      strictness = `GRADING STRICTNESS: STRICT (Entrance Exams Level, Easy Difficulty)
+- This is a student preparing for competitive entrance exams.
+- Expect accurate use of technical terminology for ${subject}.
+- The answer should be well-structured and precise.
+- Acceptable: correct explanation with proper terms.
+- Not acceptable: vague, casual, or superficial responses.
+- Penalize lack of subject-specific language.`;
+    } else if (difficulty === 'hard') {
+      strictness = `GRADING STRICTNESS: VERY STRICT (Entrance Exams Level, Hard Difficulty)
+- This is a student preparing for competitive entrance exams, attempting a challenging question.
+- REQUIRE precise technical terminology specific to ${subject}.
+- REQUIRE detailed explanations of mechanisms, processes, or theories.
+- REQUIRE critical analysis, connections between concepts, and evaluation.
+- Vague answers = 0 for that tier. Superficial = minimal marks.
+- Penalize heavily for: missing technical terms, lack of depth, no examples, generic responses.
+- A good answer should demonstrate genuine understanding that could be applied to new contexts.`;
+    } else {
+      strictness = `GRADING STRICTNESS: STRICT (Entrance Exams Level, Medium Difficulty)
+- Expect exam-level response with proper technical terminology for ${subject}.
+- The answer should demonstrate understanding of mechanisms and processes.
+- Require specific examples or evidence, not just general statements.
+- Penalize vague or incomplete explanations.
+- The response should show the student has engaged with the material at depth.`;
+    }
+  } else if (level.includes('university')) {
     if (difficulty === 'easy') {
       strictness = `GRADING STRICTNESS: STRICT (University Level, Easy Difficulty)
 - This is a university student. Even for an easy question, expect university-level response.
@@ -702,7 +728,7 @@ export async function gradeTheoryAnswer(params: {
     }
   } else if (level.includes('professional') || level.includes('certification')) {
     if (difficulty === 'hard') {
-      strictness = `GRADING STRICTNESS: VERY STRICT (Professional/Certification Level, Hard Difficulty)
+      strictness = `GRADING STRICTNESS: VERY STRICT (Professional Certifications Level, Hard Difficulty)
 - This is a professional or certification candidate. Apply the strictest standards.
 - REQUIRE expert-level terminology and precise technical language for ${subject}.
 - REQUIRE detailed, practical knowledge with real-world application.
@@ -711,7 +737,7 @@ export async function gradeTheoryAnswer(params: {
 - The answer should demonstrate professional competence, not just academic knowledge.
 - For ${subject}: expect industry-standard terminology and practical reasoning.`;
     } else {
-      strictness = `GRADING STRICTNESS: STRICT (Professional/Certification Level, ${difficulty === 'easy' ? 'Easy' : 'Medium'} Difficulty)
+      strictness = `GRADING STRICTNESS: STRICT (Professional Certifications Level, ${difficulty === 'easy' ? 'Easy' : 'Medium'} Difficulty)
 - Expect professional-level response with industry-appropriate terminology for ${subject}.
 - The answer should demonstrate practical understanding, not just theoretical knowledge.
 - Require specific, actionable knowledge where applicable.
