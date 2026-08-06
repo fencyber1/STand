@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { storage } from '../../services/storage';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Plus, Trash2, CalendarDays, Target, Flame } from 'lucide-react';
+import { Plus, Trash2, CalendarDays, Target, Flame, Sparkles } from 'lucide-react';
 import { SECTORS } from '../../constants';
+import StudyPlanAI from './StudyPlanAI';
 
 interface StudyPlan {
   id: string;
@@ -23,6 +24,7 @@ export default function StudyPlansScreen() {
   const [targetDate, setTargetDate] = useState('');
   const [dailyGoal, setDailyGoal] = useState(30);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [showAI, setShowAI] = useState(false);
 
   useEffect(() => {
     setPlans(storage.getStudyPlans());
@@ -75,13 +77,22 @@ export default function StudyPlansScreen() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Study Plans')}</h1>
           <p className="text-gray-500 dark:text-gray-400">{t('Set goals and track your study streaks')}</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
-        >
-          <Plus size={16} />
-          {t('Create Plan')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAI(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-500 transition"
+          >
+            <Sparkles size={16} />
+            {t('Plan with AI')}
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
+          >
+            <Plus size={16} />
+            {t('Create Plan')}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -207,6 +218,7 @@ export default function StudyPlansScreen() {
           })}
         </div>
       )}
+      <StudyPlanAI open={showAI} onClose={() => setShowAI(false)} />
     </div>
   );
 }
