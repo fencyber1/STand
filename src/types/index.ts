@@ -597,3 +597,131 @@ export interface DailyReward {
   coins: number;
   special?: string;
 }
+
+export type GameMode = '1v1' | 'team' | 'tournament' | 'blitz' | 'marathon' | 'survival' | 'speedrun';
+export type GameStatus = 'waiting' | 'starting' | 'in_progress' | 'finished' | 'cancelled';
+export type GameDifficulty = 'easy' | 'medium' | 'hard' | 'mixed';
+
+export interface GamePlayer {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  score: number;
+  correctAnswers: number;
+  totalAnswers: number;
+  answers: PlayerAnswer[];
+  ready: boolean;
+  connected: boolean;
+  finished: boolean;
+  streak: number;
+  bestStreak: number;
+  totalTime: number;
+  rank?: number;
+}
+
+export interface PlayerAnswer {
+  questionId: string;
+  answer: string | string[];
+  correct: boolean;
+  timeSpent: number;
+  points: number;
+}
+
+export interface GameRoom {
+  id: string;
+  mode: GameMode;
+  status: GameStatus;
+  host: string;
+  hostName: string;
+  players: GamePlayer[];
+  maxPlayers: number;
+  subject: string;
+  topic: string;
+  difficulty: GameDifficulty;
+  totalQuestions: number;
+  timePerQuestion: number;
+  currentQuestion: number;
+  questions: Question[];
+  answers: Record<string, Record<string, PlayerAnswer>>;
+  spectators: string[];
+  winner?: string;
+  winningTeam?: string;
+  rewards: GameReward;
+  isPrivate: boolean;
+  roomCode?: string;
+  teamA?: string[];
+  teamB?: string[];
+  teamNames?: { a: string; b: string };
+  bracket?: TournamentBracket;
+  createdAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  liveChat: GameChatMessage[];
+}
+
+export interface GameReward {
+  xp: number;
+  coins: number;
+  badge?: string;
+}
+
+export interface GameChatMessage {
+  uid: string;
+  name: string;
+  text: string;
+  timestamp: string;
+  type: 'message' | 'system' | 'reaction';
+}
+
+export interface TournamentBracket {
+  rounds: TournamentRound[];
+  currentRound: number;
+}
+
+export interface TournamentRound {
+  matches: TournamentMatch[];
+}
+
+export interface TournamentMatch {
+  id: string;
+  player1: string;
+  player2: string;
+  winner?: string;
+  score1: number;
+  score2: number;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+export interface PlayerStats {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number;
+  fastestAnswer: number;
+  accuracy: number;
+  tournamentWins: number;
+  globalRank: number;
+  totalXPEarned: number;
+  totalCoinsEarned: number;
+  streak: number;
+  longestStreak: number;
+  favoriteSubject: string;
+  matchHistory: MatchResult[];
+}
+
+export interface MatchResult {
+  id: string;
+  mode: GameMode;
+  opponent: string;
+  opponentName: string;
+  result: 'win' | 'loss' | 'draw';
+  score: number;
+  opponentScore: number;
+  xpEarned: number;
+  date: string;
+  subject: string;
+}

@@ -29,8 +29,8 @@ const ImportQuestionsScreen = lazy(() => import('./components/import/ImportQuest
 const WeakAreasScreen = lazy(() => import('./components/practice/WeakAreasScreen'));
 const SessionCompareScreen = lazy(() => import('./components/practice/SessionCompareScreen'));
 const StudyGroupsScreen = lazy(() => import('./components/groups/StudyGroupsScreen'));
-const MultiplayerLobbyScreen = lazy(() => import('./components/multiplayer/MultiplayerLobbyScreen'));
-const MultiplayerGameScreen = lazy(() => import('./components/multiplayer/MultiplayerGameScreen'));
+const MultiplayerLobbyScreen = lazy(() => import('./components/multiplayer/MultiplayerArena'));
+const MultiplayerGameScreen = lazy(() => import('./components/multiplayer/GameRoom'));
 const DocumentQuizScreen = lazy(() => import('./components/practice/DocumentQuizScreen'));
 const FriendsScreen = lazy(() => import('./components/social/FriendsScreen'));
 const FeedScreen = lazy(() => import('./components/social/FeedScreen'));
