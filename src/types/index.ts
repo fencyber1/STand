@@ -654,6 +654,7 @@ export interface GameRoom {
   teamNames?: { a: string; b: string };
   bracket?: TournamentBracket;
   createdAt: string;
+  expiresAt?: number;
   startedAt?: string;
   endedAt?: string;
   liveChat: GameChatMessage[];

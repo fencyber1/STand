@@ -6,6 +6,9 @@ import {
 import { db } from '../firebase';
 import type { Question, GameRoom, GamePlayer, PlayerAnswer, GameMode, GameStatus, GameDifficulty, GameReward, GameChatMessage, TournamentBracket, TournamentRound, TournamentMatch, PlayerStats, MatchResult } from '../../types';
 
+const ROOM_TIMEOUT_MINUTES = 2;
+const ROOM_TIMEOUT_MS = ROOM_TIMEOUT_MINUTES * 60 * 1000;
+
 function ts(): string {
   return new Date().toISOString();
 }
@@ -99,6 +102,7 @@ export async function createGameRoom(params: {
         isPrivate: params.isPrivate || false,
         roomCode,
         createdAt: ts(),
+        expiresAt: Date.now() + ROOM_TIMEOUT_MS,
         liveChat: [],
       };
 
@@ -340,7 +344,29 @@ export function subscribeToActiveGames(cb: (rooms: GameRoom[]) => void): () => v
       console.log('[MP] Fetching active games...');
       const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']));
       const snap = await getDocs(q);
-      const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() } as GameRoom)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const now = Date.now();
+      const rooms: GameRoom[] = [];
+      const expired: string[] = [];
+
+      for (const d of snap.docs) {
+        const data = { id: d.id, ...d.data() } as GameRoom;
+        if (data.expiresAt && data.expiresAt < now && data.players.length < 2) {
+          expired.push(d.id);
+        } else {
+          rooms.push(data);
+        }
+      }
+
+      if (expired.length > 0) {
+        console.log('[MP] Cleaning up expired rooms:', expired.length);
+        const batch = writeBatch(db);
+        for (const id of expired) {
+          batch.delete(doc(db, 'gameRooms', id));
+        }
+        await batch.commit();
+      }
+
+      rooms.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       console.log('[MP] Found active games:', rooms.length);
       if (active) cb(rooms);
     } catch (e) {

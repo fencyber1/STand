@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import {
   setPlayerReady,
@@ -43,6 +43,12 @@ export default function GameRoom() {
       const snap = await getDoc(doc(db, 'gameRooms', roomId));
       if (snap.exists()) {
         const data = snap.data() as GameRoom;
+        if (data.expiresAt && data.expiresAt < Date.now() && data.players.length < 2) {
+          await deleteDoc(doc(db, 'gameRooms', roomId));
+          setLoadError('This room expired because nobody joined within 2 minutes.');
+          setLoading(false);
+          return false;
+        }
         setRoom(data);
         setLoadError('');
         setLoading(false);
@@ -51,7 +57,7 @@ export default function GameRoom() {
         }
         return true;
       } else {
-        setLoadError('Room not found. It may have been deleted.');
+        setLoadError('Room not found. It may have been deleted or expired.');
         setLoading(false);
         return false;
       }
