@@ -35,26 +35,46 @@ export default function GameRoom() {
   useEffect(() => {
     if (!roomId) return;
     let loaded = false;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
     const unsub = subscribeToGameRoom(roomId, (data) => {
       if (data) {
         loaded = true;
         setRoom(data);
+        setLoadError('');
         if (data?.status === 'finished') {
           setShowResults(true);
         }
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
       }
     });
 
     const timeout = setTimeout(() => {
       if (!loaded) {
-        setLoadError('Failed to load room. Please check your connection.');
-        console.error('[MP] Room load timeout for:', roomId);
+        console.warn('[MP] onSnapshot timeout, falling back to polling');
+        pollInterval = setInterval(async () => {
+          try {
+            const { getDoc, doc } = await import('firebase/firestore');
+            const { db } = await import('../../services/firebase');
+            const snap = await getDoc(doc(db, 'gameRooms', roomId));
+            if (snap.exists() && !loaded) {
+              loaded = true;
+              const data = snap.data() as any;
+              setRoom(data);
+              setLoadError('');
+              if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+            }
+          } catch (e) {
+            console.error('[MP] Poll error:', e);
+          }
+        }, 2000);
       }
-    }, 5000);
+    }, 3000);
 
     return () => {
       clearTimeout(timeout);
       unsub();
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [roomId]);
 
