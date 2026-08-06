@@ -155,7 +155,7 @@ export default function PrivacySettingsScreen() {
   const friendOnlyOptions: PrivacyLevel[] = ['everyone', 'friends', 'nobody'];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-8">
+    <div className="max-w-2xl mx-auto px-4 space-y-6 pb-8">
       <div className="flex items-center gap-3">
         <Shield size={24} className="text-primary-600 dark:text-primary-400" />
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('Privacy')}</h1>

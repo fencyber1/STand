@@ -112,7 +112,7 @@ export default function StudyGroupsScreen() {
     const isOwner = activeGroup.createdBy === userObj.uid;
     const me = activeGroup.members.find((m) => m.uid === userObj.uid);
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto px-4 space-y-6">
         <button onClick={() => setActiveGroup(null)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm flex items-center gap-1">
           <ArrowLeft size={14} /> {t('Back to Groups')}
         </button>

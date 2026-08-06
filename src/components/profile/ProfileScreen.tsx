@@ -42,7 +42,7 @@ export default function ProfileScreen() {
   const currentLang = LANGUAGES.find((l) => l.code === language);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto px-4 space-y-6">
       <EditProfileModal open={editOpen} onClose={() => { setEditOpen(false); setPhotoVersion((v) => v + 1); }} />
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-center transition-colors">

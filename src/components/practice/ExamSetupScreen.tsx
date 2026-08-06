@@ -94,7 +94,7 @@ export default function ExamSetupScreen() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto px-4">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Shield size={24} className="text-orange-600 dark:text-orange-400" />
