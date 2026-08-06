@@ -71,7 +71,14 @@ export default function MultiplayerArena() {
       });
       console.log('[MP] Room created:', roomId);
       if (roomId) {
+        console.log('[MP] Navigating to:', `/multiplayer/${roomId}`);
         navigate(`/multiplayer/${roomId}`);
+        setTimeout(() => {
+          if (window.location.pathname === '/multiplayer') {
+            console.log('[MP] Navigation failed, using href fallback');
+            window.location.href = `/multiplayer/${roomId}`;
+          }
+        }, 1000);
       } else {
         setCreateError('Failed to create room. Please try again.');
       }
