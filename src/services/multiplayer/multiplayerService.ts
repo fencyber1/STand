@@ -333,10 +333,21 @@ export function subscribeToGameRoom(roomId: string, cb: (room: GameRoom | null) 
 }
 
 export function subscribeToActiveGames(cb: (rooms: GameRoom[]) => void): () => void {
-  const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']), orderBy('createdAt', 'desc'), limit(50));
-  return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => d.data() as GameRoom));
-  }, () => cb([]));
+  let active = true;
+  const fetchGames = async () => {
+    if (!active) return;
+    try {
+      const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']), orderBy('createdAt', 'desc'), limit(50));
+      const snap = await getDocs(q);
+      if (active) cb(snap.docs.map((d) => d.data() as GameRoom));
+    } catch (e) {
+      console.error('[MP] fetchGames error:', e);
+      if (active) cb([]);
+    }
+  };
+  fetchGames();
+  const interval = setInterval(fetchGames, 5000);
+  return () => { active = false; clearInterval(interval); };
 }
 
 export async function getPlayerStats(uid: string): Promise<PlayerStats> {
