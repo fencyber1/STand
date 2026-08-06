@@ -189,7 +189,7 @@ export default function DashboardScreen() {
             <h1 className="text-2xl font-bold text-white">
               {t(greeting)}, {firstName}! <span className="inline-block animate-[wave_2s_ease-in-out_infinite]">&#x1F44B;</span>
             </h1>
-            <p className="text-gray-400 mt-1 text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} &middot; {new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</p>
+            <p className="font-bold text-violet-400 mt-1 text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} &middot; {new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</p>
             <p className="text-gray-400 mt-1 text-sm">{motivationalLine}</p>
           </div>
         </div>
