@@ -322,7 +322,7 @@ async function generateQuestionBatch(
 These questions have ALREADY been generated. You MUST NOT generate any similar or rephrased version. Every question must be COMPLETELY NEW.
 
 PREVIOUS (DO NOT REPEAT):
-${existingQuestions.slice(-30).map((q, i) => `${i + 1}. "${q.question.slice(0, 100)}"`).join('\n')}
+${existingQuestions.slice(-5).map((q, i) => `${i + 1}. "${q.question.slice(0, 100)}"`).join('\n')}
 
 VIOLATION RULE: If you generate ANY matching question, the output will be rejected. Generate ONLY new questions about different aspects of the topic.`
     : '';
@@ -557,7 +557,7 @@ async function generateDocumentQuestionBatch(
 
   const avoidDuplicates = existingQuestions.length > 0
     ? `\n\nDO NOT REPEAT QUESTIONS. These have been generated:
-${existingQuestions.slice(-30).map((q, i) => `${i + 1}. "${q.question.slice(0, 80)}"`).join('\n')}
+${existingQuestions.slice(-5).map((q, i) => `${i + 1}. "${q.question.slice(0, 80)}"`).join('\n')}
 Generate ONLY new questions about different aspects.`
     : '';
 

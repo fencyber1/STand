@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, Trash2, ArrowUp, X, ArrowUpDown, Image, Pencil, ArrowLeft, Menu, Settings, Volume2, VolumeX, Mic, StopCircle, RotateCw, Copy, Check, Clock, Zap, GraduationCap } from 'lucide-react';
 import FenBotLogo from '../effects/FenBotLogo';
@@ -144,12 +144,21 @@ function saveSettings(s: FenBotSettings) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
+const wikiImageCache = new Map<string, string | null>();
+
 function WikiImage({ query }: { query: string }) {
-  const [src, setSrc] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const [src, setSrc] = useState<string | null>(() => wikiImageCache.get(query) || null);
+  const [loading, setLoading] = useState(() => !wikiImageCache.has(query));
+  const [failed, setFailed] = useState(() => wikiImageCache.get(query) === null);
 
   useEffect(() => {
+    if (wikiImageCache.has(query)) {
+      const cached = wikiImageCache.get(query);
+      setSrc(cached || null);
+      setLoading(false);
+      setFailed(!cached);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setFailed(false);
@@ -157,11 +166,12 @@ function WikiImage({ query }: { query: string }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled) return;
-        const url = data?.thumbnail?.source || data?.originalimage?.source;
+        const url = data?.thumbnail?.source || data?.originalimage?.source || null;
+        wikiImageCache.set(query, url);
         if (url) setSrc(url); else setFailed(true);
         setLoading(false);
       })
-      .catch(() => { if (!cancelled) { setFailed(true); setLoading(false); } });
+      .catch(() => { if (!cancelled) { wikiImageCache.set(query, null); setFailed(true); setLoading(false); } });
     return () => { cancelled = true; };
   }, [query]);
 
@@ -256,6 +266,16 @@ function formatInline(text: string): string {
     .replace(/`(.+?)`/g, '<code class="bg-white/10 px-1.5 py-0.5 rounded text-indigo-300 text-xs font-mono">$1</code>');
 }
 
+const MemoizedMessage = React.memo(function MemoizedMessage({ content, role }: { content: string; role: 'user' | 'assistant' }) {
+  const parsed = useMemo(() => parseMarkdown(content), [content]);
+  if (role === 'user') return <TwemojiText className="text-white">{content}</TwemojiText>;
+  return <div className="space-y-0">{parsed}</div>;
+});
+
+const MemoizedMarkdown = React.memo(function MemoizedMarkdown({ content }: { content: string }) {
+  return <>{useMemo(() => parseMarkdown(content), [content])}</>;
+});
+
 export default function FenBot() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -288,6 +308,7 @@ export default function FenBot() {
   const fullReplyRef = useRef('');
   const conversationsRef = useRef<Conversation[]>([]);
   const activeIdRef = useRef<string | null>(null);
+  const firestoreSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeConvo = conversations.find((c) => c.id === activeId);
   const messages = activeConvo?.messages || [];
@@ -315,14 +336,18 @@ export default function FenBot() {
   }, [uid]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: streamingContent ? 'auto' : 'smooth' });
   }, [messages, streamingContent]);
 
-  // Sync conversations to localStorage
+  // Sync conversations to localStorage (debounced)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (uid && conversations.length >= 0) {
+    if (!uid) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
       localStorage.setItem(`fenbot_convos_${uid}`, JSON.stringify(conversations));
-    }
+    }, 500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [conversations, uid]);
 
   // Stop speech on unmount
@@ -333,6 +358,8 @@ export default function FenBot() {
       abortRef.current?.abort();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (renderTimerRef.current) clearTimeout(renderTimerRef.current as unknown as number);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (firestoreSaveTimerRef.current) clearTimeout(firestoreSaveTimerRef.current);
     };
   }, []);
 
@@ -434,7 +461,13 @@ export default function FenBot() {
     setConversations((prev) => {
       const next = updater(prev);
       const updated = next.find((c) => c.id === activeId);
-      if (updated) saveFenBotConversation(uid, updated).catch(() => {});
+      if (updated) {
+        if (firestoreSaveTimerRef.current) clearTimeout(firestoreSaveTimerRef.current);
+        const convoToSave = updated;
+        firestoreSaveTimerRef.current = setTimeout(() => {
+          saveFenBotConversation(uid, convoToSave).catch(() => {});
+        }, 1000);
+      }
       return next;
     });
   }, [activeId, uid]);
@@ -448,7 +481,7 @@ export default function FenBot() {
     setTimeout(() => inputRef.current?.focus(), 200);
   }, []);
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || loading) return;
     window.speechSynthesis?.cancel();
 
@@ -664,7 +697,7 @@ export default function FenBot() {
       setTimeout(() => setStreamingContent(''), 100);
       setTimeout(() => inputRef.current?.focus(), 200);
     }
-  };
+  }, [loading, uid, language, mode, fastLength, createConversation, updateAndSave, conversationsRef, activeIdRef]);
 
   const handleCopy = useCallback((content: string, idx: number) => {
     navigator.clipboard.writeText(content).catch(() => {});
@@ -720,9 +753,9 @@ export default function FenBot() {
     }
   }, [editContent, activeId, updateAndSave, sendMessage, conversations]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
-  };
+  }, [input, sendMessage]);
 
   return (
     <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
@@ -990,11 +1023,11 @@ export default function FenBot() {
                           <button onClick={() => handleEditSave(idx)} className="px-3 py-1.5 rounded-lg text-xs bg-indigo-500 text-white hover:bg-indigo-400">Save</button>
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-sm leading-relaxed">
-                        {msg.role === 'assistant' ? <div className="space-y-0">{parseMarkdown(msg.content)}</div> : <TwemojiText className="text-white">{msg.content}</TwemojiText>}
-                      </div>
-                    )}
+                     ) : (
+                       <div className="text-sm leading-relaxed">
+                         <MemoizedMessage content={msg.content} role={msg.role} />
+                       </div>
+                     )}
                     {!loading && editingIdx !== idx && (
                       <div className={`flex items-center gap-1 mt-2 pt-1 border-t border-white/5 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                         {msg.role === 'assistant' && (
@@ -1038,9 +1071,9 @@ export default function FenBot() {
                       <FenBotIcon size={18} />
                       <span className="text-[11px] font-bold text-indigo-400">FenBot</span>
                     </div>
-                    {streamingContent ? (
-                      <div className="text-sm leading-relaxed space-y-0">{parseMarkdown(streamingContent)}</div>
-                    ) : (
+                     {streamingContent ? (
+                       <div className="text-sm leading-relaxed space-y-0"><MemoizedMarkdown content={streamingContent} /></div>
+                     ) : (
                       <div className="flex items-center gap-2 text-sm text-white/40"><Loader2 className="w-4 h-4 animate-spin" /> Thinking...</div>
                     )}
                   </div>
