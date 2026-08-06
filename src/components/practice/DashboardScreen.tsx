@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, CheckCircle2, TrendingUp, Calendar, Trophy, Target } from 'lucide-react';
+import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, CheckCircle2, TrendingUp, Calendar, Trophy, Target, Search, User } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -102,6 +102,7 @@ export default function DashboardScreen() {
 
   const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null);
   const [challengeLoading, setChallengeLoading] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -204,12 +205,21 @@ export default function DashboardScreen() {
         <div className="relative overflow-hidden p-4">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl" />
-          <div className="relative">
-            <h1 className="text-2xl font-bold text-white">
-              {t(greeting)}, {firstName}! <span className="inline-block animate-[wave_2s_ease-in-out_infinite]">&#x1F44B;</span>
-            </h1>
-            <p className="font-bold text-violet-400 mt-1 text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} &middot; {new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</p>
-            <p className="text-gray-400 mt-1 text-sm">{motivationalLine}</p>
+          <div className="relative flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {t(greeting)}, {firstName}! <span className="inline-block animate-[wave_2s_ease-in-out_infinite]">&#x1F44B;</span>
+              </h1>
+              <p className="font-bold text-violet-400 mt-1 text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} &middot; {new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-gray-400 mt-1 text-sm">{motivationalLine}</p>
+            </div>
+            <button
+              onClick={() => setShowSearch(true)}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition"
+              title={t('Search')}
+            >
+              <Search size={20} className="text-white/60" />
+            </button>
           </div>
         </div>
       </BorderGlow>
@@ -418,6 +428,149 @@ export default function DashboardScreen() {
             ))
           )}
         </div>
+      </div>
+      <SearchOverlay open={showSearch} onClose={() => setShowSearch(false)} />
+    </div>
+  );
+}
+
+const searchItems = [
+  { label: 'Practice Quiz', icon: GraduationCap, to: '/practice', desc: 'Start a new practice session' },
+  { label: 'FenBot AI Tutor', icon: Bot, to: '/fenbot', desc: 'Chat with your AI tutor' },
+  { label: 'Multiplayer', icon: Users, to: '/multiplayer', desc: 'Play with friends' },
+  { label: 'Document Quiz', icon: FileText, to: '/doc-quiz', desc: 'Upload PDF or DOCX' },
+  { label: 'Import Questions', icon: BookOpen, to: '/import', desc: 'Import custom questions' },
+  { label: 'History', icon: CheckCircle2, to: '/history', desc: 'View past sessions' },
+  { label: 'Bookmarks', icon: Star, to: '/bookmarks', desc: 'Your saved questions' },
+  { label: 'Progress', icon: TrendingUp, to: '/progress', desc: 'View your stats' },
+  { label: 'Achievements', icon: Trophy, to: '/achievements', desc: 'Your badges and rewards' },
+  { label: 'Weak Areas', icon: Target, to: '/weak-areas', desc: 'Topics to improve' },
+  { label: 'Compare Sessions', icon: Calendar, to: '/compare', desc: 'Compare performance' },
+  { label: 'Study Plans', icon: BookOpen, to: '/study-plans', desc: 'Plan your study schedule' },
+  { label: 'Study Groups', icon: Users, to: '/groups', desc: 'Join or create groups' },
+  { label: 'Friends', icon: Users, to: '/friends', desc: 'Your friends list' },
+  { label: 'Feed', icon: FileText, to: '/feed', desc: 'Social feed' },
+  { label: 'Status', icon: Calendar, to: '/statuses', desc: 'View statuses' },
+  { label: 'Messages', icon: Bot, to: '/chat', desc: 'Your conversations' },
+  { label: 'Settings', icon: Bot, to: '/settings', desc: 'App settings' },
+  { label: 'Privacy Settings', icon: CheckCircle2, to: '/privacy', desc: 'Privacy options' },
+  { label: 'About', icon: CheckCircle2, to: '/about', desc: 'About STand' },
+  { label: 'Profile', icon: User, to: '/profile', desc: 'Your profile' },
+];
+
+function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('');
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return searchItems;
+    const q = query.toLowerCase();
+    return searchItems.filter(
+      (item) =>
+        item.label.toLowerCase().includes(q) ||
+        item.desc.toLowerCase().includes(q) ||
+        item.to.toLowerCase().includes(q)
+    );
+  }, [query]);
+
+  useEffect(() => {
+    if (open) {
+      setQuery('');
+      setSelectedIdx(0);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setSelectedIdx(0);
+  }, [query]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIdx((prev) => Math.min(prev + 1, filtered.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIdx((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' && filtered[selectedIdx]) {
+        navigate(filtered[selectedIdx].to);
+        onClose();
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [filtered, selectedIdx, navigate, onClose]
+  );
+
+  const handleSelect = useCallback(
+    (to: string) => {
+      navigate(to);
+      onClose();
+    },
+    [navigate, onClose]
+  );
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(10, 14, 26, 0.95)' }}>
+      <div className="shrink-0 px-4 py-3 flex items-center gap-3 border-b border-white/10">
+        <Search size={20} className="text-violet-400 shrink-0" />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search features, pages, actions..."
+          className="flex-1 bg-transparent text-white text-base outline-none placeholder-white/40"
+        />
+        <button onClick={onClose} className="text-sm text-white/50 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition">
+          ESC
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="max-w-2xl mx-auto space-y-1">
+          {filtered.length === 0 ? (
+            <p className="text-center text-white/40 py-12 text-sm">No results found</p>
+          ) : (
+            filtered.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.to + item.label}
+                  onClick={() => handleSelect(item.to)}
+                  onMouseEnter={() => setSelectedIdx(idx)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+                    idx === selectedIdx
+                      ? 'bg-violet-600/20 border border-violet-500/30'
+                      : 'hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    idx === selectedIdx ? 'bg-violet-600/30' : 'bg-white/5'
+                  }`}>
+                    <Icon size={18} className={idx === selectedIdx ? 'text-violet-400' : 'text-white/60'} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-sm font-medium truncate ${idx === selectedIdx ? 'text-violet-300' : 'text-white'}`}>
+                      {item.label}
+                    </p>
+                    <p className="text-xs text-white/40 truncate">{item.desc}</p>
+                  </div>
+                  <span className="text-[10px] text-white/30 font-mono shrink-0 hidden sm:block">{item.to}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 px-4 py-2 border-t border-white/10 flex items-center gap-4 text-[10px] text-white/30">
+        <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono">↑↓</kbd> Navigate</span>
+        <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono">↵</kbd> Go</span>
+        <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono">esc</kbd> Close</span>
       </div>
     </div>
   );
