@@ -24,6 +24,7 @@ const ExamSetupScreen = lazy(() => import('./components/practice/ExamSetupScreen
 const ExamSimScreen = lazy(() => import('./components/practice/ExamSimScreen'));
 const SearchScreen = lazy(() => import('./components/practice/SearchScreen'));
 const AchievementsScreen = lazy(() => import('./components/achievements/AchievementsScreen'));
+const RankingsScreen = lazy(() => import('./components/rankings/RankingsScreen'));
 const ImportQuestionsScreen = lazy(() => import('./components/import/ImportQuestionsScreen'));
 const WeakAreasScreen = lazy(() => import('./components/practice/WeakAreasScreen'));
 const SessionCompareScreen = lazy(() => import('./components/practice/SessionCompareScreen'));
@@ -128,6 +129,7 @@ export default function App() {
                 <Route path="progress" element={<ProgressScreen />} />
                 <Route path="search" element={<SearchScreen />} />
                 <Route path="achievements" element={<AchievementsScreen />} />
+                <Route path="rankings" element={<RankingsScreen />} />
                 <Route path="import" element={<ImportQuestionsScreen />} />
                 <Route path="weak-areas" element={<WeakAreasScreen />} />
                 <Route path="compare" element={<SessionCompareScreen />} />

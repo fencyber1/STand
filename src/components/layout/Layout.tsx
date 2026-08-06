@@ -171,6 +171,7 @@ export default function Layout() {
       items: [
         { to: '/progress', label: t('Progress'), icon: TrendingUp },
         { to: '/achievements', label: t('Achievements'), icon: Award },
+        { to: '/rankings', label: t('Rankings'), icon: BarChart3 },
         { to: '/weak-areas', label: t('Weak Areas'), icon: Target },
         { to: '/compare', label: t('Compare'), icon: ArrowRightLeft },
       ],

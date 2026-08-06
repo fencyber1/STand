@@ -412,3 +412,49 @@ export interface StatusComment {
   edited?: boolean;
   likes?: string[];
 }
+
+// ── Rankings & Global Achievements ──
+
+export type RankTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Mythic';
+
+export interface UserRanking {
+  uid: string;
+  displayName: string | null;
+  photoURL: string | null;
+  totalXP: number;
+  weeklyXP: number;
+  level: number;
+  currentStreak: number;
+  maxStreak: number;
+  correctStreak: number;
+  totalQuestions: number;
+  totalCorrect: number;
+  totalSessions: number;
+  rank: number;
+  tier: RankTier;
+  lastActive: string;
+}
+
+export interface LeaderboardEntry {
+  uid: string;
+  displayName: string | null;
+  photoURL: string | null;
+  totalXP: number;
+  weeklyXP: number;
+  level: number;
+  currentStreak: number;
+  maxStreak: number;
+  rank: number;
+  tier: RankTier;
+  lastActive: string;
+}
+
+export interface GlobalAchievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  thresholds: number[];
+}
+
+export type LeaderboardType = 'overall' | 'weekly' | 'streak';

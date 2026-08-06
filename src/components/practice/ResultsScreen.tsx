@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ACHIEVEMENTS } from '../../constants/achievements';
 import { getTopicFunFact } from '../../services/api';
 import { createNotification } from '../../services/notificationService';
+import { updateUserRanking } from '../../services/rankingService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import type { QuestionTiming, AchievementStats } from '../../types';
@@ -126,6 +127,12 @@ export default function ResultsScreen() {
             }).catch(() => {});
           }
         }
+      }
+
+      if (user?.uid) {
+        const displayName = storage.getDisplayName() || user.fullName || null;
+        const photoURL = storage.getProfilePhoto() || user.photoURL || null;
+        updateUserRanking(user.uid, displayName, photoURL, percentage, effectiveCorrect, state.totalCount, streak).catch(() => {});
       }
     }
   }, []);
