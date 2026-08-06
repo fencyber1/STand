@@ -8,6 +8,10 @@ import {
   getRedirectResult,
   signOut,
   updateProfile,
+  deleteUser,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  GoogleAuthProvider,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
@@ -31,6 +35,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   register: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -41,6 +46,7 @@ const AuthContext = createContext<AuthContextType>({
   loginWithGoogle: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
+  deleteAccount: async () => ({ success: false }),
 });
 
 function mapUser(u: FirebaseUser): AuthUser {
@@ -243,8 +249,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     storage.setOnDataChange(null);
   }, []);
 
+  const deleteAccount = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return { success: false, error: 'No user signed in' };
+
+    try {
+      // Delete all user data from Firestore
+      const { db } = await import('../services/firebase');
+      const { doc, deleteDoc, collection, getDocs, query, where } = await import('firebase/firestore');
+
+      // Delete user data document
+      await deleteDoc(doc(db, 'users', firebaseUser.uid));
+
+      // Delete FenBot conversations
+      const fenbotQuery = query(collection(db, 'fenbotConversations'), where('uid', '==', firebaseUser.uid));
+      const fenbotSnap = await getDocs(fenbotQuery);
+      for (const d of fenbotSnap.docs) await deleteDoc(d.ref);
+
+      // Delete study plan conversations
+      const studyPlanQuery = query(collection(db, 'studyPlanConversations'), where('uid', '==', firebaseUser.uid));
+      const studyPlanSnap = await getDocs(studyPlanQuery);
+      for (const d of studyPlanSnap.docs) await deleteDoc(d.ref);
+
+      // Delete from users collection (social)
+      await deleteDoc(doc(db, 'users', firebaseUser.uid)).catch(() => {});
+
+      // Delete Firebase Auth account
+      await deleteUser(firebaseUser);
+
+      // Clear local data
+      storage.clearAllUserData();
+      storage.setActiveUserId(null);
+      storage.setOnDataChange(null);
+      storage.removeToken();
+      storage.removeUser();
+
+      return { success: true };
+    } catch (e: any) {
+      console.error('Delete account error:', e.code, e.message);
+      const msg =
+        e.code === 'auth/requires-recent-login' ? 'Please log in again before deleting your account.'
+        : e.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
+        : 'Failed to delete account. Please try again.';
+      return { success: false, error: msg };
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!user, user, loading, login, loginWithGoogle, register, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!user, user, loading, login, loginWithGoogle, register, logout, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

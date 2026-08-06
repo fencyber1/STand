@@ -4,16 +4,18 @@ import { storage } from '../../services/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext';
 import EditProfileModal from './EditProfileModal';
-import { User, BookOpen, Trophy, Clock, LogOut, Briefcase, MapPin, Heart, Mail, Globe, ChevronDown, Check } from 'lucide-react';
+import { User, BookOpen, Trophy, Clock, LogOut, Briefcase, MapPin, Heart, Mail, Globe, ChevronDown, Check, Trash2, AlertTriangle } from 'lucide-react';
 
 export default function ProfileScreen() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const history = useMemo(() => storage.getHistory(), []);
   const [editOpen, setEditOpen] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(0);
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const displayPhoto = storage.getProfilePhoto() || user?.photoURL || null;
   const displayName = storage.getDisplayName() || user?.fullName || 'Student';
@@ -36,6 +38,18 @@ export default function ProfileScreen() {
     if (window.confirm(t('Are you sure you want to logout?'))) {
       logout();
       navigate('/login');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(t('Are you sure you want to delete your account? This action is permanent and cannot be undone.'))) return;
+    setDeleteLoading(true);
+    const result = await deleteAccount();
+    setDeleteLoading(false);
+    if (result.success) {
+      navigate('/login');
+    } else {
+      alert(result.error || 'Failed to delete account.');
     }
   };
 
@@ -164,6 +178,47 @@ export default function ProfileScreen() {
         <LogOut size={18} />
         {t('Logout')}
       </button>
+
+      {/* Delete Account */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900/30 overflow-hidden transition-colors">
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full text-left px-6 py-4 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex items-center gap-3"
+          >
+            <Trash2 size={18} />
+            <div>
+              <p className="font-medium">{t('Delete Account')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('Permanently delete your account and all data')}</p>
+            </div>
+          </button>
+        ) : (
+          <div className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle size={18} />
+              <p className="font-medium">{t('Are you absolutely sure?')}</p>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('This will permanently delete your account, all history, bookmarks, study plans, and chat conversations. This action cannot be undone.')}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+              >
+                {t('Cancel')}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition"
+              >
+                {deleteLoading ? t('Deleting...') : t('Yes, Delete My Account')}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
