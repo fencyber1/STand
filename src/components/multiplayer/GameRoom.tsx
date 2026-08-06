@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Clock, CheckCircle, XCircle, Users, Crown, Trophy,
-  Zap, MessageCircle, Send, Eye, RefreshCw,
+  Zap, MessageCircle, Send, Eye, RefreshCw, ArrowRight, Loader2,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { generateQuestions } from '../../services/api';
 import {
   setPlayerReady,
   startGame,
@@ -18,6 +19,7 @@ import {
   addSpectator,
 } from '../../services/multiplayer/multiplayerService';
 import type { GameRoom } from '../../types';
+import { SECTORS } from '../../constants';
 
 export default function GameRoom() {
   const { code } = useParams<{ code: string }>();
@@ -36,6 +38,10 @@ export default function GameRoom() {
   const [pollCount, setPollCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [hasAnswered, setHasAnswered] = useState(false);
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const fetchRoom = useCallback(async () => {
     if (!roomId) return;
@@ -99,6 +105,8 @@ export default function GameRoom() {
 
     setTimeLeft(room.timePerQuestion);
     setSelectedAnswer(null);
+    setHasAnswered(false);
+    setLastAnswerCorrect(null);
 
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -117,16 +125,27 @@ export default function GameRoom() {
   }, [room?.currentQuestion, room?.status]);
 
   const handleAnswer = async (answer: string) => {
-    if (!roomId || !user || !room || selectedAnswer) return;
+    if (!roomId || !user || !room || hasAnswered) return;
     setSelectedAnswer(answer);
+    setHasAnswered(true);
 
     const currentQ = room.questions[room.currentQuestion];
     if (!currentQ) return;
 
     const isCorrect = answer === (Array.isArray(currentQ.correctAnswer) ? currentQ.correctAnswer[0] : currentQ.correctAnswer);
+    setLastAnswerCorrect(isCorrect);
     const timeSpent = room.timePerQuestion - timeLeft;
 
     await submitAnswer(roomId, user.uid, room.currentQuestion, answer, timeSpent, isCorrect);
+  };
+
+  const handleNextQuestion = async () => {
+    if (!roomId) return;
+    await nextQuestion(roomId);
+    setSelectedAnswer(null);
+    setHasAnswered(false);
+    setLastAnswerCorrect(null);
+    fetchRoom();
   };
 
   const handleReady = async () => {
@@ -138,9 +157,42 @@ export default function GameRoom() {
 
   const handleStartGame = async () => {
     if (!roomId || !room) return;
-    const sampleQuestions = Array.from({ length: room.totalQuestions }, (_, i) => ({
-      id: `q-${i}`,
-      question: `Sample Question ${i + 1}`,
+    setGenerating(true);
+    try {
+      const subjects = SECTORS.filter((s) => s !== 'Other');
+      const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
+      const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+
+      const result = await generateQuestions({
+        topic: randomTopic,
+        sector: randomSubject,
+        level: 'High School',
+        questionType: 'MCQ Only',
+        count: Math.min(room.totalQuestions, 10),
+        difficulty: 'medium',
+      });
+
+      const questions = result.questions.map((q, i) => ({
+        ...q,
+        id: q.id || `mp-q-${i}-${Date.now()}`,
+      }));
+
+      await startGame(roomId, questions.length > 0 ? questions : fallbackQuestions(room));
+      fetchRoom();
+    } catch (e: any) {
+      console.error('[MP] Failed to generate questions:', e);
+      await startGame(roomId, fallbackQuestions(room));
+      fetchRoom();
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const fallbackQuestions = (room: GameRoom) => {
+    return Array.from({ length: Math.min(room.totalQuestions, 10) }, (_, i) => ({
+      id: `q-${i}-${Date.now()}`,
+      question: `Question ${i + 1}`,
       type: 'MCQ' as const,
       options: ['Option A', 'Option B', 'Option C', 'Option D'],
       correctAnswer: 'Option A',
@@ -149,8 +201,6 @@ export default function GameRoom() {
       subject: room.subject,
       topic: room.topic,
     }));
-    await startGame(roomId, sampleQuestions);
-    fetchRoom();
   };
 
   const handleLeave = async () => {
@@ -333,9 +383,17 @@ export default function GameRoom() {
           {isHost && hasOtherPlayers && (
             <button
               onClick={handleStartGame}
-              className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition"
+              disabled={generating}
+              className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Start Game
+              {generating ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                'Start Game'
+              )}
             </button>
           )}
           <button
@@ -378,33 +436,87 @@ export default function GameRoom() {
           <div className="space-y-2">
             {currentQ.options?.map((option, idx) => {
               const isSelected = selectedAnswer === option;
+              const isCorrectAnswer = option === (Array.isArray(currentQ.correctAnswer) ? currentQ.correctAnswer[0] : currentQ.correctAnswer);
               const letter = String.fromCharCode(65 + idx);
+
+              let borderColor = 'border-gray-200 dark:border-gray-700';
+              let bgColor = 'bg-gray-100 dark:bg-gray-700';
+              let textColor = 'text-gray-600 dark:text-gray-400';
+
+              if (hasAnswered) {
+                if (isSelected && isCorrectAnswer) {
+                  borderColor = 'border-green-500';
+                  bgColor = 'bg-green-500';
+                  textColor = 'text-white';
+                } else if (isSelected && !isCorrectAnswer) {
+                  borderColor = 'border-red-500';
+                  bgColor = 'bg-red-500';
+                  textColor = 'text-white';
+                } else if (isCorrectAnswer) {
+                  borderColor = 'border-green-500';
+                  bgColor = 'bg-green-100 dark:bg-green-900/30';
+                  textColor = 'text-green-700 dark:text-green-300';
+                }
+              } else if (isSelected) {
+                borderColor = 'border-primary-500';
+                bgColor = 'bg-primary-500';
+                textColor = 'text-white';
+              }
+
               return (
                 <button
                   key={idx}
                   onClick={() => handleAnswer(option)}
-                  disabled={!!selectedAnswer}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition text-left ${
-                    isSelected
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : selectedAnswer
-                      ? 'border-gray-200 dark:border-gray-700 opacity-50'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600'
-                  }`}
+                  disabled={hasAnswered}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition text-left ${borderColor} ${isSelected || (hasAnswered && isCorrectAnswer) ? (isSelected && isCorrectAnswer ? 'bg-green-50 dark:bg-green-900/20' : hasAnswered && isCorrectAnswer ? 'bg-green-50 dark:bg-green-900/20' : isSelected && !isCorrectAnswer ? 'bg-red-50 dark:bg-red-900/20' : '') : 'hover:border-primary-300 dark:hover:border-primary-600'}`}
                 >
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                    isSelected ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}>
-                    {letter}
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${bgColor} ${textColor}`}>
+                    {hasAnswered && isCorrectAnswer ? <CheckCircle size={16} /> : hasAnswered && isSelected && !isCorrectAnswer ? <XCircle size={16} /> : letter}
                   </span>
-                  <span className="text-sm text-gray-800 dark:text-gray-100">{option}</span>
+                  <span className="text-sm text-gray-800 dark:text-gray-100 flex-1">{option}</span>
+                  {hasAnswered && isCorrectAnswer && (
+                    <CheckCircle size={16} className="text-green-500" />
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        {hasAnswered && lastAnswerCorrect !== null && (
+          <div className={`mb-4 p-3 rounded-lg ${lastAnswerCorrect ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+            <div className="flex items-center gap-2">
+              {lastAnswerCorrect ? (
+                <>
+                  <CheckCircle size={16} className="text-green-500" />
+                  <span className="text-sm font-medium text-green-600 dark:text-green-400">Correct! +100 points</span>
+                </>
+              ) : (
+                <>
+                  <XCircle size={16} className="text-red-500" />
+                  <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                    Wrong! The answer was: {Array.isArray(currentQ.correctAnswer) ? currentQ.correctAnswer[0] : currentQ.correctAnswer}
+                  </span>
+                </>
+              )}
+            </div>
+            {currentQ.explanation && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">{currentQ.explanation}</p>
+            )}
+          </div>
+        )}
+
+        {hasAnswered && (
+          <button
+            onClick={handleNextQuestion}
+            className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition flex items-center justify-center gap-2"
+          >
+            {room.currentQuestion + 1 >= room.totalQuestions ? 'See Results' : 'NEXT QUESTION'}
+            <ArrowRight size={16} />
+          </button>
+        )}
+
+        <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <Users size={14} />
             <span>{room.players.length} players</span>
