@@ -337,9 +337,12 @@ export function subscribeToActiveGames(cb: (rooms: GameRoom[]) => void): () => v
   const fetchGames = async () => {
     if (!active) return;
     try {
-      const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']), orderBy('createdAt', 'desc'), limit(50));
+      console.log('[MP] Fetching active games...');
+      const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']));
       const snap = await getDocs(q);
-      if (active) cb(snap.docs.map((d) => d.data() as GameRoom));
+      const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() } as GameRoom)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      console.log('[MP] Found active games:', rooms.length);
+      if (active) cb(rooms);
     } catch (e) {
       console.error('[MP] fetchGames error:', e);
       if (active) cb([]);

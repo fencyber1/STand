@@ -30,12 +30,15 @@ export default function MultiplayerArena() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [lastMode, setLastMode] = useState<GameMode>('1v1');
+  const [debug, setDebug] = useState('');
 
   const gameModes = getAllGameModes();
 
   useEffect(() => {
     const unsub = subscribeToActiveGames((rooms) => {
+      console.log('[MP] Active games received:', rooms.length);
       setActiveGames(rooms);
+      setDebug(`Last update: ${new Date().toLocaleTimeString()} | Games: ${rooms.length}`);
     });
     return () => unsub();
   }, []);
@@ -238,7 +241,11 @@ export default function MultiplayerArena() {
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Active Games</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100">Active Games</h3>
+          <button onClick={() => { setActiveGames([]); setDebug('Refreshing...'); }} className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Refresh</button>
+        </div>
+        {debug && <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{debug}</p>}
         {activeGames.length === 0 ? (
           <div className="text-center py-6">
             <Swords size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
