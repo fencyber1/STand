@@ -1,14 +1,34 @@
-const CACHE_NAME = 'stand-v1';
+const CACHE_NAME = 'stand-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/stand-logo.webp'
+  '/stand-logo.webp',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(STATIC_ASSETS.map((url) => cache.add(url)))
+    ).then(() => {
+      // Precache main bundles by parsing index.html
+      return fetch('/index.html').then((response) => response.text()).then((html) => {
+        const urls = new Set();
+        const scriptRegex = /<script[^>]*src="([^"]+)"/g;
+        const linkRegex = /<link[^>]*href="([^"]+)"/g;
+        let match;
+        while ((match = scriptRegex.exec(html))) urls.add(match[1]);
+        while ((match = linkRegex.exec(html))) urls.add(match[1]);
+        return Promise.allSettled(
+          Array.from(urls).map((url) => {
+            const fullUrl = url.startsWith('http') ? url : self.location.origin + url;
+            return cache.add(fullUrl).catch(() => {});
+          })
+        );
+      }).catch(() => {});
+    })
   );
   self.skipWaiting();
 });
@@ -25,30 +45,51 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // Don't intercept Firebase/FCM requests
-  if (event.request.url.includes('firebaseio.com') || event.request.url.includes('firebase') || event.request.url.includes('gstatic.com')) {
+  const url = new URL(event.request.url);
+
+  // Don't intercept Firebase/FCM/Google requests
+  if (url.hostname.includes('firebaseio') ||
+      url.hostname.includes('firebase') ||
+      url.hostname.includes('gstatic') ||
+      url.hostname.includes('googleapis') ||
+      url.hostname.includes('nvidia') ||
+      url.hostname.includes('wikipedia.org') ||
+      url.hostname.includes('jsdelivr')) {
     return;
   }
 
-  // Network-first for API calls
-  if (event.request.url.includes('/api/') || event.request.url.includes('nvidia')) {
+  // Network-first for API calls (always fresh)
+  if (url.pathname.includes('/api/')) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
 
-  // Cache-first for static assets
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetched = fetch(event.request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      });
-      return cached || fetched;
-    })
-  );
+  // Stale-while-revalidate for same-origin static assets
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        const networkFetch = fetch(event.request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || networkFetch;
+      })
+    );
+    return;
+  }
+
+  // Default: network only (for external resources not listed above)
 });
