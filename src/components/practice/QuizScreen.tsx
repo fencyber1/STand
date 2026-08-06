@@ -388,7 +388,7 @@ export default function QuizScreen() {
   const nextReady = currentIndex + 1 < questions.length;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto px-4">
       <div className="mb-4">
         <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); window.speechSynthesis.cancel(); navigate('/practice'); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm mb-2 flex items-center gap-1">
           <ArrowLeft size={14} /> {t('Back to Practice')}

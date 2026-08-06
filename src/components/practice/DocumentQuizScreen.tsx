@@ -268,7 +268,7 @@ export default function DocumentQuizScreen() {
   const wordCount = docText.split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto px-4 space-y-6">
       <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm flex items-center gap-1">
         <ArrowLeft size={14} /> Back
       </button>
