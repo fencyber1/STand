@@ -20,7 +20,8 @@ import {
 import type { GameRoom } from '../../types';
 
 export default function GameRoom() {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { code } = useParams<{ code: string }>();
+  const roomId = code;
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { user } = useAuth();
