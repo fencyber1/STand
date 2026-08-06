@@ -9,9 +9,14 @@ import { setQuestionProgressCallback } from '../../services/api';
 import { QUESTION_TYPES, DIFFICULTY_LEVELS } from '../../constants';
 import { storage } from '../../services/storage';
 import type { SavedDocument } from '../../types';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
 import BorderGlow from '../ui/BorderGlow';
 import { useLanguage } from '../../contexts/LanguageContext';
+
+// Local type to avoid importing pdfjs-dist in main bundle
+type PDFDocumentProxy = {
+  numPages: number;
+  getPage(pageNumber: number): Promise<any>;
+};
 
 type Step = 'upload' | 'preview' | 'generating';
 
