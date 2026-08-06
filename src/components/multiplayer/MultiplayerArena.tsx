@@ -51,7 +51,10 @@ export default function MultiplayerArena() {
   }, [user?.uid]);
 
   const handleCreateGame = async (mode: GameMode) => {
-    if (!user) return;
+    if (!user) {
+      setCreateError('Please log in to create a game room');
+      return;
+    }
     setCreating(true);
     setCreateError('');
     try {
