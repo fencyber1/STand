@@ -76,10 +76,11 @@ export default function GameRoom() {
 
     fetchRoom();
 
+    const interval = room?.status === 'waiting' ? 2000 : 3000;
     pollRef.current = setInterval(async () => {
       setPollCount((c) => c + 1);
       await fetchRoom();
-    }, 3000);
+    }, interval);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -132,6 +133,7 @@ export default function GameRoom() {
     if (!roomId || !user) return;
     const player = room?.players.find((p) => p.uid === user.uid);
     await setPlayerReady(roomId, user.uid, !player?.ready);
+    setTimeout(() => fetchRoom(), 500);
   };
 
   const handleStartGame = async () => {
@@ -148,6 +150,7 @@ export default function GameRoom() {
       topic: room.topic,
     }));
     await startGame(roomId, sampleQuestions);
+    fetchRoom();
   };
 
   const handleLeave = async () => {
@@ -232,7 +235,9 @@ export default function GameRoom() {
   const currentPlayer = room.players.find((p) => p.uid === user?.uid);
   const currentQ = room.questions[room.currentQuestion];
   const isHost = room.host === user?.uid;
-  const allReady = room.players.length >= 2 && room.players.every((p) => p.ready);
+  const roomIsFull = room.players.length >= room.maxPlayers;
+  const allReady = roomIsFull && room.players.every((p) => p.ready);
+  const readyCount = room.players.filter((p) => p.ready).length;
 
   if (showResults || room.status === 'finished') {
     return <GameResults room={room} onLeave={handleLeave} />;
@@ -251,10 +256,37 @@ export default function GameRoom() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Players ({room.players.length}/{room.maxPlayers})</span>
-            <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">{room.mode}</span>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center justify-between flex-1">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Players ({room.players.length}/{room.maxPlayers})
+            </span>
+            <div className="flex items-center gap-2">
+              {roomIsFull && (
+                <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded font-bold">
+                  Room Full!
+                </span>
+              )}
+              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">{room.mode}</span>
+            </div>
           </div>
+        </div>
+
+        {roomIsFull && !allReady && (
+          <div className="mb-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs text-yellow-600 dark:text-yellow-400">
+              {isHost ? `Waiting for players to ready up... (${readyCount}/${room.players.length})` : `Click Ready Up to let the host start! (${readyCount}/${room.players.length} ready)`}
+            </span>
+          </div>
+        )}
+
+        {allReady && (
+          <div className="mb-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center gap-2">
+            <CheckCircle size={14} className="text-green-500" />
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">All players ready! Host can start the game.</span>
+          </div>
+        )}
           <div className="space-y-2">
             {room.players.map((player) => (
               <div key={player.uid} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -290,12 +322,13 @@ export default function GameRoom() {
           >
             {currentPlayer?.ready ? 'Ready!' : 'Ready Up'}
           </button>
-          {isHost && allReady && (
+          {isHost && roomIsFull && (
             <button
               onClick={handleStartGame}
-              className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition"
+              disabled={!allReady}
+              className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Start Game
+              {allReady ? 'Start Game' : `Start (${readyCount}/${room.players.length})`}
             </button>
           )}
           <button
