@@ -342,7 +342,7 @@ export default function ResultsScreen() {
   const slowestQuestion = timingStats?.slowest ? state.questions?.find((q) => q.id === timingStats.slowest.questionId) : null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto px-4 space-y-6">
       <div className="text-center">
         <div className="inline-flex p-4 bg-primary-50 dark:bg-primary-900/30 rounded-full mb-3">
           <Trophy size={32} className="text-primary-600 dark:text-primary-400" />
