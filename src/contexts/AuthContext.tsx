@@ -181,8 +181,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signInWithRedirect(auth, googleProvider);
         return { success: true };
       }
-      await signInWithPopup(auth, googleProvider);
-      return { success: true };
+      try {
+        await signInWithPopup(auth, googleProvider);
+        return { success: true };
+      } catch (popupError: any) {
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+          console.log('[Auth] Popup blocked, falling back to redirect');
+          await signInWithRedirect(auth, googleProvider);
+          return { success: true };
+        }
+        throw popupError;
+      }
     } catch (e: any) {
       console.error('Google sign-in error:', e.code, e.message);
       const msg =
