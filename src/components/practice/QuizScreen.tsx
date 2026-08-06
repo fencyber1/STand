@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
 import { getDeepExplanation, gradeTheoryAnswer, generateQuestionsProgressive, getDocumentQuestionsProgressive } from '../../services/api';
+import { saveDailyChallengeResult } from '../../services/dailyChallenge';
 import { storage } from '../../services/storage';
 import BorderGlow from '../ui/BorderGlow';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -22,6 +23,7 @@ interface QuizState {
   timeLimit: number;
   instantFeedback?: boolean;
   speedRound?: boolean;
+  isDailyChallenge?: boolean;
 }
 
 interface Result {
@@ -245,6 +247,9 @@ export default function QuizScreen() {
       const correctCount = allResults.filter((r) => r.correct === true).length;
       const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
       storage.saveQuestionTimings(questionTimingsRef.current);
+      if (state.isDailyChallenge) {
+        saveDailyChallengeResult(correctCount, questions.length);
+      }
       navigate('/results', {
         state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
       });
@@ -281,6 +286,9 @@ export default function QuizScreen() {
       const correctCount = allResults.filter((r) => r.correct === true).length;
       const totalScore = allResults.reduce((s, r) => s + (r.score || (r.correct ? 100 : 0)), 0);
       storage.saveQuestionTimings(questionTimingsRef.current);
+      if (state.isDailyChallenge) {
+        saveDailyChallengeResult(correctCount, questions.length);
+      }
       navigate('/results', {
         state: { topic, sector: state.sector, level: state.level, questions, results: allResults, correctCount, totalCount: questions.length, totalScore, questionTimings: questionTimingsRef.current },
       });

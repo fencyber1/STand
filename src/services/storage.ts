@@ -1,5 +1,15 @@
 import type { SessionData, Question, QuestionTiming, StoredAchievement, QuestionNote, SavedDocument } from '../types';
 
+export interface DailyChallengeData {
+  date: string;
+  questions: Question[];
+  completed: boolean;
+  score: number;
+  totalQuestions: number;
+  startedAt?: number;
+  completedAt?: number;
+}
+
 const USER_TOKEN_KEY = 'stand_user_token';
 const USER_KEY = 'stand_user';
 const USERS_KEY = 'stand_users';
@@ -374,6 +384,23 @@ export const storage = {
     localStorage.setItem(k('stand_onboarding_complete'), 'true');
   },
 
+  getDailyChallengeStreak(): { current: number; best: number; lastDate: string | null } {
+    return readJson('stand_daily_challenge_streak', { current: 0, best: 0, lastDate: null });
+  },
+
+  saveDailyChallengeStreak(data: { current: number; best: number; lastDate: string | null }): void {
+    writeJson('stand_daily_challenge_streak', data);
+  },
+
+  getDailyChallengeData(): DailyChallengeData | null {
+    return readJson<DailyChallengeData | null>('stand_daily_challenge', null);
+  },
+
+  saveDailyChallengeData(data: DailyChallengeData): void {
+    writeJson('stand_daily_challenge', data);
+    notifyChange();
+  },
+
   clearAllUserData(): void {
     const keys = [
       'stand_history',
@@ -393,6 +420,8 @@ export const storage = {
       'stand_chat_theme',
       'stand_saved_documents',
       'stand_generated_questions',
+      'stand_daily_challenge',
+      'stand_daily_challenge_streak',
     ];
     for (const base of keys) {
       localStorage.removeItem(k(base));

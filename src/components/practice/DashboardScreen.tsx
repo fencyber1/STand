@@ -1,11 +1,13 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, CheckCircle2, TrendingUp } from 'lucide-react';
+import { GraduationCap, Bot, Users, FileText, BookOpen, ChevronRight, Flame, Zap, Star, CheckCircle2, TrendingUp, Calendar, Trophy, Target } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getMotivationalLines } from '../../services/api';
 import BorderGlow from '../ui/BorderGlow';
+import { getDailyChallenge, generateDailyChallenge, isDailyChallengeCompleted, getDailyChallengeStreak, type DailyChallenge } from '../../services/dailyChallenge';
+import { useNavigate } from 'react-router-dom';
 
 function CircularProgress({ percent, size = 100, stroke = 8 }: { percent: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2;
@@ -97,6 +99,23 @@ export default function DashboardScreen() {
   const [motivationalLine, setMotivationalLine] = useState(() => {
     return localStorage.getItem('stand_motivational_line') || "Every question brings you closer to mastery.";
   });
+
+  const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null);
+  const [challengeLoading, setChallengeLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const existing = getDailyChallenge();
+    if (existing) {
+      setDailyChallenge(existing);
+    } else {
+      setChallengeLoading(true);
+      generateDailyChallenge().then((challenge) => {
+        setDailyChallenge(challenge);
+        setChallengeLoading(false);
+      }).catch(() => setChallengeLoading(false));
+    }
+  }, []);
 
   const fetchLines = useCallback(async () => {
     try {
@@ -238,6 +257,41 @@ export default function DashboardScreen() {
           </div>
         </BorderGlow>
       </div>
+
+      {/* Daily Challenge */}
+      {dailyChallenge && (
+        <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="45 80 60" glowRadius={20} glowIntensity={0.5} edgeSensitivity={35} colors={['#f59e0b', '#f97316', '#ef4444']}>
+          <div className="p-4 relative overflow-hidden">
+            <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl" />
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar size={14} className="text-amber-400" />
+              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">{t('Daily Challenge')}</span>
+              {dailyChallenge.completed && <CheckCircle2 size={14} className="text-green-400 ml-auto" />}
+            </div>
+            <p className="text-sm text-gray-300 mb-3">
+              {dailyChallenge.completed
+                ? `${t('Completed')}: ${dailyChallenge.score}/${dailyChallenge.totalQuestions} ${t('correct')}`
+                : `${t('5 questions')}${dailyChallenge.questions.length > 0 ? ` · ${dailyChallenge.questions[0].topic}` : ''} ${t('waiting for you')}`}
+            </p>
+            {dailyChallenge.completed ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${(dailyChallenge.score / dailyChallenge.totalQuestions) * 100}%` }} />
+                </div>
+                <span className="text-xs text-green-400 font-bold">{Math.round((dailyChallenge.score / dailyChallenge.totalQuestions) * 100)}%</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate('/quiz', { state: { questions: dailyChallenge.questions, topic: 'Daily Challenge', sector: dailyChallenge.questions[0]?.subject || 'General Science', level: 'SSS/WAEC', timeLimit: 300, isDailyChallenge: true } })}
+                disabled={challengeLoading || dailyChallenge.questions.length === 0}
+                className="w-full py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-gray-900 font-bold rounded-lg text-sm transition"
+              >
+                {challengeLoading ? t('Loading...') : t('Start Challenge')}
+              </button>
+            )}
+          </div>
+        </BorderGlow>
+      )}
 
       {/* Quick Actions */}
       <div>
