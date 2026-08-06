@@ -24,7 +24,7 @@ const ExamSetupScreen = lazy(() => import('./components/practice/ExamSetupScreen
 const ExamSimScreen = lazy(() => import('./components/practice/ExamSimScreen'));
 const SearchScreen = lazy(() => import('./components/practice/SearchScreen'));
 const AchievementsScreen = lazy(() => import('./components/achievements/AchievementsScreen'));
-const RankingsScreen = lazy(() => import('./components/rankings/RankingsScreen'));
+const RankingsScreen = lazy(() => import('./components/rankings/GlobalDashboard'));
 const ImportQuestionsScreen = lazy(() => import('./components/import/ImportQuestionsScreen'));
 const WeakAreasScreen = lazy(() => import('./components/practice/WeakAreasScreen'));
 const SessionCompareScreen = lazy(() => import('./components/practice/SessionCompareScreen'));

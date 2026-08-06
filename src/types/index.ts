@@ -433,6 +433,11 @@ export interface UserRanking {
   rank: number;
   tier: RankTier;
   lastActive: string;
+  country?: string;
+  school?: string;
+  region?: string;
+  className?: string;
+  coins?: number;
 }
 
 export interface LeaderboardEntry {
@@ -447,6 +452,8 @@ export interface LeaderboardEntry {
   rank: number;
   tier: RankTier;
   lastActive: string;
+  country?: string;
+  school?: string;
 }
 
 export interface GlobalAchievement {
@@ -457,7 +464,7 @@ export interface GlobalAchievement {
   thresholds: number[];
 }
 
-export type LeaderboardType = 'overall' | 'weekly' | 'streak';
+export type LeaderboardType = 'overall' | 'weekly' | 'streak' | 'country' | 'school' | 'friends' | 'subject';
 
 export type XPActivity =
   | 'correctAnswer'
@@ -509,3 +516,84 @@ export const XP_ACTIVITY_ICONS: Record<XPActivity, string> = {
   streak30Day: '💎',
   helpAnotherStudent: '🤝',
 };
+
+export const LEVEL_THRESHOLDS: { level: number; xp: number; title: string }[] = [
+  { level: 1, xp: 0, title: 'Beginner' },
+  { level: 5, xp: 500, title: 'Learner' },
+  { level: 10, xp: 1500, title: 'Scholar' },
+  { level: 15, xp: 3000, title: 'Expert' },
+  { level: 20, xp: 5000, title: 'Master' },
+  { level: 25, xp: 8000, title: 'Grand Master' },
+  { level: 30, xp: 12000, title: 'Sage' },
+  { level: 40, xp: 20000, title: 'Legend' },
+  { level: 50, xp: 35000, title: 'Mythic' },
+  { level: 75, xp: 60000, title: 'Immortal' },
+  { level: 100, xp: 100000, title: 'Master Scholar' },
+];
+
+export function getLevelInfo(level: number): { title: string; xpForNext: number } {
+  let title = 'Beginner';
+  for (const t of LEVEL_THRESHOLDS) {
+    if (level >= t.level) title = t.title;
+  }
+  const nextThreshold = LEVEL_THRESHOLDS.find((t) => t.level > level);
+  const xpForNext = nextThreshold ? nextThreshold.xp : 100000;
+  return { title, xpForNext };
+}
+
+export interface AchievementBadge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'learning' | 'streak' | 'multiplayer' | 'fenbot' | 'community' | 'global';
+  requirement: number;
+  metric: 'sessions' | 'streak' | 'wins' | 'questions' | 'accuracy' | 'rank' | 'friends' | 'sessions';
+  unlocked: boolean;
+  unlockedAt?: string;
+}
+
+export interface UserStatistics {
+  questionsAnswered: number;
+  accuracyRate: number;
+  avgResponseTime: number;
+  lessonsCompleted: number;
+  challengesCompleted: number;
+  multiplayerWins: number;
+  friendsHelped: number;
+  totalStudyHours: number;
+  currentStreak: number;
+  longestStreak: number;
+}
+
+export interface SeasonInfo {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  rank: number;
+  reward?: {
+    badge?: string;
+    xp: number;
+    avatar?: string;
+  };
+}
+
+export interface WeeklyMission {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  target: number;
+  current: number;
+  xpReward: number;
+  coinReward: number;
+  completed: boolean;
+}
+
+export interface DailyReward {
+  day: number;
+  xp: number;
+  coins: number;
+  special?: string;
+}

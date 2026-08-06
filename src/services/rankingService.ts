@@ -1,13 +1,14 @@
 import type { SessionData } from '../types';
 import {
   collection, doc, setDoc, getDoc, getDocs,
-  onSnapshot, query, orderBy, limit,
+  onSnapshot, query, orderBy, limit, where,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
   UserRanking, LeaderboardEntry, RankTier, LeaderboardType,
-  GlobalAchievement,
+  GlobalAchievement, AchievementBadge, UserStatistics, SeasonInfo,
+  WeeklyMission, DailyReward,
 } from '../types';
 
 function ts(): string {
@@ -24,6 +25,7 @@ function sanitize(obj: any): any {
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const SEASON_MS = 90 * 24 * 60 * 60 * 1000;
 
 export const RANK_TIERS: RankTier[] = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Mythic'];
 
@@ -184,6 +186,17 @@ export async function addXP(
   }
 }
 
+export async function addCoins(uid: string, amount: number, reason: string): Promise<void> {
+  try {
+    const ref = doc(db, 'rankings', uid);
+    await setDoc(ref, sanitize({ coins: (await getDoc(ref)).data()?.coins || 0 + amount }), { merge: true });
+    const logRef = doc(collection(db, 'coinLogs'));
+    await setDoc(logRef, sanitize({ uid, amount, reason, timestamp: ts() }));
+  } catch (e: any) {
+    console.error('Failed to add coins:', e);
+  }
+}
+
 function getCurrentStreak(history: SessionData[]): number {
   if (history.length === 0) return 0;
   let streak = 0;
@@ -305,15 +318,26 @@ export function subscribeToLeaderboard(
   type: LeaderboardType,
   cb: (entries: LeaderboardEntry[]) => void,
   limitCount: number = 100,
+  filterValue?: string,
 ): () => void {
   let orderField: string;
   switch (type) {
     case 'weekly': orderField = 'weeklyXP'; break;
     case 'streak': orderField = 'currentStreak'; break;
+    case 'country': orderField = 'totalXP'; break;
+    case 'school': orderField = 'totalXP'; break;
     default: orderField = 'totalXP'; break;
   }
 
-  const q = query(collection(db, 'rankings'), orderBy(orderField, 'desc'), limit(limitCount));
+  let q;
+  if (type === 'country' && filterValue) {
+    q = query(collection(db, 'rankings'), where('country', '==', filterValue), orderBy(orderField, 'desc'), limit(limitCount));
+  } else if (type === 'school' && filterValue) {
+    q = query(collection(db, 'rankings'), where('school', '==', filterValue), orderBy(orderField, 'desc'), limit(limitCount));
+  } else {
+    q = query(collection(db, 'rankings'), orderBy(orderField, 'desc'), limit(limitCount));
+  }
+
   return onSnapshot(q, (snap) => {
     const entries = snap.docs.map((doc, idx) => {
       const data = doc.data();
@@ -330,6 +354,8 @@ export function subscribeToLeaderboard(
         rank,
         tier: data.tier || 'Bronze',
         lastActive: data.lastActive || '',
+        country: data.country,
+        school: data.school,
       } as LeaderboardEntry;
     });
     cb(entries);
@@ -359,6 +385,11 @@ export function subscribeToUserRanking(uid: string, cb: (ranking: UserRanking | 
       rank: d.rank || 0,
       tier: d.tier || 'Bronze',
       lastActive: d.lastActive || '',
+      country: d.country,
+      school: d.school,
+      region: d.region,
+      className: d.className,
+      coins: d.coins || 0,
     } as UserRanking);
   });
 }
@@ -400,5 +431,120 @@ export async function recalculateRanks(): Promise<void> {
     await batch.commit();
   } catch (e: any) {
     console.error('Failed to recalculate ranks:', e);
+  }
+}
+
+export const ALL_BADGES: AchievementBadge[] = [
+  { id: 'first_lesson', name: 'First Lesson', description: 'Complete your first lesson', icon: '📚', category: 'learning', requirement: 1, metric: 'sessions', unlocked: false },
+  { id: 'knowledge_seeker', name: 'Knowledge Seeker', description: 'Complete 25 lessons', icon: '📖', category: 'learning', requirement: 25, metric: 'sessions', unlocked: false },
+  { id: 'study_champion', name: 'Study Champion', description: 'Complete 100 lessons', icon: '🎓', category: 'learning', requirement: 100, metric: 'sessions', unlocked: false },
+  { id: 'genius_mind', name: 'Genius Mind', description: 'Answer 1000 questions correctly', icon: '🧠', category: 'learning', requirement: 1000, metric: 'questions', unlocked: false },
+  { id: 'streak_7', name: '7-Day Streak', description: 'Study for 7 consecutive days', icon: '🔥', category: 'streak', requirement: 7, metric: 'streak', unlocked: false },
+  { id: 'streak_30', name: '30-Day Streak', description: 'Study for 30 consecutive days', icon: '🔥', category: 'streak', requirement: 30, metric: 'streak', unlocked: false },
+  { id: 'streak_100', name: '100-Day Streak', description: 'Study for 100 consecutive days', icon: '🔥', category: 'streak', requirement: 100, metric: 'streak', unlocked: false },
+  { id: 'streak_365', name: '365-Day Legend', description: 'Study for 365 consecutive days', icon: '👑', category: 'streak', requirement: 365, metric: 'streak', unlocked: false },
+  { id: 'challenger', name: 'Challenger', description: 'Win 5 multiplayer matches', icon: '⚔️', category: 'multiplayer', requirement: 5, metric: 'wins', unlocked: false },
+  { id: 'champion', name: 'Champion', description: 'Win 25 multiplayer matches', icon: '🏆', category: 'multiplayer', requirement: 25, metric: 'wins', unlocked: false },
+  { id: 'grand_master', name: 'Grand Master', description: 'Win 100 multiplayer matches', icon: '👑', category: 'multiplayer', requirement: 100, metric: 'wins', unlocked: false },
+  { id: 'ai_explorer', name: 'AI Explorer', description: 'Complete 10 FenBot sessions', icon: '🤖', category: 'fenbot', requirement: 10, metric: 'sessions', unlocked: false },
+  { id: 'fenbot_master', name: 'FenBot Master', description: 'Complete 50 FenBot sessions', icon: '🤖', category: 'fenbot', requirement: 50, metric: 'sessions', unlocked: false },
+  { id: 'ai_genius', name: 'AI Genius', description: 'Complete 100 FenBot sessions', icon: '🤖', category: 'fenbot', requirement: 100, metric: 'sessions', unlocked: false },
+  { id: 'helpful_student', name: 'Helpful Student', description: 'Help 5 other students', icon: '❤️', category: 'community', requirement: 5, metric: 'friends', unlocked: false },
+  { id: 'community_hero', name: 'Community Hero', description: 'Help 25 other students', icon: '🌍', category: 'community', requirement: 25, metric: 'friends', unlocked: false },
+  { id: 'stand_ambassador', name: 'STand Ambassador', description: 'Help 100 other students', icon: '👑', category: 'community', requirement: 100, metric: 'friends', unlocked: false },
+  { id: 'top_100_global', name: 'Top 100 Global', description: 'Reach top 100 globally', icon: '🥇', category: 'global', requirement: 100, metric: 'rank', unlocked: false },
+  { id: 'top_1000_global', name: 'Top 1000 Global', description: 'Reach top 1000 globally', icon: '🥈', category: 'global', requirement: 1000, metric: 'rank', unlocked: false },
+  { id: 'top_1_percent', name: 'Top 1%', description: 'Reach top 1% globally', icon: '🌍', category: 'global', requirement: 1, metric: 'rank', unlocked: false },
+  { id: 'world_champion', name: 'World Champion', description: 'Reach #1 globally', icon: '🌎', category: 'global', requirement: 1, metric: 'rank', unlocked: false },
+];
+
+export function checkBadges(stats: UserStatistics, currentRank: number): AchievementBadge[] {
+  return ALL_BADGES.map((badge) => {
+    let value = 0;
+    switch (badge.metric) {
+      case 'sessions': value = stats.lessonsCompleted; break;
+      case 'questions': value = stats.questionsAnswered; break;
+      case 'streak': value = stats.currentStreak; break;
+      case 'wins': value = stats.multiplayerWins; break;
+      case 'friends': value = stats.friendsHelped; break;
+      case 'rank': value = currentRank; break;
+      default: value = 0;
+    }
+    const unlocked = badge.metric === 'rank' ? value <= badge.requirement && value > 0 : value >= badge.requirement;
+    return { ...badge, unlocked };
+  });
+}
+
+export function getDefaultStats(): UserStatistics {
+  return {
+    questionsAnswered: 0,
+    accuracyRate: 0,
+    avgResponseTime: 0,
+    lessonsCompleted: 0,
+    challengesCompleted: 0,
+    multiplayerWins: 0,
+    friendsHelped: 0,
+    totalStudyHours: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+  };
+}
+
+export function getWeeklyMissions(): WeeklyMission[] {
+  return [
+    { id: 'answer_100', title: 'Answer 100 Questions', description: 'Answer 100 questions this week', icon: '❓', target: 100, current: 0, xpReward: 200, coinReward: 50, completed: false },
+    { id: 'study_5h', title: 'Study 5 Hours', description: 'Study for 5 hours this week', icon: '⏰', target: 300, current: 0, xpReward: 150, coinReward: 30, completed: false },
+    { id: 'complete_3', title: 'Complete 3 Challenges', description: 'Complete 3 challenges', icon: '🎯', target: 3, current: 0, xpReward: 300, coinReward: 75, completed: false },
+    { id: 'win_10_mp', title: 'Win 10 Multiplayer', description: 'Win 10 multiplayer matches', icon: '⚔️', target: 10, current: 0, xpReward: 500, coinReward: 100, completed: false },
+    { id: 'teach_20', title: 'Teach FenBot 20 Times', description: 'Teach FenBot 20 times', icon: '🤖', target: 20, current: 0, xpReward: 400, coinReward: 80, completed: false },
+  ];
+}
+
+export function getDailyRewards(): DailyReward[] {
+  return [
+    { day: 1, xp: 20, coins: 5 },
+    { day: 2, xp: 40, coins: 10 },
+    { day: 3, xp: 60, coins: 15 },
+    { day: 4, xp: 80, coins: 20 },
+    { day: 5, xp: 100, coins: 25 },
+    { day: 6, xp: 120, coins: 30 },
+    { day: 7, xp: 200, coins: 50, special: 'Rare Badge' },
+    { day: 14, xp: 300, coins: 75 },
+    { day: 21, xp: 400, coins: 100 },
+    { day: 30, xp: 600, coins: 200, special: 'Premium Avatar' },
+    { day: 60, xp: 1000, coins: 400 },
+    { day: 100, xp: 2000, coins: 1000, special: 'Legendary Frame' },
+  ];
+}
+
+export function getCurrentSeason(): SeasonInfo {
+  const now = new Date();
+  const seasonStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  const seasonEnd = new Date(seasonStart.getFullYear(), seasonStart.getMonth() + 3, 0);
+  const seasonNum = Math.floor((now.getMonth() / 3)) + 1;
+  return {
+    id: `season-${now.getFullYear()}-${seasonNum}`,
+    name: `Season ${seasonNum} ${now.getFullYear()}`,
+    startDate: seasonStart.toISOString(),
+    endDate: seasonEnd.toISOString(),
+    rank: 0,
+  };
+}
+
+export async function claimDailyReward(uid: string, day: number): Promise<{ xp: number; coins: number } | null> {
+  const rewards = getDailyRewards();
+  const reward = rewards.find((r) => r.day === day);
+  if (!reward) return null;
+  await addXP(uid, 'dailyChallenge', reward.xp);
+  await addCoins(uid, reward.coins, `Daily reward day ${day}`);
+  return { xp: reward.xp, coins: reward.coins };
+}
+
+export async function updateUserLocation(uid: string, country: string, region: string, school: string, className: string): Promise<void> {
+  try {
+    const ref = doc(db, 'rankings', uid);
+    await setDoc(ref, sanitize({ country, region, school, className }), { merge: true });
+  } catch (e: any) {
+    console.error('Failed to update location:', e);
   }
 }
