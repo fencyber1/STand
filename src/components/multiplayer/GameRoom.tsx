@@ -30,16 +30,32 @@ export default function GameRoom() {
   const [chatInput, setChatInput] = useState('');
   const [showChat, setShowChat] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     if (!roomId) return;
+    let loaded = false;
     const unsub = subscribeToGameRoom(roomId, (data) => {
-      setRoom(data);
-      if (data?.status === 'finished') {
-        setShowResults(true);
+      if (data) {
+        loaded = true;
+        setRoom(data);
+        if (data?.status === 'finished') {
+          setShowResults(true);
+        }
       }
     });
-    return () => unsub();
+
+    const timeout = setTimeout(() => {
+      if (!loaded) {
+        setLoadError('Failed to load room. Please check your connection.');
+        console.error('[MP] Room load timeout for:', roomId);
+      }
+    }, 5000);
+
+    return () => {
+      clearTimeout(timeout);
+      unsub();
+    };
   }, [roomId]);
 
   useEffect(() => {
@@ -120,8 +136,31 @@ export default function GameRoom() {
 
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+        {loadError ? (
+          <div className="text-center">
+            <p className="text-red-500 dark:text-red-400 mb-3">{loadError}</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => navigate('/multiplayer')}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition"
+              >
+                Back to Arena
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Loading room...</p>
+          </>
+        )}
       </div>
     );
   }
