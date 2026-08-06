@@ -58,6 +58,7 @@ export default function MultiplayerArena() {
     setCreating(true);
     setCreateError('');
     try {
+      console.log('[MP] Creating room with mode:', mode);
       const roomId = await createGameRoom({
         host: { uid: user.uid, name: user.fullName || 'Player', photo: user.photoURL },
         mode,
@@ -66,12 +67,14 @@ export default function MultiplayerArena() {
         difficulty: 'mixed',
         isPrivate: mode === '1v1',
       });
+      console.log('[MP] Room created:', roomId);
       if (roomId) {
         navigate(`/multiplayer/${roomId}`);
       } else {
         setCreateError('Failed to create room. Please try again.');
       }
     } catch (e: any) {
+      console.error('[MP] Create room error:', e);
       setCreateError(e.message || 'Failed to create room');
     } finally {
       setCreating(false);
@@ -127,6 +130,16 @@ export default function MultiplayerArena() {
       {createError && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
           <span className="text-sm text-red-600 dark:text-red-400">{createError}</span>
+          {createError.includes('Permission denied') && (
+            <p className="text-xs text-red-500 dark:text-red-300 mt-1">
+              Make sure Firestore rules allow writing to the gameRooms collection.
+            </p>
+          )}
+          {createError.includes('timeout') && (
+            <p className="text-xs text-red-500 dark:text-red-300 mt-1">
+              Check your internet connection or try again.
+            </p>
+          )}
         </div>
       )}
 

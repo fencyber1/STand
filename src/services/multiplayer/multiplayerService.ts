@@ -59,56 +59,66 @@ export async function createGameRoom(params: {
   difficulty: GameDifficulty;
   isPrivate?: boolean;
 }): Promise<string> {
-  try {
-    const ref = doc(collection(db, 'gameRooms'));
-    const config = GAME_MODE_CONFIG[params.mode];
-    const roomCode = params.isPrivate || params.mode === '1v1' ? generateRoomCode() : undefined;
+    try {
+      const ref = doc(collection(db, 'gameRooms'));
+      const config = GAME_MODE_CONFIG[params.mode];
+      const roomCode = params.isPrivate || params.mode === '1v1' ? generateRoomCode() : undefined;
 
-    const room: any = {
-      id: ref.id,
-      mode: params.mode,
-      status: 'waiting',
-      host: params.host.uid,
-      hostName: params.host.name,
-      players: [{
-        uid: params.host.uid,
-        displayName: params.host.name,
-        photoURL: params.host.photo,
-        score: 0,
-        correctAnswers: 0,
-        totalAnswers: 0,
-        answers: [],
-        ready: false,
-        connected: true,
-        finished: false,
-        streak: 0,
-        bestStreak: 0,
-        totalTime: 0,
-      }],
-      maxPlayers: config.maxPlayers,
-      subject: params.subject,
-      topic: params.topic,
-      difficulty: params.difficulty,
-      totalQuestions: config.questions,
-      timePerQuestion: config.time,
-      currentQuestion: 0,
-      questions: [],
-      answers: {},
-      spectators: [],
-      rewards: { xp: config.xpReward, coins: config.coinReward },
-      isPrivate: params.isPrivate || false,
-      roomCode,
-      createdAt: ts(),
-      liveChat: [],
-    };
+      const room: any = {
+        id: ref.id,
+        mode: params.mode,
+        status: 'waiting',
+        host: params.host.uid,
+        hostName: params.host.name,
+        players: [{
+          uid: params.host.uid,
+          displayName: params.host.name,
+          photoURL: params.host.photo,
+          score: 0,
+          correctAnswers: 0,
+          totalAnswers: 0,
+          answers: [],
+          ready: false,
+          connected: true,
+          finished: false,
+          streak: 0,
+          bestStreak: 0,
+          totalTime: 0,
+        }],
+        maxPlayers: config.maxPlayers,
+        subject: params.subject,
+        topic: params.topic,
+        difficulty: params.difficulty,
+        totalQuestions: config.questions,
+        timePerQuestion: config.time,
+        currentQuestion: 0,
+        questions: [],
+        answers: {},
+        spectators: [],
+        rewards: { xp: config.xpReward, coins: config.coinReward },
+        isPrivate: params.isPrivate || false,
+        roomCode,
+        createdAt: ts(),
+        liveChat: [],
+      };
 
-    await setDoc(ref, sanitize(room));
-    return ref.id;
-  } catch (e: any) {
-    console.error('Failed to create game room:', e);
-    throw new Error('Failed to create game room. Please check your connection.');
+      const writePromise = setDoc(ref, sanitize(room));
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout. Please check your internet and try again.')), 8000)
+      );
+      await Promise.race([writePromise, timeoutPromise]);
+      return ref.id;
+    } catch (e: any) {
+      console.error('Failed to create game room:', e);
+      if (e.message?.includes('timeout') || e.message?.includes('Connection timeout')) {
+        throw new Error('Connection timeout. Please check your internet and try again.');
+      }
+      if (e.code === 'permission-denied' || e.message?.includes('permission')) {
+        throw new Error('Permission denied. Firestore rules may not allow this operation.');
+      }
+      throw new Error(e.message || 'Failed to create game room');
+    }
   }
-}
 
 export async function joinGameRoom(roomId: string, player: { uid: string; name: string; photo: string | null }): Promise<{ success: boolean; error?: string }> {
   try {
