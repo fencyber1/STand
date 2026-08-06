@@ -1,11 +1,11 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard, Clock, Zap, Share2, Lightbulb } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, Home, RotateCcw, RotateCw, Download, CreditCard, Clock, Zap, Share2, Lightbulb, Star } from 'lucide-react';
 import { storage } from '../../services/storage';
 import { useEffect, useMemo, useState } from 'react';
 import { ACHIEVEMENTS } from '../../constants/achievements';
 import { getTopicFunFact } from '../../services/api';
 import { createNotification } from '../../services/notificationService';
-import { updateUserRanking } from '../../services/rankingService';
+import { updateUserRanking, XP_REWARDS } from '../../services/rankingService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import type { QuestionTiming, AchievementStats } from '../../types';
@@ -47,6 +47,7 @@ export default function ResultsScreen() {
   const { t } = useLanguage();
   const [funFact, setFunFact] = useState('');
   const [funFactLoading, setFunFactLoading] = useState(false);
+  const [xpGained, setXpGained] = useState(0);
 
   useEffect(() => {
     if (state?.topic && state?.sector) {
@@ -132,7 +133,11 @@ export default function ResultsScreen() {
       if (user?.uid) {
         const displayName = storage.getDisplayName() || user.fullName || null;
         const photoURL = storage.getProfilePhoto() || user.photoURL || null;
-        updateUserRanking(user.uid, displayName, photoURL, percentage, effectiveCorrect, state.totalCount, streak).catch(() => {});
+        updateUserRanking(user.uid, displayName, photoURL, percentage, effectiveCorrect, state.totalCount, streak)
+          .then((xp) => {
+            if (xp > 0) setXpGained(xp);
+          })
+          .catch(() => {});
       }
     }
   }, []);
@@ -378,6 +383,20 @@ export default function ResultsScreen() {
           </div>
         )}
       </div>
+
+      {xpGained > 0 && (
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-800 transition-colors">
+          <div className="flex items-center justify-center gap-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+              <Star size={20} className="text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">+{xpGained} XP</p>
+              <p className="text-xs text-purple-500 dark:text-purple-300">Rankings updated!</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {funFact && (
         <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl p-5 border border-yellow-200 dark:border-yellow-800 transition-colors">

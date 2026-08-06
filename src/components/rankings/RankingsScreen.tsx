@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Trophy, Zap, Calendar, TrendingUp, Users, Hash } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Trophy, Zap, Calendar, TrendingUp, Users, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { storage } from '../../services/storage';
@@ -9,6 +9,7 @@ import {
   subscribeToUserRanking,
   RANK_TIER_COLORS,
   RANK_TIER_ICONS,
+  XP_REWARDS,
   getLevelForXP,
   getXPToNextLevel,
   getTierForXP,
@@ -61,7 +62,6 @@ function RankMedal({ rank }: { rank: number }) {
 
 export default function RankingsScreen() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   const { user } = useAuth();
 
@@ -274,6 +274,64 @@ export default function RankingsScreen() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      <XPSystemSection />
+    </div>
+  );
+}
+
+const XP_ACTIVITY_META: { activity: string; icon: string; label: string }[] = [
+  { activity: 'correctAnswer', icon: '✅', label: 'Correct Answer' },
+  { activity: 'perfectAnswer', icon: '⭐', label: 'Perfect Score (100%)' },
+  { activity: 'dailyChallenge', icon: '🎯', label: 'Daily Challenge' },
+  { activity: 'completeLesson', icon: '📖', label: 'Complete Lesson' },
+  { activity: 'teachMode', icon: '🎓', label: 'Teach Mode' },
+  { activity: 'fastestModeWin', icon: '⚡', label: 'Fastest Mode Win' },
+  { activity: 'multiplayerWin', icon: '🏆', label: 'Multiplayer Win' },
+  { activity: 'streak7Day', icon: '🔥', label: '7-Day Streak' },
+  { activity: 'streak30Day', icon: '💎', label: '30-Day Streak' },
+  { activity: 'helpAnotherStudent', icon: '🤝', label: 'Help Another Student' },
+];
+
+function XPSystemSection() {
+  const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
+
+  return (
+    <div className="mt-6">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+            <Star size={18} className="text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('XP System')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('How to earn XP')}</p>
+          </div>
+        </div>
+        {open ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="mt-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {XP_ACTIVITY_META.map(({ activity, icon, label }) => (
+              <div key={activity} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{icon}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                </div>
+                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                  +{XP_REWARDS[activity as keyof typeof XP_REWARDS]} XP
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

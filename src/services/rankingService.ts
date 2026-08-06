@@ -23,6 +23,8 @@ function sanitize(obj: any): any {
   return clean;
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 export const RANK_TIERS: RankTier[] = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Mythic'];
 
 export const RANK_TIER_COLORS: Record<RankTier, string> = {
@@ -85,16 +87,101 @@ export function getXPToNextLevel(xp: number): number {
   return getXPForLevel(level + 1) - xp;
 }
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+export const XP_REWARDS = {
+  correctAnswer: 10,
+  perfectAnswer: 20,
+  dailyChallenge: 100,
+  completeLesson: 150,
+  teachMode: 60,
+  fastestModeWin: 80,
+  multiplayerWin: 200,
+  streak7Day: 300,
+  streak30Day: 1500,
+  helpAnotherStudent: 50,
+} as const;
 
-export function calculateXP(percentage: number, correct: number, total: number, streak: number): number {
+export type XPActivity =
+  | 'correctAnswer'
+  | 'perfectAnswer'
+  | 'dailyChallenge'
+  | 'completeLesson'
+  | 'teachMode'
+  | 'fastestModeWin'
+  | 'multiplayerWin'
+  | 'streak7Day'
+  | 'streak30Day'
+  | 'helpAnotherStudent';
+
+export interface XPLog {
+  amount: number;
+  activity: XPActivity;
+  timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+export function calculateSessionXP(
+  percentage: number,
+  correct: number,
+  total: number,
+  streak: number,
+): number {
   let xp = 0;
-  xp += Math.round((percentage / 100) * 50);
-  xp += correct * 5;
-  xp += Math.round((correct / total) * 20);
-  const bonus = streak >= 3 ? Math.floor(streak / 3) * 10 : 0;
-  xp += bonus;
+  xp += correct * XP_REWARDS.correctAnswer;
+  if (percentage === 100) xp += XP_REWARDS.perfectAnswer;
+  xp += Math.round((correct / Math.max(total, 1)) * 20);
+  if (streak >= 3) xp += Math.floor(streak / 3) * 10;
   return xp;
+}
+
+export async function addXP(
+  uid: string,
+  activity: XPActivity,
+  amount?: number,
+  metadata?: Record<string, any>,
+): Promise<number> {
+  const xpAmount = amount ?? XP_REWARDS[activity];
+  try {
+    const ref = doc(db, 'rankings', uid);
+    const snap = await getDoc(ref);
+    const existing = snap.exists() ? snap.data() : {};
+
+    const totalXP = (existing.totalXP || 0) + xpAmount;
+    const level = getLevelForXP(totalXP);
+    const tier = getTierForXP(totalXP);
+    const weeklyResetTime = existing.weeklyResetAt || ts();
+
+    let resetWeekly = false;
+    if (new Date(weeklyResetTime).getTime() < Date.now() - WEEK_MS) {
+      resetWeekly = true;
+    }
+
+    const updateData: any = {
+      totalXP,
+      weeklyXP: resetWeekly ? xpAmount : (existing.weeklyXP || 0) + xpAmount,
+      weeklyResetAt: resetWeekly ? ts() : weeklyResetTime,
+      level,
+      tier,
+      lastActive: ts(),
+    };
+
+    if (metadata?.displayName) updateData.displayName = metadata.displayName;
+    if (metadata?.photoURL !== undefined) updateData.photoURL = metadata.photoURL;
+
+    const logRef = doc(collection(db, 'xpLogs'));
+    await setDoc(logRef, sanitize({
+      uid,
+      amount: xpAmount,
+      activity,
+      timestamp: ts(),
+      metadata: metadata || null,
+    }));
+
+    await setDoc(ref, sanitize(updateData), { merge: true });
+    return xpAmount;
+  } catch (e: any) {
+    console.error('Failed to add XP:', e);
+    return 0;
+  }
 }
 
 function getCurrentStreak(history: SessionData[]): number {
@@ -150,10 +237,10 @@ export async function updateUserRanking(
   correctCount: number,
   totalCount: number,
   currentStreak: number,
-): Promise<void> {
+): Promise<number> {
   try {
     const percentage = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
-    const xpGain = calculateXP(percentage, correctCount, totalCount, currentStreak);
+    const xpGain = calculateSessionXP(percentage, correctCount, totalCount, currentStreak);
 
     const ref = doc(db, 'rankings', uid);
     const snap = await getDoc(ref);
@@ -164,7 +251,6 @@ export async function updateUserRanking(
     }
 
     const now = ts();
-    const oneHourAgo = new Date(Date.now() - HOUR_MS).toISOString();
     const weeklyXP = (existing.weeklyXP || 0) + xpGain;
     const weeklyResetTimestamp = existing.weeklyResetAt || now;
 
@@ -198,12 +284,22 @@ export async function updateUserRanking(
     };
 
     await setDoc(ref, sanitize(updateData), { merge: true });
+
+    const logRef = doc(collection(db, 'xpLogs'));
+    await setDoc(logRef, sanitize({
+      uid,
+      amount: xpGain,
+      activity: 'correctAnswer',
+      timestamp: now,
+      metadata: { sessionScore, correctCount, totalCount },
+    }));
+
+    return xpGain;
   } catch (e: any) {
     console.error('Failed to update ranking:', e);
+    return 0;
   }
 }
-
-const HOUR_MS = 60 * 60 * 1000;
 
 export function subscribeToLeaderboard(
   type: LeaderboardType,

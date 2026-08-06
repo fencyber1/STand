@@ -458,3 +458,54 @@ export interface GlobalAchievement {
 }
 
 export type LeaderboardType = 'overall' | 'weekly' | 'streak';
+
+export type XPActivity =
+  | 'correctAnswer'
+  | 'perfectAnswer'
+  | 'dailyChallenge'
+  | 'completeLesson'
+  | 'teachMode'
+  | 'fastestModeWin'
+  | 'multiplayerWin'
+  | 'streak7Day'
+  | 'streak30Day'
+  | 'helpAnotherStudent';
+
+export const XP_REWARDS: Record<XPActivity, number> = {
+  correctAnswer: 10,
+  perfectAnswer: 20,
+  dailyChallenge: 100,
+  completeLesson: 150,
+  teachMode: 60,
+  fastestModeWin: 80,
+  multiplayerWin: 200,
+  streak7Day: 300,
+  streak30Day: 1500,
+  helpAnotherStudent: 50,
+};
+
+export const XP_ACTIVITY_LABELS: Record<XPActivity, string> = {
+  correctAnswer: 'Correct Answer',
+  perfectAnswer: 'Perfect Answer',
+  dailyChallenge: 'Daily Challenge',
+  completeLesson: 'Complete Lesson',
+  teachMode: 'Teach Mode',
+  fastestModeWin: 'Fastest Mode Win',
+  multiplayerWin: 'Multiplayer Win',
+  streak7Day: '7-Day Streak',
+  streak30Day: '30-Day Streak',
+  helpAnotherStudent: 'Help Another Student',
+};
+
+export const XP_ACTIVITY_ICONS: Record<XPActivity, string> = {
+  correctAnswer: '✅',
+  perfectAnswer: '⭐',
+  dailyChallenge: '🎯',
+  completeLesson: '📖',
+  teachMode: '🎓',
+  fastestModeWin: '⚡',
+  multiplayerWin: '🏆',
+  streak7Day: '🔥',
+  streak30Day: '💎',
+  helpAnotherStudent: '🤝',
+};
