@@ -93,6 +93,23 @@ export default function MultiplayerArena() {
     }
   };
 
+  const handleKillAllRooms = async () => {
+    if (!confirm('Delete ALL game rooms from Firestore? This cannot be undone.')) return;
+    setDebug('Deleting all rooms...');
+    try {
+      const { collection, getDocs, writeBatch, deleteDoc } = await import('firebase/firestore');
+      const { db: firestoreDb } = await import('../../services/firebase');
+      const snap = await getDocs(collection(firestoreDb, 'gameRooms'));
+      const batch = writeBatch(firestoreDb);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      setDebug(`Deleted ${snap.docs.length} rooms`);
+      setActiveGames([]);
+    } catch (e: any) {
+      setDebug(`Error: ${e.message}`);
+    }
+  };
+
   const handleJoinWithCode = async () => {
     if (!user || !joinCode.trim()) return;
     setJoinError('');
@@ -243,7 +260,10 @@ export default function MultiplayerArena() {
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-800 dark:text-gray-100">Active Games</h3>
-          <button onClick={() => { setActiveGames([]); setDebug('Refreshing...'); }} className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Refresh</button>
+          <div className="flex gap-2">
+            <button onClick={() => { setActiveGames([]); setDebug('Refreshing...'); }} className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Refresh</button>
+            <button onClick={handleKillAllRooms} className="text-xs text-red-500 dark:text-red-400 hover:underline">Kill All</button>
+          </div>
         </div>
         {debug && <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{debug}</p>}
         {activeGames.length === 0 ? (
