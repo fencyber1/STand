@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Clock, CheckCircle, XCircle, Users, Crown, Trophy,
-  Zap, MessageCircle, Send, Eye,
+  Zap, MessageCircle, Send, Eye, RefreshCw,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import {
-  subscribeToGameRoom,
   setPlayerReady,
   startGame,
   submitAnswer,
@@ -29,54 +30,59 @@ export default function GameRoom() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [chatInput, setChatInput] = useState('');
   const [showChat, setShowChat] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [pollCount, setPollCount] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
+  const fetchRoom = useCallback(async () => {
     if (!roomId) return;
-    let loaded = false;
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-    const unsub = subscribeToGameRoom(roomId, (data) => {
-      if (data) {
-        loaded = true;
+    try {
+      const snap = await getDoc(doc(db, 'gameRooms', roomId));
+      if (snap.exists()) {
+        const data = snap.data() as GameRoom;
         setRoom(data);
         setLoadError('');
+        setLoading(false);
         if (data?.status === 'finished') {
           setShowResults(true);
         }
-        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        return true;
+      } else {
+        setLoadError('Room not found. It may have been deleted.');
+        setLoading(false);
+        return false;
       }
-    });
+    } catch (e: any) {
+      console.error('[MP] Fetch error:', e);
+      setLoadError(`Failed to load room: ${e.message}`);
+      setLoading(false);
+      return false;
+    }
+  }, [roomId]);
 
-    const timeout = setTimeout(() => {
-      if (!loaded) {
-        console.warn('[MP] onSnapshot timeout, falling back to polling');
-        pollInterval = setInterval(async () => {
-          try {
-            const { getDoc, doc } = await import('firebase/firestore');
-            const { db } = await import('../../services/firebase');
-            const snap = await getDoc(doc(db, 'gameRooms', roomId));
-            if (snap.exists() && !loaded) {
-              loaded = true;
-              const data = snap.data() as any;
-              setRoom(data);
-              setLoadError('');
-              if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-            }
-          } catch (e) {
-            console.error('[MP] Poll error:', e);
-          }
-        }, 2000);
-      }
+  useEffect(() => {
+    if (!roomId) return;
+    setLoading(true);
+    setPollCount(0);
+
+    fetchRoom();
+
+    pollRef.current = setInterval(async () => {
+      setPollCount((c) => c + 1);
+      await fetchRoom();
     }, 3000);
 
     return () => {
-      clearTimeout(timeout);
-      unsub();
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [roomId]);
+  }, [roomId, fetchRoom]);
+
+  const manualRefresh = async () => {
+    setLoading(true);
+    await fetchRoom();
+  };
 
   useEffect(() => {
     if (!room || room.status !== 'in_progress') return;
@@ -154,33 +160,64 @@ export default function GameRoom() {
     setChatInput('');
   };
 
+  if (loading && !room) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Loading room...</p>
+        {pollCount > 0 && (
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-2">Polling attempt #{pollCount}...</p>
+        )}
+        <button
+          onClick={manualRefresh}
+          className="mt-3 flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+        >
+          <RefreshCw size={12} /> Refresh now
+        </button>
+        <button
+          onClick={() => navigate('/multiplayer')}
+          className="mt-2 text-xs text-gray-500 dark:text-gray-400 hover:underline"
+        >
+          Back to Arena
+        </button>
+      </div>
+    );
+  }
+
+  if (loadError && !room) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+        <div className="text-center">
+          <p className="text-red-500 dark:text-red-400 mb-3">{loadError}</p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={manualRefresh}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => navigate('/multiplayer')}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition"
+            >
+              Back to Arena
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!room) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-        {loadError ? (
-          <div className="text-center">
-            <p className="text-red-500 dark:text-red-400 mb-3">{loadError}</p>
-            <div className="flex gap-2 justify-center">
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
-              >
-                Retry
-              </button>
-              <button
-                onClick={() => navigate('/multiplayer')}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition"
-              >
-                Back to Arena
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Loading room...</p>
-          </>
-        )}
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Room not found</p>
+        <button
+          onClick={() => navigate('/multiplayer')}
+          className="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+        >
+          Back to Arena
+        </button>
       </div>
     );
   }
