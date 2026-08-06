@@ -104,19 +104,22 @@ export async function createGameRoom(params: {
 
       const writePromise = setDoc(ref, sanitize(room));
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Connection timeout. Please check your internet and try again.')), 8000)
+        setTimeout(() => reject(new Error('CONNECTION_TIMEOUT')), 5000)
       );
       await Promise.race([writePromise, timeoutPromise]);
       return ref.id;
     } catch (e: any) {
-      console.error('Failed to create game room:', e);
-      if (e.message?.includes('timeout') || e.message?.includes('Connection timeout')) {
-        throw new Error('Connection timeout. Please check your internet and try again.');
+      console.error('[MP] Failed to create game room:', e);
+      if (e.message === 'CONNECTION_TIMEOUT' || e.code === 'unavailable') {
+        throw new Error('Cannot reach Firebase. Check your internet connection.');
       }
-      if (e.code === 'permission-denied' || e.message?.includes('permission')) {
-        throw new Error('Permission denied. Firestore rules may not allow this operation.');
+      if (e.code === 'permission-denied') {
+        throw new Error('Permission denied. Firestore rules may not allow this.');
       }
-      throw new Error(e.message || 'Failed to create game room');
+      if (e.code === 'unauthenticated') {
+        throw new Error('Not authenticated. Please log in again.');
+      }
+      throw new Error(e.message || 'Failed to create room');
     }
   }
 

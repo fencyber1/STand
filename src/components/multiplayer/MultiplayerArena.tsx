@@ -29,6 +29,7 @@ export default function MultiplayerArena() {
   const [joinError, setJoinError] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [lastMode, setLastMode] = useState<GameMode>('1v1');
 
   const gameModes = getAllGameModes();
 
@@ -55,6 +56,7 @@ export default function MultiplayerArena() {
       setCreateError('Please log in to create a game room');
       return;
     }
+    setLastMode(mode);
     setCreating(true);
     setCreateError('');
     try {
@@ -130,16 +132,20 @@ export default function MultiplayerArena() {
       {createError && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
           <span className="text-sm text-red-600 dark:text-red-400">{createError}</span>
-          {createError.includes('Permission denied') && (
-            <p className="text-xs text-red-500 dark:text-red-300 mt-1">
-              Make sure Firestore rules allow writing to the gameRooms collection.
-            </p>
-          )}
-          {createError.includes('timeout') && (
-            <p className="text-xs text-red-500 dark:text-red-300 mt-1">
-              Check your internet connection or try again.
-            </p>
-          )}
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => setCreateError('')}
+              className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={() => handleCreateGame(lastMode)}
+              className="text-xs px-2 py-1 bg-primary-600 text-white rounded"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       )}
 
