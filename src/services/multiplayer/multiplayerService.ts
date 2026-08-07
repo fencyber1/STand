@@ -309,6 +309,24 @@ export async function endGame(roomId: string): Promise<void> {
     winner,
     endedAt: ts(),
   });
+
+  for (const player of rankedPlayers) {
+    const isWinner = player.uid === winner;
+    const opponent = rankedPlayers.find((p) => p.uid !== player.uid);
+    const result: MatchResult = {
+      id: `${roomId}-${player.uid}`,
+      mode: room.mode,
+      opponent: opponent?.uid || '',
+      opponentName: opponent?.displayName || 'Unknown',
+      result: isWinner ? 'win' : opponent ? 'loss' : 'draw',
+      score: player.score,
+      opponentScore: opponent?.score || 0,
+      xpEarned: room.rewards.xp + (isWinner ? 50 : 0),
+      date: ts(),
+      subject: room.subject,
+    };
+    await recordMatchResult(player.uid, result);
+  }
 }
 
 export async function leaveGame(roomId: string, uid: string): Promise<void> {
