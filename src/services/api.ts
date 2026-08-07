@@ -35,7 +35,14 @@ async function callAI(prompt: string): Promise<string> {
       const text = await response.text();
 
       if (!response.ok) {
-        lastError = 'Failed to generate content. Please try again.';
+        let errorDetail = `HTTP ${response.status}`;
+        try {
+          const errData = JSON.parse(text);
+          errorDetail += `: ${errData.error?.message || errData.error || errData.message || text.slice(0, 200)}`;
+        } catch {
+          errorDetail += `: ${text.slice(0, 200)}`;
+        }
+        lastError = errorDetail;
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
@@ -44,13 +51,13 @@ async function callAI(prompt: string): Promise<string> {
       try {
         data = JSON.parse(text);
       } catch {
-        lastError = 'Failed to generate content. Please try again.';
+        lastError = `Invalid JSON from AI: ${text.slice(0, 200)}`;
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
 
       if (!data.choices || !data.choices[0]) {
-        lastError = 'Failed to generate content. Please try again.';
+        lastError = `No choices in AI response: ${text.slice(0, 200)}`;
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
@@ -58,11 +65,11 @@ async function callAI(prompt: string): Promise<string> {
       return data.choices[0].message.content;
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        lastError = 'AI service timed out. Please try again.';
+        lastError = 'AI service timed out (30s). Please try again.';
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-        lastError = 'Failed to generate content. Please try again.';
+      lastError = `AI error: ${err.message || 'Unknown error'}`;
       await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       continue;
     }

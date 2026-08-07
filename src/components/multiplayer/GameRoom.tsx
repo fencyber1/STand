@@ -199,10 +199,11 @@ export default function GameRoom() {
     } catch (e: any) {
       console.error('[MP] Question generation failed:', e);
       if (e.message === 'TIMEOUT') {
-        alert('Question generation timed out. Make sure the API server is running (npm run dev:api)');
+        alert('Question generation timed out after 30s. Check NVIDIA API key and try again.');
       } else {
-        alert(`Failed to generate questions: ${e.message}. Make sure the API server is running.`);
+        alert(`Failed to generate questions: ${e.message}`);
       }
+      throw e;
     } finally {
       setGenerating(false);
     }
