@@ -197,12 +197,33 @@ export async function setPlayerReady(roomId: string, uid: string, ready: boolean
 export async function startGame(roomId: string, questions: Question[]): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
   await updateDoc(ref, {
-    status: 'in_progress',
+    status: 'starting',
     questions,
     currentQuestion: 0,
+    countdown: 5,
     startedAt: ts(),
     liveChat: [],
   });
+}
+
+export async function tickCountdown(roomId: string): Promise<void> {
+  const ref = doc(db, 'gameRooms', roomId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const room = snap.data() as GameRoom;
+  const currentCount = room.countdown ?? 0;
+
+  if (currentCount <= 1) {
+    await updateDoc(ref, {
+      countdown: 0,
+      status: 'in_progress',
+    });
+  } else {
+    await updateDoc(ref, {
+      countdown: currentCount - 1,
+    });
+  }
 }
 
 export async function submitAnswer(

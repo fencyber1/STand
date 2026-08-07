@@ -645,6 +645,7 @@ export interface GameRoom {
   answers: Record<string, Record<string, PlayerAnswer>>;
   spectators: string[];
   reactions?: Reaction[];
+  countdown?: number;
   winner?: string;
   winningTeam?: string;
   rewards: GameReward;

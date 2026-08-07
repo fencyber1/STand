@@ -12,6 +12,7 @@ import { generateQuestions } from '../../services/api';
 import {
   setPlayerReady,
   startGame,
+  tickCountdown,
   submitAnswer,
   nextQuestion,
   leaveGame,
@@ -136,6 +137,16 @@ export default function GameRoom() {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [roomId, fetchRoom]);
+
+  useEffect(() => {
+    if (room?.status === 'starting' && (room.countdown ?? 0) > 0) {
+      const timer = setInterval(async () => {
+        await tickCountdown(roomId!);
+        await fetchRoom();
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [room?.status, room?.countdown, roomId, fetchRoom]);
 
   const manualRefresh = async () => {
     setLoading(true);
@@ -484,6 +495,31 @@ export default function GameRoom() {
           >
             Leave
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (room.status === 'starting') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 px-4">
+        <div className="text-center">
+          <div className="text-8xl font-bold text-white mb-4 animate-pulse">
+            {room.countdown ?? 5}
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Get Ready!</h2>
+          <p className="text-white/70 text-sm">Game starting soon...</p>
+          <div className="mt-6 flex items-center gap-2 justify-center">
+            <Users size={16} className="text-white/50" />
+            <span className="text-white/50 text-sm">{room.players.length} players</span>
+            {room.spectators && room.spectators.length > 0 && (
+              <>
+                <span className="text-white/30">•</span>
+                <Eye size={16} className="text-white/50" />
+                <span className="text-white/50 text-sm">{room.spectators.length} watching</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
