@@ -25,14 +25,14 @@ function sanitize(obj: any): any {
 
 export { type GameMode, type GameStatus, type GameDifficulty } from '../../types';
 
-const GAME_MODE_CONFIG: Record<GameMode, { label: string; description: string; questions: number; time: number; maxPlayers: number; xpReward: number; coinReward: number }> = {
-  '1v1': { label: '1v1 Battle', description: 'Head-to-head quiz battle', questions: 20, time: 30, maxPlayers: 2, xpReward: 150, coinReward: 50 },
-  'team': { label: 'Team Battle', description: 'Team vs team competition', questions: 25, time: 25, maxPlayers: 10, xpReward: 200, coinReward: 75 },
-  'tournament': { label: 'Tournament', description: 'Single elimination bracket', questions: 15, time: 20, maxPlayers: 16, xpReward: 500, coinReward: 200 },
-  'blitz': { label: 'Blitz Mode', description: '10 questions in 60 seconds', questions: 10, time: 6, maxPlayers: 2, xpReward: 100, coinReward: 40 },
-  'marathon': { label: 'Marathon', description: '100 challenging questions', questions: 100, time: 15, maxPlayers: 2, xpReward: 300, coinReward: 100 },
-  'survival': { label: 'Survival', description: 'One wrong answer eliminates you', questions: 50, time: 20, maxPlayers: 4, xpReward: 250, coinReward: 80 },
-  'speedrun': { label: 'Speed Run', description: 'Fast and accurate wins', questions: 15, time: 10, maxPlayers: 2, xpReward: 180, coinReward: 60 },
+const GAME_MODE_CONFIG: Record<GameMode, { label: string; description: string; icon: string; questions: number; time: number; maxPlayers: number; xpReward: number; coinReward: number }> = {
+  '1v1': { label: '1v1 Battle', description: 'Head-to-head quiz battle', icon: '⚔️', questions: 20, time: 30, maxPlayers: 2, xpReward: 150, coinReward: 50 },
+  'team': { label: 'Team Battle', description: 'Team vs team competition', icon: '👥', questions: 25, time: 25, maxPlayers: 10, xpReward: 200, coinReward: 75 },
+  'tournament': { label: 'Tournament', description: 'Single elimination bracket', icon: '🏆', questions: 15, time: 20, maxPlayers: 16, xpReward: 500, coinReward: 200 },
+  'blitz': { label: 'Blitz Mode', description: '10 questions in 60 seconds', icon: '⚡', questions: 10, time: 6, maxPlayers: 2, xpReward: 100, coinReward: 40 },
+  'marathon': { label: 'Marathon', description: '100 challenging questions', icon: '🏃', questions: 100, time: 15, maxPlayers: 2, xpReward: 300, coinReward: 100 },
+  'survival': { label: 'Survival', description: 'One wrong answer eliminates you', icon: '💀', questions: 50, time: 20, maxPlayers: 4, xpReward: 250, coinReward: 80 },
+  'speedrun': { label: 'Speed Run', description: 'Fast and accurate wins', icon: '🚀', questions: 15, time: 10, maxPlayers: 2, xpReward: 180, coinReward: 60 },
 };
 
 export function getGameModeConfig(mode: GameMode) {
