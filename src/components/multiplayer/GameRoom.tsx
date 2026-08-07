@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { generateQuestions } from '../../services/api';
+import { getRankIcon, getRankColor } from '../../services/rankingService';
 import {
   setPlayerReady,
   startGame,
@@ -50,6 +51,34 @@ export default function GameRoom() {
   const isSpectator = searchParams.get('spectate') === 'true';
   const [spectatorChat, setSpectatorChat] = useState('');
   const [waitingChat, setWaitingChat] = useState('');
+  const [playerLevels, setPlayerLevels] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!room?.players?.length) return;
+    const fetchLevels = async () => {
+      const levels: Record<string, number> = {};
+      for (const player of room.players) {
+        try {
+          const snap = await getDoc(doc(db, 'rankings', player.uid));
+          if (snap.exists()) {
+            levels[player.uid] = snap.data().level || 1;
+          }
+        } catch {}
+      }
+      setPlayerLevels(levels);
+    };
+    fetchLevels();
+  }, [room?.players]);
+
+  const getPlayerRankIcon = (uid: string) => {
+    const level = playerLevels[uid] || 1;
+    return getRankIcon(level);
+  };
+
+  const getPlayerRankColor = (uid: string) => {
+    const level = playerLevels[uid] || 1;
+    return getRankColor(level);
+  };
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const reactionEmojis = ['🔥', '❤️', '👏', '😂', '⚡', '🎉', '💪', '👀'];
 
@@ -455,13 +484,21 @@ export default function GameRoom() {
             {room.players.map((player) => (
               <div key={player.uid} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  {player.photoURL ? (
-                    <img src={player.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
-                      {player.displayName.charAt(0)}
-                    </div>
-                  )}
+                  <div className="relative">
+                    {player.photoURL ? (
+                      <img src={player.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                        {player.displayName.charAt(0)}
+                      </div>
+                    )}
+                    <span
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] shadow-sm"
+                      style={{ backgroundColor: getPlayerRankColor(player.uid), border: '1.5px solid white' }}
+                    >
+                      {getPlayerRankIcon(player.uid)}
+                    </span>
+                  </div>
                   <span className="font-medium text-gray-800 dark:text-gray-100 text-sm">{player.displayName}</span>
                   {player.uid === room.host && <Crown size={14} className="text-yellow-500" />}
                 </div>
@@ -627,12 +664,24 @@ export default function GameRoom() {
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Live Scores</span>
           </div>
           <div className="space-y-1">
-            {[...room.players].sort((a, b) => b.score - a.score).map((p, i) => (
-              <div key={p.uid} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
-                <span className="text-sm text-gray-800 dark:text-gray-100">#{i + 1} {p.displayName}</span>
-                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{p.score} pts</span>
-              </div>
-            ))}
+            {[...room.players].sort((a, b) => b.score - a.score).map((p, i) => {
+              const level = playerLevels[p.uid] || 1;
+              return (
+                <div key={p.uid} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">#{i + 1}</span>
+                    <span
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
+                      style={{ backgroundColor: getRankColor(level), border: '1px solid white' }}
+                    >
+                      {getRankIcon(level)}
+                    </span>
+                    <span className="text-sm text-gray-800 dark:text-gray-100">{p.displayName}</span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{p.score} pts</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -806,6 +855,23 @@ function GameResults({ room, onLeave }: { room: GameRoom; onLeave: () => void })
   const sortedPlayers = [...room.players].sort((a, b) => b.score - a.score);
   const winner = sortedPlayers[0];
   const isWinner = winner?.uid === user?.uid;
+  const [playerLevels, setPlayerLevels] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const fetchLevels = async () => {
+      const levels: Record<string, number> = {};
+      for (const player of sortedPlayers) {
+        try {
+          const snap = await getDoc(doc(db, 'rankings', player.uid));
+          if (snap.exists()) {
+            levels[player.uid] = snap.data().level || 1;
+          }
+        } catch {}
+      }
+      setPlayerLevels(levels);
+    };
+    fetchLevels();
+  }, []);
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
@@ -823,30 +889,48 @@ function GameResults({ room, onLeave }: { room: GameRoom; onLeave: () => void })
 
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-4">
         <div className="space-y-2">
-          {sortedPlayers.map((player, idx) => (
-            <div
-              key={player.uid}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                idx === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-700/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className={`text-lg font-bold ${idx === 0 ? 'text-yellow-500' : 'text-gray-400'}`}>
-                  #{idx + 1}
-                </span>
-                <div>
-                  <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">{player.displayName}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {player.correctAnswers}/{player.totalAnswers} correct
+          {sortedPlayers.map((player, idx) => {
+            const level = playerLevels[player.uid] || 1;
+            return (
+              <div
+                key={player.uid}
+                className={`flex items-center justify-between p-3 rounded-lg ${
+                  idx === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-700/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`text-lg font-bold ${idx === 0 ? 'text-yellow-500' : 'text-gray-400'}`}>
+                    #{idx + 1}
+                  </span>
+                  <div className="relative">
+                    {player.photoURL ? (
+                      <img src={player.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                        {player.displayName.charAt(0)}
+                      </div>
+                    )}
+                    <span
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] shadow-sm"
+                      style={{ backgroundColor: getRankColor(level), border: '1.5px solid white' }}
+                    >
+                      {getRankIcon(level)}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">{player.displayName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {player.correctAnswers}/{player.totalAnswers} correct
+                    </div>
                   </div>
                 </div>
+                <div className="text-right">
+                  <div className="font-bold text-purple-600 dark:text-purple-400">{player.score} pts</div>
+                  <div className="text-xs text-gray-400">🔥 {player.bestStreak} streak</div>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-purple-600 dark:text-purple-400">{player.score} pts</div>
-                <div className="text-xs text-gray-400">🔥 {player.bestStreak} streak</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

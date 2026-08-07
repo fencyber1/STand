@@ -89,6 +89,34 @@ export function getXPToNextLevel(xp: number): number {
   return getXPForLevel(level + 1) - xp;
 }
 
+export function getRankIcon(level: number): string {
+  if (level >= 100) return '👑';
+  if (level >= 75) return '💎';
+  if (level >= 50) return '🔮';
+  if (level >= 40) return '⭐';
+  if (level >= 30) return '🌟';
+  if (level >= 25) return '🏅';
+  if (level >= 20) return '🎖️';
+  if (level >= 15) return '🥇';
+  if (level >= 10) return '🥈';
+  if (level >= 5) return '🥉';
+  return '🌱';
+}
+
+export function getRankColor(level: number): string {
+  if (level >= 100) return '#ffd700';
+  if (level >= 75) return '#ff69b4';
+  if (level >= 50) return '#9b59b6';
+  if (level >= 40) return '#f1c40f';
+  if (level >= 30) return '#e67e22';
+  if (level >= 25) return '#e74c3c';
+  if (level >= 20) return '#1abc9c';
+  if (level >= 15) return '#3498db';
+  if (level >= 10) return '#2ecc71';
+  if (level >= 5) return '#95a5a6';
+  return '#bdc3c7';
+}
+
 export const XP_REWARDS = {
   correctAnswer: 10,
   perfectAnswer: 20,

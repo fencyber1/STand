@@ -15,7 +15,7 @@ import {
   joinByCode,
   getPlayerStats,
 } from '../../services/multiplayer/multiplayerService';
-import { subscribeToUserRanking } from '../../services/rankingService';
+import { subscribeToUserRanking, getRankIcon, getRankColor } from '../../services/rankingService';
 import type { GameRoom, GameMode, PlayerStats, UserRanking } from '../../types';
 
 export default function MultiplayerArena() {
@@ -36,8 +36,30 @@ export default function MultiplayerArena() {
   const [selectedRoom, setSelectedRoom] = useState<GameRoom | null>(null);
   const [joining, setJoining] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
+  const [hostLevels, setHostLevels] = useState<Record<string, number>>({});
 
   const gameModes = getAllGameModes();
+
+  useEffect(() => {
+    if (!activeGames.length) return;
+    const fetchHostLevels = async () => {
+      const levels: Record<string, number> = {};
+      for (const game of activeGames) {
+        if (game.host && !levels[game.host]) {
+          try {
+            const { getDoc, doc } = await import('firebase/firestore');
+            const { db: firestoreDb } = await import('../../services/firebase');
+            const snap = await getDoc(doc(firestoreDb, 'rankings', game.host));
+            if (snap.exists()) {
+              levels[game.host] = snap.data().level || 1;
+            }
+          } catch {}
+        }
+      }
+      setHostLevels(levels);
+    };
+    fetchHostLevels();
+  }, [activeGames]);
 
   useEffect(() => {
     const unsub = subscribeToActiveGames((rooms) => {
@@ -285,37 +307,46 @@ export default function MultiplayerArena() {
             <p className="text-gray-500 dark:text-gray-400 text-sm">No active games. Create one!</p>
           </div>
         ) : (
-          <div className="space-y-2">
+           <div className="space-y-2">
              {activeGames.slice(0, 10).map((game) => {
-              const isFull = game.players.length >= game.maxPlayers;
-              const isLive = game.status === 'in_progress' || game.status === 'finished';
-              const spectatorCount = game.spectators?.length || 0;
+               const isFull = game.players.length >= game.maxPlayers;
+               const isLive = game.status === 'in_progress' || game.status === 'finished';
+               const spectatorCount = game.spectators?.length || 0;
+               const hostLevel = hostLevels[game.host] || 1;
 
-              return (
-                <button
-                  key={game.id}
-                  onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
-                  className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${game.status === 'waiting' ? 'bg-green-500' : game.status === 'in_progress' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-400'}`} />
-                    <div className="text-left">
-                      <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">
-                        {game.hostName}'s Game
-                        {isLive && <span className="ml-1 text-xs text-yellow-500">● LIVE</span>}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {game.mode} • {game.players.length}/{game.maxPlayers} players
-                        {spectatorCount > 0 && <span className="ml-1 text-purple-400">• {spectatorCount} watching</span>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {game.status === 'waiting' ? (isFull ? 'Full' : 'Waiting') : game.status === 'in_progress' ? 'In Progress' : 'Finished'}
-                  </div>
-                </button>
-              );
-            })}
+               return (
+                 <button
+                   key={game.id}
+                   onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
+                   className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                 >
+                   <div className="flex items-center gap-3">
+                     <div className={`w-2 h-2 rounded-full ${game.status === 'waiting' ? 'bg-green-500' : game.status === 'in_progress' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-400'}`} />
+                     <div className="text-left">
+                       <div className="flex items-center gap-1">
+                         <span
+                           className="w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
+                           style={{ backgroundColor: getRankColor(hostLevel), border: '1px solid white' }}
+                         >
+                           {getRankIcon(hostLevel)}
+                         </span>
+                         <span className="font-medium text-gray-800 dark:text-gray-100 text-sm">
+                           {game.hostName}'s Game
+                           {isLive && <span className="ml-1 text-xs text-yellow-500">● LIVE</span>}
+                         </span>
+                       </div>
+                       <div className="text-xs text-gray-500 dark:text-gray-400">
+                         {game.mode} • {game.players.length}/{game.maxPlayers} players
+                         {spectatorCount > 0 && <span className="ml-1 text-purple-400">• {spectatorCount} watching</span>}
+                       </div>
+                     </div>
+                   </div>
+                   <div className="text-xs text-gray-400">
+                     {game.status === 'waiting' ? (isFull ? 'Full' : 'Waiting') : game.status === 'in_progress' ? 'In Progress' : 'Finished'}
+                   </div>
+                 </button>
+               );
+             })}
           </div>
         )}
       </div>
