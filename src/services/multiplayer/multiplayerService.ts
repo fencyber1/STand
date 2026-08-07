@@ -205,6 +205,7 @@ export async function startGame(roomId: string, questions: Question[]): Promise<
     countdown: 5,
     startedAt: ts(),
     liveChat: [],
+    genProgress: null,
   });
 }
 

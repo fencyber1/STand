@@ -647,6 +647,7 @@ export interface GameRoom {
   spectators: string[];
   reactions?: Reaction[];
   countdown?: number;
+  genProgress?: { current: number; total: number };
   winner?: string;
   winningTeam?: string;
   rewards: GameReward;

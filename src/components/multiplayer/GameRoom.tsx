@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getDoc, doc, deleteDoc } from 'firebase/firestore';
+import { getDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { generateQuestions, generateQuestionsProgressive } from '../../services/api';
 import { getRankIcon, getRankColor } from '../../services/rankingService';
@@ -268,6 +268,10 @@ const handleStartGame = async () => {
       const questionCount = room.totalQuestions;
       console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
 
+      await updateDoc(doc(db, 'gameRooms', roomId), {
+        genProgress: { current: 0, total: questionCount },
+      });
+
       const questions = await generateQuestionsProgressive({
         topic: randomTopic,
         sector: randomSubject,
@@ -277,6 +281,9 @@ const handleStartGame = async () => {
         difficulty: 'medium',
       }, (batch, progress) => {
         setGenProgress({ current: progress.current, total: progress.total });
+        updateDoc(doc(db, 'gameRooms', roomId), {
+          genProgress: { current: progress.current, total: progress.total },
+        }).catch(() => {});
       });
 
       console.log('[MP] Questions generated:', questions.length);
@@ -558,6 +565,26 @@ const handleStartGame = async () => {
             </button>
           </div>
         </div>
+
+        {room.genProgress && room.genProgress.total > 0 && room.status === 'waiting' && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Generating Questions...</span>
+              <span className="text-xs font-bold text-primary-600 dark:text-primary-400">
+                {Math.round((room.genProgress.current / room.genProgress.total) * 100)}%
+              </span>
+            </div>
+            <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-primary-500 to-purple-500 rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((room.genProgress.current / room.genProgress.total) * 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-center">
+              {room.genProgress.current}/{room.genProgress.total} questions
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button
