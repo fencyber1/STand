@@ -66,8 +66,8 @@ export default function AchievementsScreen() {
               backgroundColor="#1f2937"
               borderRadius={12}
               glowColor={unlocked ? '140 200 80' : '100 100 100'}
-              glowRadius={unlocked ? 20 : 5}
-              glowIntensity={unlocked ? 0.5 : 0.1}
+              glowRadius={unlocked ? 25 : 8}
+              glowIntensity={unlocked ? 0.8 : 0.2}
               edgeSensitivity={30}
               colors={unlocked ? ['#22c55e', '#16a34a', '#15803d'] : ['#6b7280', '#4b5563', '#374151']}
             >

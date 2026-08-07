@@ -121,7 +121,7 @@ export default function MultiplayerLobbyScreen() {
       </div>
 
       {tab === 'create' && (
-        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="280 80 70" glowIntensity={0.4} colors={['#a855f7', '#6366f1', '#3b82f6']}>
+        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="280 80 70" glowIntensity={0.7} colors={['#a855f7', '#6366f1', '#3b82f6']}>
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Topic')} *</label>
@@ -254,7 +254,7 @@ export default function MultiplayerLobbyScreen() {
       )}
 
       {tab === 'join' && (
-        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="280 80 70" glowIntensity={0.4} colors={['#a855f7', '#6366f1', '#3b82f6']}>
+        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="280 80 70" glowIntensity={0.7} colors={['#a855f7', '#6366f1', '#3b82f6']}>
           <div className="p-6 space-y-4">
             <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('Join a Room')}</h3>
             <input

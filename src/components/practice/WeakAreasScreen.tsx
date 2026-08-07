@@ -158,7 +158,7 @@ function TopicCard({ stats, onPractice }: { stats: TopicStats; onPractice: (s: T
       borderRadius={10}
       glowColor="220 80 70"
       glowRadius={15}
-      glowIntensity={0.3}
+      glowIntensity={0.6}
       colors={['#6366f1', '#8b5cf6', '#3b82f6']}
     >
       <div className="p-3 dark:bg-gray-800">

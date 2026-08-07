@@ -219,7 +219,7 @@ export default function StudyGroupsScreen() {
       </div>
 
       {tab === 'create' && (
-        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="220 80 70" glowIntensity={0.4} colors={['#6366f1', '#8b5cf6', '#3b82f6']}>
+        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="220 80 70" glowIntensity={0.7} colors={['#6366f1', '#8b5cf6', '#3b82f6']}>
           <div className="p-6 space-y-4">
             <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('Create a Study Group')}</h3>
             <input
@@ -237,7 +237,7 @@ export default function StudyGroupsScreen() {
       )}
 
       {tab === 'join' && (
-        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="220 80 70" glowIntensity={0.4} colors={['#6366f1', '#8b5cf6', '#3b82f6']}>
+        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="220 80 70" glowIntensity={0.7} colors={['#6366f1', '#8b5cf6', '#3b82f6']}>
           <div className="p-6 space-y-4">
             <h3 className="font-semibold text-gray-800 dark:text-gray-100">{t('Join a Study Group')}</h3>
             <input

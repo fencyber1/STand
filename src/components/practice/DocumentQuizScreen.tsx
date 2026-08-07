@@ -291,7 +291,7 @@ export default function DocumentQuizScreen() {
 
       {/* Saved Documents List */}
       {step === 'upload' && savedDocs.length > 0 && (
-        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.3} colors={['#6366f1', '#3b82f6', '#10b981']}>
+        <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.6} colors={['#6366f1', '#3b82f6', '#10b981']}>
           <div className="p-4">
               <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-gray-300 font-semibold text-sm">
                 <FolderOpen size={16} /> {t('Saved Documents')}
@@ -326,7 +326,7 @@ export default function DocumentQuizScreen() {
       {/* Step: Upload */}
       {step === 'upload' && (
         <div data-tour-id="tour-doc-quiz">
-          <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#10b981', '#3b82f6', '#6366f1']}>
+          <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.7} colors={['#10b981', '#3b82f6', '#6366f1']}>
             <div className="p-6">
               <div
                 onDrop={handleDrop}
@@ -405,7 +405,7 @@ export default function DocumentQuizScreen() {
             </div>
           </div>
 
-          <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.4} colors={['#10b981', '#3b82f6', '#6366f1']}>
+          <BorderGlow backgroundColor={document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'} borderRadius={12} glowColor="142 80 70" glowIntensity={0.7} colors={['#10b981', '#3b82f6', '#6366f1']}>
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
                 <Settings2 size={16} /> {t('Quiz Settings')}

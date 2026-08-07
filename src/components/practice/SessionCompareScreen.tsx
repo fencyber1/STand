@@ -86,7 +86,7 @@ export default function SessionCompareScreen() {
               borderRadius={12}
               glowColor="220 80 70"
               glowRadius={20}
-              glowIntensity={0.5}
+              glowIntensity={0.8}
               colors={['#6366f1', '#8b5cf6', '#3b82f6']}
             >
               <div className="p-6 dark:bg-gray-800">

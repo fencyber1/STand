@@ -76,7 +76,7 @@ export default function SearchScreen() {
               borderRadius={12}
               glowColor="220 80 70"
               glowRadius={20}
-              glowIntensity={0.5}
+              glowIntensity={0.8}
               edgeSensitivity={30}
               colors={['#6366f1', '#8b5cf6', '#3b82f6']}
             >
