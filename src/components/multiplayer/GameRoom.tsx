@@ -164,25 +164,42 @@ export default function GameRoom() {
       const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
-      const result = await generateQuestions({
+      const questionCount = Math.min(room.totalQuestions, 5);
+      console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
+
+      const generatePromise = generateQuestions({
         topic: randomTopic,
         sector: randomSubject,
         level: 'High School',
         questionType: 'MCQ Only',
-        count: Math.min(room.totalQuestions, 10),
+        count: questionCount,
         difficulty: 'medium',
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Question generation timed out')), 30000)
+      );
+
+      const result = await Promise.race([generatePromise, timeoutPromise]);
+      console.log('[MP] Questions generated:', result.questions.length);
 
       const questions = result.questions.map((q, i) => ({
         ...q,
         id: q.id || `mp-q-${i}-${Date.now()}`,
+        options: q.options && q.options.length >= 2 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
+        correctAnswer: q.correctAnswer || 'Option A',
       }));
 
-      await startGame(roomId, questions.length > 0 ? questions : fallbackQuestions(room));
+      if (questions.length === 0) {
+        throw new Error('No questions generated');
+      }
+
+      await startGame(roomId, questions);
       fetchRoom();
     } catch (e: any) {
-      console.error('[MP] Failed to generate questions:', e);
-      await startGame(roomId, fallbackQuestions(room));
+      console.error('[MP] Question generation failed:', e);
+      const fallback = fallbackQuestions(room);
+      await startGame(roomId, fallback);
       fetchRoom();
     } finally {
       setGenerating(false);
@@ -190,17 +207,83 @@ export default function GameRoom() {
   };
 
   const fallbackQuestions = (room: GameRoom) => {
-    return Array.from({ length: Math.min(room.totalQuestions, 10) }, (_, i) => ({
-      id: `q-${i}-${Date.now()}`,
-      question: `Question ${i + 1}`,
-      type: 'MCQ' as const,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctAnswer: 'Option A',
-      explanation: 'This is a sample explanation.',
-      difficulty: 'medium' as const,
-      subject: room.subject,
-      topic: room.topic,
-    }));
+    const localQuestions: Record<string, Array<{ question: string; options: string[]; correctAnswer: string; explanation: string }>> = {
+      'General Science': [
+        { question: 'What is the chemical symbol for water?', options: ['A. H2O', 'B. CO2', 'C. O2', 'D. NaCl'], correctAnswer: 'A. H2O', explanation: 'Water is composed of two hydrogen atoms and one oxygen atom.' },
+        { question: 'Which planet is known as the Red Planet?', options: ['A. Venus', 'B. Mars', 'C. Jupiter', 'D. Saturn'], correctAnswer: 'B. Mars', explanation: 'Mars appears red due to iron oxide on its surface.' },
+        { question: 'What is the largest organ in the human body?', options: ['A. Heart', 'B. Liver', 'C. Skin', 'D. Brain'], correctAnswer: 'C. Skin', explanation: 'The skin is the largest organ, covering about 20 square feet.' },
+        { question: 'What gas do plants absorb from the atmosphere?', options: ['A. Oxygen', 'B. Nitrogen', 'C. Carbon Dioxide', 'D. Hydrogen'], correctAnswer: 'C. Carbon Dioxide', explanation: 'Plants absorb CO2 for photosynthesis.' },
+        { question: 'What is the speed of light approximately?', options: ['A. 300,000 km/s', 'B. 150,000 km/s', 'C. 500,000 km/s', 'D. 100,000 km/s'], correctAnswer: 'A. 300,000 km/s', explanation: 'Light travels at approximately 299,792 km/s in a vacuum.' },
+      ],
+      'Mathematics': [
+        { question: 'What is the value of π (pi) to two decimal places?', options: ['A. 3.14', 'B. 3.16', 'C. 3.12', 'D. 3.18'], correctAnswer: 'A. 3.14', explanation: 'Pi is approximately 3.14159...' },
+        { question: 'What is the square root of 144?', options: ['A. 10', 'B. 11', 'C. 12', 'D. 14'], correctAnswer: 'C. 12', explanation: '12 × 12 = 144.' },
+        { question: 'What is 15% of 200?', options: ['A. 25', 'B. 30', 'C. 35', 'D. 40'], correctAnswer: 'B. 30', explanation: '15% of 200 = 0.15 × 200 = 30.' },
+        { question: 'What is the sum of angles in a triangle?', options: ['A. 90°', 'B. 180°', 'C. 270°', 'D. 360°'], correctAnswer: 'B. 180°', explanation: 'The sum of interior angles in any triangle is always 180°.' },
+        { question: 'What is 2 to the power of 8?', options: ['A. 128', 'B. 256', 'C. 512', 'D. 64'], correctAnswer: 'B. 256', explanation: '2^8 = 256.' },
+      ],
+      'English Language': [
+        { question: 'Which of the following is a noun?', options: ['A. Run', 'B. Beautiful', 'C. Teacher', 'D. Quickly'], correctAnswer: 'C. Teacher', explanation: 'A noun is a person, place, thing, or idea.' },
+        { question: 'What is the past tense of "go"?', options: ['A. Goed', 'B. Went', 'C. Going', 'D. Gone'], correctAnswer: 'B. Went', explanation: '"Went" is the irregular past tense of "go".' },
+        { question: 'Which word is an antonym of "happy"?', options: ['A. Joyful', 'B. Sad', 'C. Excited', 'D. Cheerful'], correctAnswer: 'B. Sad', explanation: '"Sad" is the opposite of "happy".' },
+        { question: 'What is a group of words that contains a subject and a verb called?', options: ['A. Phrase', 'B. Clause', 'C. Sentence', 'D. Paragraph'], correctAnswer: 'C. Sentence', explanation: 'A sentence must contain a subject and a predicate (verb).' },
+        { question: 'Which punctuation mark ends a question?', options: ['A. Period', 'B. Exclamation mark', 'C. Question mark', 'D. Comma'], correctAnswer: 'C. Question mark', explanation: 'Questions end with a question mark (?).' },
+      ],
+      'Biology': [
+        { question: 'What is the powerhouse of the cell?', options: ['A. Nucleus', 'B. Mitochondria', 'C. Ribosome', 'D. Golgi body'], correctAnswer: 'B. Mitochondria', explanation: 'Mitochondria produce ATP, the cell\'s energy currency.' },
+        { question: 'Which molecule carries genetic information?', options: ['A. RNA', 'B. DNA', 'C. Protein', 'D. Lipid'], correctAnswer: 'B. DNA', explanation: 'DNA (deoxyribonucleic acid) carries genetic instructions.' },
+        { question: 'What process do plants use to make food?', options: ['A. Respiration', 'B. Photosynthesis', 'C. Fermentation', 'D. Digestion'], correctAnswer: 'B. Photosynthesis', explanation: 'Plants convert sunlight, CO2, and water into glucose.' },
+        { question: 'What is the basic unit of life?', options: ['A. Atom', 'B. Molecule', 'C. Cell', 'D. Tissue'], correctAnswer: 'C. Cell', explanation: 'The cell is the fundamental structural and functional unit of life.' },
+        { question: 'Which blood cells fight infection?', options: ['A. Red blood cells', 'B. White blood cells', 'C. Platelets', 'D. Plasma'], correctAnswer: 'B. White blood cells', explanation: 'White blood cells are part of the immune system.' },
+      ],
+      'Chemistry': [
+        { question: 'What is the atomic number of carbon?', options: ['A. 4', 'B. 6', 'C. 8', 'D. 12'], correctAnswer: 'B. 6', explanation: 'Carbon has 6 protons, giving it atomic number 6.' },
+        { question: 'What is the pH of pure water?', options: ['A. 5', 'B. 7', 'C. 9', 'D. 14'], correctAnswer: 'B. 7', explanation: 'Pure water has a neutral pH of 7.' },
+        { question: 'Which element has the symbol "Na"?', options: ['A. Nitrogen', 'B. Sodium', 'C. Nickel', 'D. Neon'], correctAnswer: 'B. Sodium', explanation: 'Na comes from the Latin word "natrium".' },
+        { question: 'What type of bond involves sharing electrons?', options: ['A. Ionic', 'B. Covalent', 'C. Metallic', 'D. Hydrogen'], correctAnswer: 'B. Covalent', explanation: 'Covalent bonds share electron pairs between atoms.' },
+        { question: 'What is the most abundant gas in Earth\'s atmosphere?', options: ['A. Oxygen', 'B. Carbon Dioxide', 'C. Nitrogen', 'D. Argon'], correctAnswer: 'C. Nitrogen', explanation: 'Nitrogen makes up about 78% of the atmosphere.' },
+      ],
+      'Physics': [
+        { question: 'What is the SI unit of force?', options: ['A. Joule', 'B. Watt', 'C. Newton', 'D. Pascal'], correctAnswer: 'C. Newton', explanation: 'Force is measured in Newtons (N), named after Isaac Newton.' },
+        { question: 'What is the formula for kinetic energy?', options: ['A. mgh', 'B. ½mv²', 'C. mv', 'D. Fd'], correctAnswer: 'B. ½mv²', explanation: 'Kinetic energy equals half mass times velocity squared.' },
+        { question: 'Which law states that every action has an equal and opposite reaction?', options: ['A. First Law', 'B. Second Law', 'C. Third Law', 'D. Law of Gravitation'], correctAnswer: 'C. Third Law', explanation: 'Newton\'s Third Law of Motion.' },
+        { question: 'What is the unit of electric current?', options: ['A. Volt', 'B. Ohm', 'C. Ampere', 'D. Watt'], correctAnswer: 'C. Ampere', explanation: 'Current is measured in Amperes (A).' },
+        { question: 'What is the acceleration due to gravity on Earth?', options: ['A. 8.9 m/s²', 'B. 9.8 m/s²', 'C. 10.8 m/s²', 'D. 11.8 m/s²'], correctAnswer: 'B. 9.8 m/s²', explanation: 'Gravity accelerates objects at approximately 9.8 m/s².' },
+      ],
+      'Computer Science': [
+        { question: 'What does CPU stand for?', options: ['A. Central Processing Unit', 'B. Computer Personal Unit', 'C. Central Program Utility', 'D. Computer Processing Unit'], correctAnswer: 'A. Central Processing Unit', explanation: 'CPU is the brain of the computer.' },
+        { question: 'What is the binary representation of the number 10?', options: ['A. 1010', 'B. 1100', 'C. 1001', 'D. 1110'], correctAnswer: 'A. 1010', explanation: '10 in decimal = 1010 in binary.' },
+        { question: 'Which language is used for web page structure?', options: ['A. Python', 'B. HTML', 'C. Java', 'D. C++'], correctAnswer: 'B. HTML', explanation: 'HTML (HyperText Markup Language) structures web content.' },
+        { question: 'What does RAM stand for?', options: ['A. Read Access Memory', 'B. Random Access Memory', 'C. Run Application Memory', 'D. Random Allocation Memory'], correctAnswer: 'B. Random Access Memory', explanation: 'RAM is volatile memory for temporary data storage.' },
+        { question: 'What is an algorithm?', options: ['A. A programming language', 'B. A step-by-step procedure', 'C. A computer virus', 'D. A type of hardware'], correctAnswer: 'B. A step-by-step procedure', explanation: 'An algorithm is a finite sequence of well-defined instructions.' },
+      ],
+    };
+
+    const defaultQuestions = [
+      { question: 'Which of the following is a prime number?', options: ['A. 4', 'B. 6', 'C. 7', 'D. 9'], correctAnswer: 'C. 7', explanation: '7 is only divisible by 1 and itself.' },
+      { question: 'What is the capital of France?', options: ['A. London', 'B. Berlin', 'C. Paris', 'D. Madrid'], correctAnswer: 'C. Paris', explanation: 'Paris is the capital and largest city of France.' },
+      { question: 'Which continent is largest by area?', options: ['A. Africa', 'B. North America', 'C. Asia', 'D. Europe'], correctAnswer: 'C. Asia', explanation: 'Asia is the largest continent, covering about 30% of Earth\'s land.' },
+      { question: 'What is the hardest natural substance?', options: ['A. Gold', 'B. Iron', 'C. Diamond', 'D. Quartz'], correctAnswer: 'C. Diamond', explanation: 'Diamond rates 10 on the Mohs hardness scale.' },
+      { question: 'Who painted the Mona Lisa?', options: ['A. Van Gogh', 'B. Picasso', 'C. Da Vinci', 'D. Michelangelo'], correctAnswer: 'C. Da Vinci', explanation: 'Leonardo da Vinci painted the Mona Lisa between 1503-1519.' },
+    ];
+
+    const subjectQuestions = localQuestions[room.subject] || defaultQuestions;
+    const count = Math.min(room.totalQuestions, subjectQuestions.length);
+
+    return Array.from({ length: count }, (_, i) => {
+      const q = subjectQuestions[i % subjectQuestions.length];
+      return {
+        id: `q-${i}-${Date.now()}`,
+        question: q.question,
+        type: 'MCQ' as const,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: 'medium' as const,
+        subject: room.subject,
+        topic: room.topic,
+      };
+    });
   };
 
   const handleLeave = async () => {
