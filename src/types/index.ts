@@ -617,6 +617,7 @@ export interface GamePlayer {
   bestStreak: number;
   totalTime: number;
   rank?: number;
+  eliminated?: boolean;
 }
 
 export interface PlayerAnswer {

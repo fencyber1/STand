@@ -251,10 +251,14 @@ export async function submitAnswer(
     points,
   };
 
+  // Check if player is already eliminated
+  const currentPlayer = room.players.find((p) => p.uid === uid);
+  if (currentPlayer?.eliminated) return;
+
   const players = room.players.map((p) => {
     if (p.uid !== uid) return p;
     const newStreak = isCorrect ? p.streak + 1 : 0;
-    return {
+    const updated = {
       ...p,
       score: p.score + points,
       correctAnswers: p.correctAnswers + (isCorrect ? 1 : 0),
@@ -264,6 +268,12 @@ export async function submitAnswer(
       bestStreak: Math.max(p.bestStreak, newStreak),
       totalTime: p.totalTime + timeSpent,
     };
+
+    // Survival mode: eliminate on wrong answer
+    if (room.mode === 'survival' && !isCorrect) {
+      return { ...updated, eliminated: true };
+    }
+    return updated;
   });
 
   const answers = { ...room.answers };
@@ -271,6 +281,24 @@ export async function submitAnswer(
   answers[uid][questionIndex.toString()] = playerAnswer;
 
   await updateDoc(ref, { players, answers: sanitize(answers) });
+
+  // Check if survival mode should end (only 1 player alive)
+  if (room.mode === 'survival') {
+    const alivePlayers = room.players.filter((p) => !p.eliminated && p.uid !== uid);
+    if (isCorrect) {
+      // Count alive after this answer
+      const aliveAfter = room.players.filter((p) => !p.eliminated && (p.uid !== uid || isCorrect)).length;
+      if (aliveAfter <= 1) {
+        await endGame(roomId);
+      }
+    } else {
+      // Wrong answer - check if only one player left alive
+      const aliveAfter = room.players.filter((p) => !p.eliminated && p.uid !== uid).length;
+      if (aliveAfter <= 1) {
+        await endGame(roomId);
+      }
+    }
+  }
 }
 
 function calculateAnswerPoints(correct: boolean, timeSpent: number, maxTime: number): number {

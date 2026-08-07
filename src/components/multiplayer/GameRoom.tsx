@@ -223,6 +223,8 @@ export default function GameRoom() {
 
   const handleAnswer = async (answer: string) => {
     if (!roomId || !user || !room || hasAnswered) return;
+    const currentPlayer = room.players.find((p) => p.uid === user.uid);
+    if (currentPlayer?.eliminated) return;
     setSelectedAnswer(answer);
     setHasAnswered(true);
 
@@ -261,7 +263,7 @@ export default function GameRoom() {
       const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
-      const questionCount = Math.min(room.totalQuestions, 3);
+      const questionCount = room.totalQuestions;
       console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
 
       const generatePromise = generateQuestions({
@@ -492,6 +494,11 @@ export default function GameRoom() {
                         {player.displayName.charAt(0)}
                       </div>
                     )}
+                    {player.eliminated && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[7px] font-bold flex items-center justify-center animate-pulse">
+                        ✕
+                      </span>
+                    )}
                     <span
                       className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] shadow-sm"
                       style={{ backgroundColor: getPlayerRankColor(player.uid), border: '1.5px solid white' }}
@@ -501,6 +508,7 @@ export default function GameRoom() {
                   </div>
                   <span className="font-medium text-gray-800 dark:text-gray-100 text-sm">{player.displayName}</span>
                   {player.uid === room.host && <Crown size={14} className="text-yellow-500" />}
+                  {player.eliminated && <span className="text-xs text-red-500 font-bold ml-1">ELIMINATED</span>}
                 </div>
                 {player.ready ? (
                   <CheckCircle size={16} className="text-green-500" />
@@ -677,6 +685,7 @@ export default function GameRoom() {
                       {getRankIcon(level)}
                     </span>
                     <span className="text-sm text-gray-800 dark:text-gray-100">{p.displayName}</span>
+                    {p.eliminated && <span className="text-xs text-red-500 font-bold">ELIMINATED</span>}
                   </div>
                   <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{p.score} pts</span>
                 </div>
