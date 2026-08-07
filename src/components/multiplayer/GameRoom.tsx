@@ -76,6 +76,12 @@ export default function GameRoom() {
   }, [roomId]);
 
   useEffect(() => {
+    if (room?.status === 'finished' && !showResults) {
+      setShowResults(true);
+    }
+  }, [room?.status, showResults]);
+
+  useEffect(() => {
     if (!roomId) return;
     setLoading(true);
     setPollCount(0);
@@ -145,7 +151,7 @@ export default function GameRoom() {
     setSelectedAnswer(null);
     setHasAnswered(false);
     setLastAnswerCorrect(null);
-    fetchRoom();
+    setTimeout(() => fetchRoom(), 500);
   };
 
   const handleReady = async () => {
@@ -164,7 +170,7 @@ export default function GameRoom() {
       const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
-      const questionCount = Math.min(room.totalQuestions, 5);
+      const questionCount = room.totalQuestions;
       console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
 
       const generatePromise = generateQuestions({
@@ -183,7 +189,7 @@ export default function GameRoom() {
       const result = await Promise.race([generatePromise, timeoutPromise]);
       console.log('[MP] Questions generated:', result.questions.length);
 
-      const questions = result.questions.map((q, i) => ({
+      let questions = result.questions.map((q, i) => ({
         ...q,
         id: q.id || `mp-q-${i}-${Date.now()}`,
         options: q.options && q.options.length >= 2 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
@@ -192,6 +198,18 @@ export default function GameRoom() {
 
       if (questions.length === 0) {
         throw new Error('No questions generated');
+      }
+
+      if (questions.length < questionCount) {
+        console.warn(`[MP] AI generated ${questions.length}/${questionCount} questions, filling remaining`);
+        const originalLen = questions.length;
+        for (let i = originalLen; i < questionCount; i++) {
+          const existing = questions[i % originalLen];
+          questions.push({
+            ...existing,
+            id: `mp-q-${i}-${Date.now()}`,
+          });
+        }
       }
 
       await startGame(roomId, questions);
