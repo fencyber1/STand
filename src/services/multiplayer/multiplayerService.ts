@@ -201,6 +201,7 @@ export async function startGame(roomId: string, questions: Question[]): Promise<
     status: 'starting',
     questions,
     currentQuestion: 0,
+    totalQuestions: questions.length,
     countdown: 5,
     startedAt: ts(),
     liveChat: [],
