@@ -326,6 +326,40 @@ export async function addSpectator(roomId: string, uid: string): Promise<void> {
   }
 }
 
+export async function removeSpectator(roomId: string, uid: string): Promise<void> {
+  const ref = doc(db, 'gameRooms', roomId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const room = snap.data() as GameRoom;
+  await updateDoc(ref, { spectators: room.spectators.filter((s) => s !== uid) });
+}
+
+export async function sendReaction(roomId: string, reaction: { uid: string; name: string; emoji: string }): Promise<void> {
+  const ref = doc(db, 'gameRooms', roomId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const room = snap.data() as GameRoom;
+  const newReaction = {
+    id: `reaction-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ...reaction,
+    timestamp: ts(),
+  };
+  const reactions = [...(room.reactions || []), newReaction].slice(-50);
+  await updateDoc(ref, { reactions });
+
+  await updateDoc(ref, {
+    liveChat: [...room.liveChat.slice(-99), {
+      uid: reaction.uid,
+      name: reaction.name,
+      text: reaction.emoji,
+      timestamp: ts(),
+      type: 'reaction' as const,
+    }],
+  });
+}
+
 export function subscribeToGameRoom(roomId: string, cb: (room: GameRoom | null) => void): () => void {
   return onSnapshot(doc(db, 'gameRooms', roomId), (snap) => {
     if (!snap.exists()) { cb(null); return; }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Clock, CheckCircle, XCircle, Users, Crown, Trophy,
   Zap, MessageCircle, Send, Eye, RefreshCw, ArrowRight, Loader2,
@@ -17,8 +17,10 @@ import {
   leaveGame,
   sendChatMessage,
   addSpectator,
+  removeSpectator,
+  sendReaction,
 } from '../../services/multiplayer/multiplayerService';
-import type { GameRoom } from '../../types';
+import type { GameRoom, Reaction } from '../../types';
 import { SECTORS } from '../../constants';
 
 export default function GameRoom() {
@@ -42,6 +44,42 @@ export default function GameRoom() {
   const [hasAnswered, setHasAnswered] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [generating, setGenerating] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const isSpectator = searchParams.get('spectate') === 'true';
+  const [spectatorChat, setSpectatorChat] = useState('');
+  const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
+  const reactionEmojis = ['🔥', '❤️', '👏', '😂', '⚡', '🎉', '💪', '👀'];
+
+  useEffect(() => {
+    if (isSpectator && user?.uid && roomId) {
+      addSpectator(roomId, user.uid);
+      return () => {
+        removeSpectator(roomId, user.uid);
+      };
+    }
+  }, [isSpectator, user?.uid, roomId]);
+
+  const handleSendReaction = async (emoji: string) => {
+    if (!user || !roomId) return;
+    await sendReaction(roomId, { uid: user.uid, name: user.fullName || 'Fan', emoji });
+    const id = `float-${Date.now()}`;
+    setFloatingReactions((prev) => [...prev, { id, emoji, x: Math.random() * 80 + 10 }]);
+    setTimeout(() => {
+      setFloatingReactions((prev) => prev.filter((r) => r.id !== id));
+    }, 2000);
+  };
+
+  const handleSendSpectatorChat = async () => {
+    if (!user || !roomId || !spectatorChat.trim()) return;
+    await sendChatMessage(roomId, {
+      uid: user.uid,
+      name: user.fullName || 'Fan',
+      text: spectatorChat.trim(),
+      type: 'message',
+    });
+    setSpectatorChat('');
+  };
 
   const fetchRoom = useCallback(async () => {
     if (!roomId) return;
@@ -446,6 +484,99 @@ export default function GameRoom() {
           >
             Leave
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSpectator && room.status === 'in_progress') {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Eye size={16} className="text-purple-500" />
+            <span className="text-sm font-medium text-purple-600 dark:text-purple-400">SPECTATING</span>
+          </div>
+          <span className="text-xs text-gray-500 dark:text-gray-400">{room.spectators?.length || 1} watching</span>
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            Q{room.currentQuestion + 1}/{room.totalQuestions}
+          </span>
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-bold ${timeLeft <= 5 ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'}`}>
+            <Clock size={14} />
+            {timeLeft}s
+          </div>
+        </div>
+
+        {currentQ && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 mb-4 relative overflow-hidden">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{currentQ.question}</h2>
+            <div className="space-y-2">
+              {currentQ.options?.map((option, idx) => {
+                const letter = String.fromCharCode(65 + idx);
+                return (
+                  <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                    <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">{letter}</span>
+                    <span className="text-sm text-gray-800 dark:text-gray-100">{option}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {floatingReactions.map((r) => (
+              <div key={r.id} className="absolute text-3xl animate-bounce pointer-events-none" style={{ left: `${r.x}%`, bottom: '20%' }}>
+                {r.emoji}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-1 mb-4 flex-wrap">
+          {reactionEmojis.map((emoji) => (
+            <button key={emoji} onClick={() => handleSendReaction(emoji)} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition text-lg flex items-center justify-center">
+              {emoji}
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Users size={14} className="text-gray-400" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Live Scores</span>
+          </div>
+          <div className="space-y-1">
+            {[...room.players].sort((a, b) => b.score - a.score).map((p, i) => (
+              <div key={p.uid} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                <span className="text-sm text-gray-800 dark:text-gray-100">#{i + 1} {p.displayName}</span>
+                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{p.score} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+          <div className="max-h-32 overflow-y-auto mb-2 space-y-1">
+            {room.liveChat?.filter((m) => m.type === 'message').slice(-10).map((msg, i) => (
+              <div key={i} className="text-xs">
+                <span className="font-medium text-purple-600 dark:text-purple-400">{msg.name}: </span>
+                <span className="text-gray-700 dark:text-gray-300">{msg.text}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={spectatorChat}
+              onChange={(e) => setSpectatorChat(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendSpectatorChat()}
+              placeholder="Cheer for your player..."
+              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-purple-500"
+            />
+            <button onClick={handleSendSpectatorChat} className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition">
+              <Send size={14} />
+            </button>
+          </div>
         </div>
       </div>
     );

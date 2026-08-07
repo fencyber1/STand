@@ -644,6 +644,7 @@ export interface GameRoom {
   questions: Question[];
   answers: Record<string, Record<string, PlayerAnswer>>;
   spectators: string[];
+  reactions?: Reaction[];
   winner?: string;
   winningTeam?: string;
   rewards: GameReward;
@@ -672,6 +673,14 @@ export interface GameChatMessage {
   text: string;
   timestamp: string;
   type: 'message' | 'system' | 'reaction';
+}
+
+export interface Reaction {
+  id: string;
+  uid: string;
+  name: string;
+  emoji: string;
+  timestamp: string;
 }
 
 export interface TournamentBracket {

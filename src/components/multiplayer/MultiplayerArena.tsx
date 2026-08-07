@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Swords, Users, Trophy, Zap, Crown, Clock, Target,
   Flame, Timer, Award, TrendingUp, Play, Search, Plus,
-  X, LogIn, UserCheck, AlertCircle,
+  X, LogIn, UserCheck, AlertCircle, Eye,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -280,28 +280,36 @@ export default function MultiplayerArena() {
           </div>
         ) : (
           <div className="space-y-2">
-            {activeGames.slice(0, 10).map((game) => (
-              <button
-                key={game.id}
-                onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
-                className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${game.status === 'waiting' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  <div className="text-left">
-                    <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">
-                      {game.hostName}'s Game
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {game.mode} • {game.players.length}/{game.maxPlayers} players
+             {activeGames.slice(0, 10).map((game) => {
+              const isFull = game.players.length >= game.maxPlayers;
+              const isLive = game.status === 'in_progress' || game.status === 'finished';
+              const spectatorCount = game.spectators?.length || 0;
+
+              return (
+                <button
+                  key={game.id}
+                  onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${game.status === 'waiting' ? 'bg-green-500' : game.status === 'in_progress' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-400'}`} />
+                    <div className="text-left">
+                      <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">
+                        {game.hostName}'s Game
+                        {isLive && <span className="ml-1 text-xs text-yellow-500">● LIVE</span>}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {game.mode} • {game.players.length}/{game.maxPlayers} players
+                        {spectatorCount > 0 && <span className="ml-1 text-purple-400">• {spectatorCount} watching</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-xs text-gray-400">
-                  {game.status === 'waiting' ? 'Waiting' : 'In Progress'}
-                </div>
-              </button>
-            ))}
+                  <div className="text-xs text-gray-400">
+                    {game.status === 'waiting' ? (isFull ? 'Full' : 'Waiting') : game.status === 'in_progress' ? 'In Progress' : 'Finished'}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -380,15 +388,31 @@ export default function MultiplayerArena() {
                   <Play size={16} /> Enter Room
                 </button>
               </div>
-            ) : selectedRoom.status !== 'waiting' ? (
-              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
-                <AlertCircle size={14} className="text-yellow-500 shrink-0" />
-                <span className="text-xs text-yellow-600 dark:text-yellow-400">Game already in progress</span>
+            ) : selectedRoom.status === 'waiting' && selectedRoom.players.length >= selectedRoom.maxPlayers ? (
+              <div className="space-y-2">
+                <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={14} className="text-yellow-500 shrink-0" />
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Room is full — Spectate instead!</span>
+                </div>
+                <button
+                  onClick={() => navigate(`/multiplayer/${selectedRoom.id}?spectate=true`)}
+                  className="w-full py-2.5 bg-purple-600 text-white rounded-lg font-semibold text-sm hover:bg-purple-700 transition flex items-center justify-center gap-2"
+                >
+                  <Eye size={16} /> SPECTATE
+                </button>
               </div>
-            ) : selectedRoom.players.length >= selectedRoom.maxPlayers ? (
-              <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-2">
-                <AlertCircle size={14} className="text-red-500 shrink-0" />
-                <span className="text-xs text-red-600 dark:text-red-400">Room is full ({selectedRoom.maxPlayers}/{selectedRoom.maxPlayers})</span>
+            ) : selectedRoom.status !== 'waiting' ? (
+              <div className="space-y-2">
+                <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={14} className="text-yellow-500 shrink-0" />
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Game in progress — Watch live!</span>
+                </div>
+                <button
+                  onClick={() => navigate(`/multiplayer/${selectedRoom.id}?spectate=true`)}
+                  className="w-full py-2.5 bg-purple-600 text-white rounded-lg font-semibold text-sm hover:bg-purple-700 transition flex items-center justify-center gap-2"
+                >
+                  <Eye size={16} /> SPECTATE LIVE
+                </button>
               </div>
             ) : (
               <button
