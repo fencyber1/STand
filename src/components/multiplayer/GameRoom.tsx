@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Clock, CheckCircle, XCircle, Users, Crown, Trophy,
-  Zap, MessageCircle, Send, Eye, RefreshCw, ArrowRight, Loader2,
+  Zap, MessageCircle, Send, Eye, RefreshCw, ArrowRight, Loader2, LogOut,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -341,6 +341,18 @@ export default function GameRoom() {
   };
 
   const handleLeave = async () => {
+    if (!roomId || !user) return;
+    await leaveGame(roomId, user.uid);
+    navigate('/multiplayer');
+  };
+
+  const handleSpectate = async () => {
+    if (!roomId || !user) return;
+    await addSpectator(roomId, user.uid);
+    navigate(`/multiplayer/${roomId}?spectate=true`);
+  };
+
+  const handleLeaveEliminated = async () => {
     if (!roomId || !user) return;
     await leaveGame(roomId, user.uid);
     navigate('/multiplayer');
@@ -714,6 +726,32 @@ export default function GameRoom() {
             />
             <button onClick={handleSendSpectatorChat} className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition">
               <Send size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (room.status === 'in_progress' && currentPlayer?.eliminated) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-red-900 via-gray-900 to-black px-4">
+        <div className="text-center max-w-sm">
+          <div className="text-6xl mb-4">💀</div>
+          <h2 className="text-2xl font-bold text-white mb-2">ELIMINATED!</h2>
+          <p className="text-white/60 text-sm mb-6">You got a wrong answer in Survival mode. What would you like to do?</p>
+          <div className="space-y-3">
+            <button
+              onClick={handleSpectate}
+              className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold text-sm hover:bg-purple-700 transition flex items-center justify-center gap-2"
+            >
+              <Eye size={16} /> SPECTATE
+            </button>
+            <button
+              onClick={handleLeaveEliminated}
+              className="w-full py-3 bg-gray-700 text-white rounded-lg font-semibold text-sm hover:bg-gray-600 transition flex items-center justify-center gap-2"
+            >
+              <LogOut size={16} /> LEAVE ROOM
             </button>
           </div>
         </div>
