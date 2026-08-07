@@ -8,7 +8,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
-import { generateQuestions } from '../../services/api';
+import { generateQuestions, generateQuestionsProgressive } from '../../services/api';
 import { getRankIcon, getRankColor } from '../../services/rankingService';
 import {
   setPlayerReady,
@@ -46,6 +46,7 @@ export default function GameRoom() {
   const [hasAnswered, setHasAnswered] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [genProgress, setGenProgress] = useState({ current: 0, total: 0 });
 
   const [searchParams] = useSearchParams();
   const isSpectator = searchParams.get('spectate') === 'true';
@@ -254,9 +255,10 @@ export default function GameRoom() {
     setTimeout(() => fetchRoom(), 500);
   };
 
-  const handleStartGame = async () => {
+const handleStartGame = async () => {
     if (!roomId || !room) return;
     setGenerating(true);
+    setGenProgress({ current: 0, total: room.totalQuestions });
     try {
       const subjects = SECTORS.filter((s) => s !== 'Other');
       const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
@@ -266,57 +268,50 @@ export default function GameRoom() {
       const questionCount = room.totalQuestions;
       console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
 
-      const generatePromise = generateQuestions({
+      const questions = await generateQuestionsProgressive({
         topic: randomTopic,
         sector: randomSubject,
         level: 'High School',
         questionType: 'MCQ Only',
         count: questionCount,
         difficulty: 'medium',
+      }, (batch, progress) => {
+        setGenProgress({ current: progress.current, total: progress.total });
       });
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 45000)
-      );
+      console.log('[MP] Questions generated:', questions.length);
 
-      const result = await Promise.race([generatePromise, timeoutPromise]);
-      console.log('[MP] Questions generated:', result.questions.length);
-
-      let questions = result.questions.map((q, i) => ({
+      let formattedQuestions = questions.map((q, i) => ({
         ...q,
         id: q.id || `mp-q-${i}-${Date.now()}`,
         options: q.options && q.options.length >= 2 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
         correctAnswer: q.correctAnswer || 'Option A',
       }));
 
-      if (questions.length === 0) {
+      if (formattedQuestions.length === 0) {
         throw new Error('No questions generated');
       }
 
-      if (questions.length < questionCount) {
-        console.warn(`[MP] AI generated ${questions.length}/${questionCount} questions, filling remaining`);
-        const originalLen = questions.length;
+      if (formattedQuestions.length < questionCount) {
+        console.warn(`[MP] AI generated ${formattedQuestions.length}/${questionCount} questions, filling remaining`);
+        const originalLen = formattedQuestions.length;
         for (let i = originalLen; i < questionCount; i++) {
-          const existing = questions[i % originalLen];
-          questions.push({
+          const existing = formattedQuestions[i % originalLen];
+          formattedQuestions.push({
             ...existing,
             id: `mp-q-${i}-${Date.now()}`,
           });
         }
       }
 
-      await startGame(roomId, questions);
+      await startGame(roomId, formattedQuestions);
       fetchRoom();
     } catch (e: any) {
       console.error('[MP] Question generation failed:', e);
-      if (e.message === 'TIMEOUT') {
-        alert('Question generation timed out. The AI service may be slow. Please try again.');
-      } else {
-        alert(`Failed to generate questions: ${e.message}`);
-      }
-      throw e;
+      alert(`Failed to generate questions: ${e.message}`);
     } finally {
       setGenerating(false);
+      setGenProgress({ current: 0, total: 0 });
     }
   };
 
@@ -584,7 +579,9 @@ export default function GameRoom() {
               {generating ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Generating...
+                  {genProgress.total > 0
+                    ? `Generating... ${genProgress.current}/${genProgress.total}`
+                    : 'Generating...'}
                 </>
               ) : (
                 'Start Game'
