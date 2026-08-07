@@ -37,6 +37,7 @@ import { storage } from '../../services/storage';
 import Logo from '../landing/Logo';
 import FenBotIcon from '../effects/FenBotIcon';
 import NotificationBell from '../notifications/NotificationBell';
+import AnimatedBackground from '../ui/AnimatedBackground';
 
 const NAVY = '#0e1627';
 
@@ -222,6 +223,7 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: NAVY }}>
+      <AnimatedBackground />
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={closeSidebar} />
       )}
@@ -314,8 +316,11 @@ export default function Layout() {
           <NotificationBell />
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-transparent to-purple-900/10 pointer-events-none" />
+          <div className="relative z-10">
+            <Outlet />
+          </div>
         </main>
 
         {/* Mobile bottom tab bar */}
