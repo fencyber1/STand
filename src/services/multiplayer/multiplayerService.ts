@@ -4,6 +4,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { addXP } from '../rankingService';
 import type { Question, GameRoom, GamePlayer, PlayerAnswer, GameMode, GameStatus, GameDifficulty, GameReward, GameChatMessage, TournamentBracket, TournamentRound, TournamentMatch, PlayerStats, MatchResult } from '../../types';
 
 const ROOM_TIMEOUT_MINUTES = 2;
@@ -480,6 +481,12 @@ export async function recordMatchResult(uid: string, result: MatchResult): Promi
     matchHistory: [result, ...stats.matchHistory.slice(0, 49)],
   };
   await updatePlayerStats(uid, newStats);
+
+  try {
+    await addXP(uid, 'multiplayerWin', result.xpEarned, { result: result.result, mode: result.mode });
+  } catch (e) {
+    console.error('[MP] Failed to add XP:', e);
+  }
 }
 
 function getDefaultPlayerStats(uid: string): PlayerStats {
