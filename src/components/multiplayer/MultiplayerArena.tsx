@@ -38,6 +38,16 @@ export default function MultiplayerArena() {
   const [joinModalError, setJoinModalError] = useState('');
   const [hostLevels, setHostLevels] = useState<Record<string, number>>({});
 
+const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; text: string }> = {
+  '1v1': { bg: 'bg-red-500/10 dark:bg-red-500/20', border: 'border-red-500/30 dark:border-red-400/30', glow: 'shadow-red-500/20', text: 'text-red-500 dark:text-red-400' },
+  'team': { bg: 'bg-blue-500/10 dark:bg-blue-500/20', border: 'border-blue-500/30 dark:border-blue-400/30', glow: 'shadow-blue-500/20', text: 'text-blue-500 dark:text-blue-400' },
+  'tournament': { bg: 'bg-yellow-500/10 dark:bg-yellow-500/20', border: 'border-yellow-500/30 dark:border-yellow-400/30', glow: 'shadow-yellow-500/20', text: 'text-yellow-500 dark:text-yellow-400' },
+  'blitz': { bg: 'bg-purple-500/10 dark:bg-purple-500/20', border: 'border-purple-500/30 dark:border-purple-400/30', glow: 'shadow-purple-500/20', text: 'text-purple-500 dark:text-purple-400' },
+  'marathon': { bg: 'bg-green-500/10 dark:bg-green-500/20', border: 'border-green-500/30 dark:border-green-400/30', glow: 'shadow-green-500/20', text: 'text-green-500 dark:text-green-400' },
+  'survival': { bg: 'bg-orange-500/10 dark:bg-orange-500/20', border: 'border-orange-500/30 dark:border-orange-400/30', glow: 'shadow-orange-500/20', text: 'text-orange-500 dark:text-orange-400' },
+  'speedrun': { bg: 'bg-cyan-500/10 dark:bg-cyan-500/20', border: 'border-cyan-500/30 dark:border-cyan-400/30', glow: 'shadow-cyan-500/20', text: 'text-cyan-500 dark:text-cyan-400' },
+};
+
   const gameModes = getAllGameModes();
 
   useEffect(() => {
@@ -211,25 +221,28 @@ export default function MultiplayerArena() {
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6">
         <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Quick Play</h3>
         <div className="grid grid-cols-2 gap-2">
-          {gameModes.map(({ mode, label, icon, description, questions, time, xpReward }) => (
-            <button
-              key={mode}
-              onClick={() => handleCreateGame(mode)}
-              disabled={creating}
-              className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">{icon}</span>
-                <span className="font-medium text-gray-800 dark:text-gray-100 text-sm">{label}</span>
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</div>
-              <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                <span>{questions}Q</span>
-                <span>{time}s</span>
-                <span className="text-purple-500">+{xpReward} XP</span>
-              </div>
-            </button>
-          ))}
+          {gameModes.map(({ mode, label, icon, description, questions, time, xpReward }) => {
+            const colors = MODE_COLORS[mode] || MODE_COLORS['1v1'];
+            return (
+              <button
+                key={mode}
+                onClick={() => handleCreateGame(mode)}
+                disabled={creating}
+                className={`p-3 rounded-lg transition text-left disabled:opacity-50 disabled:cursor-not-allowed border ${colors.bg} ${colors.border} hover:shadow-lg ${colors.glow}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{icon}</span>
+                  <span className={`font-medium text-sm ${colors.text}`}>{label}</span>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</div>
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                  <span>{questions}Q</span>
+                  <span>{time}s</span>
+                  <span className={colors.text}>+{xpReward} XP</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -275,22 +288,25 @@ export default function MultiplayerArena() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6">
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Create Game Room</h3>
           <div className="space-y-2">
-            {gameModes.map(({ mode, label, icon, questions, time, maxPlayers, xpReward }) => (
-              <button
-                key={mode}
-                onClick={() => handleCreateGame(mode)}
-                className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{icon}</span>
-                  <div className="text-left">
-                    <div className="font-medium text-gray-800 dark:text-gray-100 text-sm">{label}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{questions} questions, {time}s each, {maxPlayers} players</div>
+            {gameModes.map(({ mode, label, icon, questions, time, maxPlayers, xpReward }) => {
+              const colors = MODE_COLORS[mode] || MODE_COLORS['1v1'];
+              return (
+                <button
+                  key={mode}
+                  onClick={() => handleCreateGame(mode)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg transition border ${colors.bg} ${colors.border} hover:shadow-lg ${colors.glow}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{icon}</span>
+                    <div className="text-left">
+                      <div className={`font-medium text-sm ${colors.text}`}>{label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{questions} questions, {time}s each, {maxPlayers} players</div>
+                    </div>
                   </div>
-                </div>
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">+{xpReward} XP</span>
-              </button>
-            ))}
+                  <span className={`text-xs font-bold ${colors.text}`}>+{xpReward} XP</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
