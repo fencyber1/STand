@@ -24,6 +24,8 @@ import {
 } from '../../services/multiplayer/multiplayerService';
 import type { GameRoom, Reaction } from '../../types';
 import { SECTORS } from '../../constants';
+import { ACHIEVEMENTS } from '../../constants/achievements';
+import { storage } from '../../services/storage';
 
 export default function GameRoom() {
   const { code } = useParams<{ code: string }>();
@@ -786,6 +788,71 @@ const handleStartGame = async () => {
   if (room.status === 'in_progress' && currentQ) {
     return (
       <div className="max-w-lg mx-auto px-4 py-6">
+        {room.mode === '1v1' && (
+          <div className="relative mb-6 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-900/30 via-black/60 to-blue-900/30" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.08),transparent)]" />
+            <div className="relative flex items-center justify-between px-4 py-6">
+              {/* Left Player */}
+              <div className="flex flex-col items-center gap-2 w-[40%]">
+                <div className="relative">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-red-500 to-red-700 opacity-60 blur-md" />
+                  <img src={room.players[0]?.photoURL || ''} alt={room.players[0]?.displayName} className="relative w-16 h-16 rounded-full object-cover border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.6)]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                  <div className="hidden w-16 h-16 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-white text-xl font-bold shadow-inner">{room.players[0]?.displayName?.charAt(0) || '?'}</div>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-white text-sm truncate max-w-[120px]">{room.players[0]?.displayName || 'Player 1'}</p>
+                  <span className="text-[10px] text-red-300 font-semibold">RED</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] shadow" style={{ backgroundColor: getPlayerRankColor(room.players[0]?.uid || ''), border: '1px solid white' }}>{getPlayerRankIcon(room.players[0]?.uid || '')}</span>
+                  <span className="text-[10px] text-white/70">Lv.{playerLevels[room.players[0]?.uid || ''] || 1}</span>
+                </div>
+                <div className="flex gap-0.5">
+                  {(() => {
+                    const unlocked = room.players[0]?.uid === user?.uid ? storage.getAchievements().map(a => a.id) : [];
+                    const badges = unlocked.length > 0 ? (ACHIEVEMENTS.filter(a => unlocked.includes(a.id)).slice(0, 3).map(a => a.icon)) : (playerLevels[room.players[0]?.uid || ''] || 1) >= 50 ? ['🏆', '👑', '🎯'] : (playerLevels[room.players[0]?.uid || ''] || 1) >= 20 ? ['🔥', '⚡', '📚'] : ['🎯', '💪', '📚'];
+                    return badges.map((emoji, i) => <span key={i} className="text-[10px] bg-white/10 rounded px-1 py-0.5 text-white/80">{emoji}</span>);
+                  })()}
+                </div>
+              </div>
+
+              {/* VS */}
+              <div className="relative flex flex-col items-center shrink-0 mx-2 z-10">
+                <div className="absolute -top-4 -bottom-4 w-[2px] bg-gradient-to-b from-transparent via-red-500/40 via-blue-500/40 to-transparent" />
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-500/40 to-blue-500/40 blur-lg animate-pulse" />
+                  <span className="relative text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-white to-blue-400 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">VS</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-red-500 to-blue-500 animate-pulse shadow-[0_0_15px_rgba(255,255,255,0.3)] mt-1" />
+              </div>
+
+              {/* Right Player */}
+              <div className="flex flex-col items-center gap-2 w-[40%]">
+                <div className="relative">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 opacity-60 blur-md" />
+                  <img src={room.players[1]?.photoURL || ''} alt={room.players[1]?.displayName} className="relative w-16 h-16 rounded-full object-cover border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                  <div className="hidden w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-xl font-bold shadow-inner">{room.players[1]?.displayName?.charAt(0) || '?'}</div>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-white text-sm truncate max-w-[120px]">{room.players[1]?.displayName || 'Player 2'}</p>
+                  <span className="text-[10px] text-blue-300 font-semibold">BLUE</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] shadow" style={{ backgroundColor: getPlayerRankColor(room.players[1]?.uid || ''), border: '1px solid white' }}>{getPlayerRankIcon(room.players[1]?.uid || '')}</span>
+                  <span className="text-[10px] text-white/70">Lv.{playerLevels[room.players[1]?.uid || ''] || 1}</span>
+                </div>
+                <div className="flex gap-0.5">
+                  {(() => {
+                    const unlocked = room.players[1]?.uid === user?.uid ? storage.getAchievements().map(a => a.id) : [];
+                    const badges = unlocked.length > 0 ? (ACHIEVEMENTS.filter(a => unlocked.includes(a.id)).slice(0, 3).map(a => a.icon)) : (playerLevels[room.players[1]?.uid || ''] || 1) >= 50 ? ['🏆', '👑', '🎯'] : (playerLevels[room.players[1]?.uid || ''] || 1) >= 20 ? ['🔥', '⚡', '📚'] : ['🎯', '💪', '📚'];
+                    return badges.map((emoji, i) => <span key={i} className="text-[10px] bg-white/10 rounded px-1 py-0.5 text-white/80">{emoji}</span>);
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
