@@ -274,7 +274,7 @@ export default function GameRoom() {
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 50000)
+        setTimeout(() => reject(new Error('TIMEOUT')), 45000)
       );
 
       const result = await Promise.race([generatePromise, timeoutPromise]);

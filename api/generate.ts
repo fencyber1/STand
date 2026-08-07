@@ -23,7 +23,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const timeout = setTimeout(() => controller.abort(), 35000);
 
     const response = await fetch(NVIDIA_API, {
       method: 'POST',
