@@ -70,7 +70,7 @@ export default async function handler(req: any, res: any) {
     return res.status(response.status).send(text);
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      return res.status(504).json({ error: 'NVIDIA API timed out after 45s' });
+      return res.status(504).json({ error: 'NVIDIA API timed out after 35s' });
     }
     return res.status(500).json({ error: err.message || 'Proxy error' });
   }
