@@ -22,6 +22,9 @@ export default async function handler(req: any, res: any) {
   const wantsStream = req.body.stream === true;
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
     const response = await fetch(NVIDIA_API, {
       method: 'POST',
       headers: {
@@ -35,7 +38,10 @@ export default async function handler(req: any, res: any) {
         max_tokens: maxTokens,
         stream: wantsStream,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (wantsStream && response.body) {
       res.setHeader('Content-Type', 'text/event-stream');
@@ -63,6 +69,9 @@ export default async function handler(req: any, res: any) {
     const text = await response.text();
     return res.status(response.status).send(text);
   } catch (err: any) {
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ error: 'NVIDIA API timed out after 45s' });
+    }
     return res.status(500).json({ error: err.message || 'Proxy error' });
   }
 }

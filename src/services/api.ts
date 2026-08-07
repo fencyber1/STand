@@ -14,7 +14,7 @@ async function callAI(prompt: string): Promise<string> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
+      const timeout = setTimeout(() => controller.abort(), 50000);
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
