@@ -27,7 +27,7 @@ export default function AnimatedBackground() {
     };
 
     const createParticles = () => {
-      const count = Math.floor((canvas.width * canvas.height) / 25000);
+      const count = Math.floor((canvas.width * canvas.height) / 12000);
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
