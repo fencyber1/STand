@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Swords, Users, Trophy, Zap, Crown, Clock, Target,
   Flame, Timer, Award, TrendingUp, Play, Search, Plus,
-  X, LogIn, UserCheck, AlertCircle, Eye,
+  X, LogIn, UserCheck, AlertCircle, Eye, ChevronRight,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import BorderGlow from '../ui/BorderGlow';
 import {
   subscribeToActiveGames,
   getAllGameModes,
@@ -38,14 +39,14 @@ export default function MultiplayerArena() {
   const [joinModalError, setJoinModalError] = useState('');
   const [hostLevels, setHostLevels] = useState<Record<string, number>>({});
 
-const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; text: string }> = {
-  '1v1': { bg: 'bg-red-500/10 dark:bg-red-500/20', border: 'border-red-500/30 dark:border-red-400/30', glow: 'shadow-red-500/20', text: 'text-red-500 dark:text-red-400' },
-  'team': { bg: 'bg-blue-500/10 dark:bg-blue-500/20', border: 'border-blue-500/30 dark:border-blue-400/30', glow: 'shadow-blue-500/20', text: 'text-blue-500 dark:text-blue-400' },
-  'tournament': { bg: 'bg-yellow-500/10 dark:bg-yellow-500/20', border: 'border-yellow-500/30 dark:border-yellow-400/30', glow: 'shadow-yellow-500/20', text: 'text-yellow-500 dark:text-yellow-400' },
-  'blitz': { bg: 'bg-purple-500/10 dark:bg-purple-500/20', border: 'border-purple-500/30 dark:border-purple-400/30', glow: 'shadow-purple-500/20', text: 'text-purple-500 dark:text-purple-400' },
-  'marathon': { bg: 'bg-green-500/10 dark:bg-green-500/20', border: 'border-green-500/30 dark:border-green-400/30', glow: 'shadow-green-500/20', text: 'text-green-500 dark:text-green-400' },
-  'survival': { bg: 'bg-orange-500/10 dark:bg-orange-500/20', border: 'border-orange-500/30 dark:border-orange-400/30', glow: 'shadow-orange-500/20', text: 'text-orange-500 dark:text-orange-400' },
-  'speedrun': { bg: 'bg-cyan-500/10 dark:bg-cyan-500/20', border: 'border-cyan-500/30 dark:border-cyan-400/30', glow: 'shadow-cyan-500/20', text: 'text-cyan-500 dark:text-cyan-400' },
+const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: string; colors: string[]; text: string }> = {
+  '1v1':      { gradient: 'from-red-500 to-red-600', glow: 'shadow-red-500/25', glowColor: '0 80 65', text: 'text-red-400', colors: ['#ef4444', '#f87171', '#dc2626'] },
+  'team':     { gradient: 'from-blue-500 to-blue-600', glow: 'shadow-blue-500/25', glowColor: '220 80 65', text: 'text-blue-400', colors: ['#3b82f6', '#60a5fa', '#2563eb'] },
+  'tournament': { gradient: 'from-yellow-500 to-amber-600', glow: 'shadow-yellow-500/25', glowColor: '45 90 60', text: 'text-yellow-400', colors: ['#f59e0b', '#fbbf24', '#f97316'] },
+  'blitz':    { gradient: 'from-purple-500 to-purple-600', glow: 'shadow-purple-500/25', glowColor: '270 80 65', text: 'text-purple-400', colors: ['#a855f7', '#c084fc', '#7c3aed'] },
+  'marathon': { gradient: 'from-green-500 to-emerald-600', glow: 'shadow-green-500/25', glowColor: '142 80 65', text: 'text-green-400', colors: ['#22c55e', '#4ade80', '#16a34a'] },
+  'survival': { gradient: 'from-orange-500 to-red-600', glow: 'shadow-orange-500/25', glowColor: '25 85 60', text: 'text-orange-400', colors: ['#f97316', '#fb923c', '#ef4444'] },
+  'speedrun': { gradient: 'from-cyan-500 to-sky-600', glow: 'shadow-cyan-500/25', glowColor: '190 90 55', text: 'text-cyan-400', colors: ['#06b6d4', '#22d3ee', '#0ea5e9'] },
 };
 
   const gameModes = getAllGameModes();
@@ -168,49 +169,55 @@ const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; te
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pb-8">
+    <div className="min-h-screen px-4 py-4 pb-24 lg:pb-6 max-w-2xl mx-auto" style={{ background: '#0e1627' }}>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Multiplayer Arena</h1>
-        <button onClick={() => navigate(-1)} className="text-gray-500 dark:text-gray-400 text-sm">
+        <h1 className="text-xl font-bold text-white">Multiplayer Arena</h1>
+        <button onClick={() => navigate(-1)} className="text-gray-400 text-sm">
           {t('Back')}
         </button>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 text-center">
-          <div className="text-xl font-bold text-gray-800 dark:text-gray-100">{playerStats?.matchesPlayed || 0}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Matches</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 text-center">
-          <div className="text-xl font-bold text-green-600 dark:text-green-400">{playerStats?.wins || 0}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Wins</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 text-center">
-          <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{playerStats?.winRate || 0}%</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
-        </div>
+        <BorderGlow backgroundColor="#141e35" borderRadius={14} glowColor="220 60 60" glowRadius={16} glowIntensity={0.7} edgeSensitivity={28} colors={['#6366f1', '#818cf8', '#4f46e5']}>
+          <div className="p-3 text-center">
+            <div className="text-xl font-bold text-white">{playerStats?.matchesPlayed || 0}</div>
+            <div className="text-xs text-gray-400">Matches</div>
+          </div>
+        </BorderGlow>
+        <BorderGlow backgroundColor="#141e35" borderRadius={14} glowColor="142 80 60" glowRadius={16} glowIntensity={0.7} edgeSensitivity={28} colors={['#22c55e', '#4ade80', '#16a34a']}>
+          <div className="p-3 text-center">
+            <div className="text-xl font-bold text-green-400">{playerStats?.wins || 0}</div>
+            <div className="text-xs text-gray-400">Wins</div>
+          </div>
+        </BorderGlow>
+        <BorderGlow backgroundColor="#141e35" borderRadius={14} glowColor="270 80 60" glowRadius={16} glowIntensity={0.7} edgeSensitivity={28} colors={['#a855f7', '#c084fc', '#7c3aed']}>
+          <div className="p-3 text-center">
+            <div className="text-xl font-bold text-purple-400">{playerStats?.winRate || 0}%</div>
+            <div className="text-xs text-gray-400">Win Rate</div>
+          </div>
+        </BorderGlow>
       </div>
 
       {creating && (
-        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-blue-600 dark:text-blue-400">Creating room...</span>
+        <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-blue-400">Creating room...</span>
         </div>
       )}
 
       {createError && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-          <span className="text-sm text-red-600 dark:text-red-400">{createError}</span>
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <span className="text-sm text-red-400">{createError}</span>
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => setCreateError('')}
-              className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+              className="text-xs px-2 py-1 bg-white/10 text-gray-300 rounded"
             >
               Dismiss
             </button>
             <button
               onClick={() => handleCreateGame(lastMode)}
-              className="text-xs px-2 py-1 bg-primary-600 text-white rounded"
+              className="text-xs px-2 py-1 bg-violet-600 text-white rounded"
             >
               Retry
             </button>
@@ -218,29 +225,35 @@ const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; te
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Quick Play</h3>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="mb-6">
+        <h3 className="font-semibold text-white mb-3">Quick Play</h3>
+        <div className="grid grid-cols-2 gap-3">
           {gameModes.map(({ mode, label, icon, description, questions, time, xpReward }) => {
             const colors = MODE_COLORS[mode] || MODE_COLORS['1v1'];
             return (
-              <button
-                key={mode}
-                onClick={() => handleCreateGame(mode)}
-                disabled={creating}
-                className={`p-3 rounded-lg transition text-left disabled:opacity-50 disabled:cursor-not-allowed border ${colors.bg} ${colors.border} hover:shadow-lg ${colors.glow}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">{icon}</span>
-                  <span className={`font-medium text-sm ${colors.text}`}>{label}</span>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</div>
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                  <span>{questions}Q</span>
-                  <span>{time}s</span>
-                  <span className={colors.text}>+{xpReward} XP</span>
-                </div>
-              </button>
+              <BorderGlow key={mode} backgroundColor="#141e35" borderRadius={16} glowColor={colors.glowColor} glowRadius={20}
+                glowIntensity={0.8} edgeSensitivity={35} colors={colors.colors}>
+                <button
+                  onClick={() => handleCreateGame(mode)}
+                  disabled={creating}
+                  className="relative group p-4 overflow-hidden block w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-[0.06] group-hover:opacity-[0.12] transition-opacity`} />
+                  <div className="relative">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center mb-3 shadow-lg ${colors.glow}`}>
+                      <span className="text-white text-lg leading-none">{icon}</span>
+                    </div>
+                    <p className={`font-semibold text-sm ${colors.text}`}>{label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                      <span>{questions}Q</span>
+                      <span>{time}s</span>
+                      <span className={`font-bold ${colors.text}`}>+{xpReward} XP</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                </button>
+              </BorderGlow>
             );
           })}
         </div>
@@ -249,203 +262,222 @@ const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; te
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => { setShowJoinCode(true); setShowCreate(false); setJoinError(''); }}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-primary-300 dark:hover:border-primary-600 transition"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:border-violet-400/40 transition"
         >
           <Search size={16} /> Join with Code
         </button>
         <button
           onClick={() => { setShowCreate(true); setShowJoinCode(false); }}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition"
         >
           <Plus size={16} /> Create Room
         </button>
       </div>
 
       {showJoinCode && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Enter Room Code</h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="ABC123"
-              maxLength={6}
-              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-center text-lg font-mono tracking-widest text-gray-800 dark:text-gray-100 focus:outline-none focus:border-primary-500"
-            />
-            <button
-              onClick={handleJoinWithCode}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition"
-            >
-              Join
-            </button>
+        <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="220 60 60" glowRadius={20} glowIntensity={0.7} edgeSensitivity={30} colors={['#6366f1', '#818cf8', '#4f46e5']}>
+          <div className="p-4 mb-6">
+            <h3 className="font-semibold text-white mb-3">Enter Room Code</h3>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                maxLength={6}
+                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-center text-lg font-mono tracking-widest text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+              />
+              <button
+                onClick={handleJoinWithCode}
+                className="px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition"
+              >
+                Join
+              </button>
+            </div>
+            {joinError && <p className="text-red-400 text-xs mt-2">{joinError}</p>}
           </div>
-          {joinError && <p className="text-red-500 text-xs mt-2">{joinError}</p>}
-        </div>
+        </BorderGlow>
       )}
 
       {showCreate && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Create Game Room</h3>
-          <div className="space-y-2">
+        <div className="mb-6">
+          <h3 className="font-semibold text-white mb-3">Create Game Room</h3>
+          <div className="space-y-3">
             {gameModes.map(({ mode, label, icon, questions, time, maxPlayers, xpReward }) => {
               const colors = MODE_COLORS[mode] || MODE_COLORS['1v1'];
               return (
-                <button
-                  key={mode}
-                  onClick={() => handleCreateGame(mode)}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition border ${colors.bg} ${colors.border} hover:shadow-lg ${colors.glow}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{icon}</span>
-                    <div className="text-left">
-                      <div className={`font-medium text-sm ${colors.text}`}>{label}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{questions} questions, {time}s each, {maxPlayers} players</div>
+                <BorderGlow key={mode} backgroundColor="#141e35" borderRadius={16} glowColor={colors.glowColor} glowRadius={20}
+                  glowIntensity={0.8} edgeSensitivity={35} colors={colors.colors}>
+                  <button
+                    onClick={() => handleCreateGame(mode)}
+                    className="relative group w-full flex items-center justify-between p-4 overflow-hidden text-left"
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-[0.06] group-hover:opacity-[0.12] transition-opacity`} />
+                    <div className="relative flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shrink-0 shadow-lg ${colors.glow}`}>
+                        <span className="text-white text-lg leading-none">{icon}</span>
+                      </div>
+                      <div>
+                        <div className={`font-semibold text-sm ${colors.text}`}>{label}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{questions} questions, {time}s each, {maxPlayers} players</div>
+                      </div>
                     </div>
-                  </div>
-                  <span className={`text-xs font-bold ${colors.text}`}>+{xpReward} XP</span>
-                </button>
+                    <div className="relative flex items-center gap-1">
+                      <span className={`text-xs font-bold ${colors.text}`}>+{xpReward} XP</span>
+                      <ChevronRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+                    </div>
+                  </button>
+                </BorderGlow>
               );
             })}
           </div>
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+<div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100">Active Games</h3>
-          <button onClick={() => { setActiveGames([]); setDebug('Refreshing...'); }} className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Refresh</button>
+          <h3 className="font-semibold text-white">Active Games</h3>
+          <button onClick={() => { setActiveGames([]); setDebug('Refreshing...'); }} className="text-xs text-violet-400 hover:text-violet-300">Refresh</button>
         </div>
-        {debug && <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{debug}</p>}
+        {debug && <p className="text-xs text-gray-500 mb-2">{debug}</p>}
         {activeGames.length === 0 ? (
-          <div className="text-center py-6">
-            <Swords size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">No active games. Create one!</p>
-          </div>
+          <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="220 60 65" glowRadius={20} glowIntensity={0.6} edgeSensitivity={30} colors={['#6366f1', '#818cf8', '#4f46e5']}>
+            <div className="p-8 text-center">
+              <Swords size={32} className="mx-auto mb-2 text-gray-600" />
+              <p className="text-gray-500 text-sm">No active games. Create one!</p>
+            </div>
+          </BorderGlow>
         ) : (
-           <div className="space-y-2">
+           <div className="space-y-3">
              {activeGames.slice(0, 10).map((game) => {
                const isFull = game.players.length >= game.maxPlayers;
                const isLive = game.status === 'in_progress' || game.status === 'finished';
                const spectatorCount = game.spectators?.length || 0;
                const hostLevel = hostLevels[game.host] || 1;
+               const colors = MODE_COLORS[game.mode] || MODE_COLORS['1v1'];
 
                return (
-                 <button
-                   key={game.id}
-                   onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
-                   className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                 >
-                   <div className="flex items-center gap-3">
-                     <div className={`w-2 h-2 rounded-full ${game.status === 'waiting' ? 'bg-green-500' : game.status === 'in_progress' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-400'}`} />
-                     <div className="text-left">
-                       <div className="flex items-center gap-1">
-                         <span
-                           className="w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
-                           style={{ backgroundColor: getRankColor(hostLevel), border: '1px solid white' }}
-                         >
-                           {getRankIcon(hostLevel)}
-                         </span>
-                         <span className="font-medium text-gray-800 dark:text-gray-100 text-sm">
-                           {game.hostName}'s Game
-                           {isLive && <span className="ml-1 text-xs text-yellow-500">● LIVE</span>}
-                         </span>
+                 <BorderGlow key={game.id} backgroundColor="#141e35" borderRadius={16} glowColor={colors.glowColor} glowRadius={18}
+                   glowIntensity={0.75} edgeSensitivity={30} colors={colors.colors}>
+                   <button
+                     onClick={() => { setSelectedRoom(game); setJoinModalError(''); }}
+                     className="relative group w-full flex items-center justify-between p-4 overflow-hidden text-left"
+                   >
+                     <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-[0.05] group-hover:opacity-[0.1] transition-opacity`} />
+                     <div className="relative flex items-center gap-3 min-w-0">
+                       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shrink-0 shadow-lg ${colors.glow}`}>
+                         {isLive ? <Zap size={18} className="text-white" /> : <Swords size={18} className="text-white" />}
                        </div>
-                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                         {game.mode} • {game.players.length}/{game.maxPlayers} players
-                         {spectatorCount > 0 && <span className="ml-1 text-purple-400">• {spectatorCount} watching</span>}
+                       <div className="min-w-0">
+                         <div className="flex items-center gap-1.5">
+                           <span
+                             className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] shrink-0"
+                             style={{ backgroundColor: getRankColor(hostLevel), border: '1px solid white' }}
+                           >
+                             {getRankIcon(hostLevel)}
+                           </span>
+                           <span className="font-medium text-white text-sm truncate">
+                             {game.hostName}'s Game
+                             {isLive && <span className="ml-1 text-xs text-yellow-400">● LIVE</span>}
+                           </span>
+                         </div>
+                         <div className="text-xs text-gray-400 mt-0.5">
+                           <span className="capitalize">{game.mode}</span> • {game.players.length}/{game.maxPlayers} players
+                           {spectatorCount > 0 && <span className="ml-1 text-purple-400">• {spectatorCount} watching</span>}
+                         </div>
                        </div>
                      </div>
-                   </div>
-                   <div className="text-xs text-gray-400">
-                     {game.status === 'waiting' ? (isFull ? 'Full' : 'Waiting') : game.status === 'in_progress' ? 'In Progress' : 'Finished'}
-                   </div>
-                 </button>
+                     <div className={`relative flex items-center gap-1 shrink-0 text-xs font-medium ${game.status === 'waiting' ? (isFull ? 'text-amber-400' : 'text-green-400') : game.status === 'in_progress' ? 'text-yellow-400' : 'text-gray-500'}`}>
+                       {game.status === 'waiting' ? (isFull ? 'Full' : 'Waiting') : game.status === 'in_progress' ? 'In Progress' : 'Finished'}
+                     </div>
+                   </button>
+                 </BorderGlow>
                );
              })}
-          </div>
+         </div>
         )}
       </div>
 
       {selectedRoom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setSelectedRoom(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => setSelectedRoom(null)}>
+          <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor={(() => { const c = MODE_COLORS[selectedRoom.mode] || MODE_COLORS['1v1']; return c.glowColor; })()} glowRadius={25} glowIntensity={0.9} edgeSensitivity={35} colors={(() => { const c = MODE_COLORS[selectedRoom.mode] || MODE_COLORS['1v1']; return c.colors; })()}>
+          <div className="p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Game Room</h3>
-              <button onClick={() => setSelectedRoom(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <h3 className="text-lg font-bold text-white">Game Room</h3>
+              <button onClick={() => setSelectedRoom(null)} className="text-gray-400 hover:text-white">
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-3 mb-5">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Host</span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedRoom.hostName}</span>
+                <span className="text-sm text-gray-500">Host</span>
+                <span className="text-sm font-medium text-white">{selectedRoom.hostName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Mode</span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100 capitalize">{selectedRoom.mode}</span>
+                <span className="text-sm text-gray-500">Mode</span>
+                <span className={`text-sm font-medium capitalize ${(() => { const c = MODE_COLORS[selectedRoom.mode] || MODE_COLORS['1v1']; return c.text; })()}`}>{selectedRoom.mode}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Players</span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedRoom.players.length}/{selectedRoom.maxPlayers}</span>
+                <span className="text-sm text-gray-500">Players</span>
+                <span className="text-sm font-medium text-white">{selectedRoom.players.length}/{selectedRoom.maxPlayers}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
-                <span className={`text-sm font-medium ${selectedRoom.status === 'waiting' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                <span className="text-sm text-gray-500">Status</span>
+                <span className={`text-sm font-medium ${selectedRoom.status === 'waiting' ? 'text-green-400' : 'text-yellow-400'}`}>
                   {selectedRoom.status === 'waiting' ? 'Waiting' : 'In Progress'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Subject</span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedRoom.subject}</span>
+                <span className="text-sm text-gray-500">Subject</span>
+                <span className="text-sm font-medium text-white">{selectedRoom.subject}</span>
               </div>
               {selectedRoom.roomCode && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Room Code</span>
-                  <span className="text-sm font-mono font-bold text-primary-600 dark:text-primary-400">{selectedRoom.roomCode}</span>
+                  <span className="text-sm text-gray-500">Room Code</span>
+                  <span className="text-sm font-mono font-bold text-violet-400">{selectedRoom.roomCode}</span>
                 </div>
               )}
             </div>
 
             {joinModalError && (
-              <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-2">
-                <AlertCircle size={14} className="text-red-500 shrink-0" />
-                <span className="text-xs text-red-600 dark:text-red-400">{joinModalError}</span>
+              <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                <AlertCircle size={14} className="text-red-400 shrink-0" />
+                <span className="text-xs text-red-400">{joinModalError}</span>
               </div>
             )}
 
             {selectedRoom.host === user?.uid ? (
               <div className="space-y-2">
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center gap-2">
-                  <UserCheck size={14} className="text-blue-500 shrink-0" />
-                  <span className="text-xs text-blue-600 dark:text-blue-400">This is your room (host)</span>
+                <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center gap-2">
+                  <UserCheck size={14} className="text-blue-400 shrink-0" />
+                  <span className="text-xs text-blue-300">This is your room (host)</span>
                 </div>
                 <button
                   onClick={() => navigate(`/multiplayer/${selectedRoom.id}`)}
-                  className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-violet-600 text-white rounded-lg font-semibold text-sm hover:bg-violet-700 transition flex items-center justify-center gap-2"
                 >
                   <Play size={16} /> Enter Room
                 </button>
               </div>
             ) : selectedRoom.players.some((p) => p.uid === user?.uid) ? (
               <div className="space-y-2">
-                <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center gap-2">
-                  <UserCheck size={14} className="text-green-500 shrink-0" />
-                  <span className="text-xs text-green-600 dark:text-green-400">You're already in this room</span>
+                <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+                  <UserCheck size={14} className="text-green-400 shrink-0" />
+                  <span className="text-xs text-green-300">You're already in this room</span>
                 </div>
                 <button
                   onClick={() => navigate(`/multiplayer/${selectedRoom.id}`)}
-                  className="w-full py-2.5 bg-primary-600 text-white rounded-lg font-semibold text-sm hover:bg-primary-700 transition flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-violet-600 text-white rounded-lg font-semibold text-sm hover:bg-violet-700 transition flex items-center justify-center gap-2"
                 >
                   <Play size={16} /> Enter Room
                 </button>
               </div>
             ) : selectedRoom.status === 'waiting' && selectedRoom.players.length >= selectedRoom.maxPlayers ? (
               <div className="space-y-2">
-                <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
-                  <AlertCircle size={14} className="text-yellow-500 shrink-0" />
-                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Room is full — Spectate instead!</span>
+                <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={14} className="text-yellow-400 shrink-0" />
+                  <span className="text-xs text-yellow-300">Room is full — Spectate instead!</span>
                 </div>
                 <button
                   onClick={() => navigate(`/multiplayer/${selectedRoom.id}?spectate=true`)}
@@ -456,9 +488,9 @@ const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; te
               </div>
             ) : selectedRoom.status !== 'waiting' ? (
               <div className="space-y-2">
-                <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center gap-2">
-                  <AlertCircle size={14} className="text-yellow-500 shrink-0" />
-                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Game in progress — Watch live!</span>
+                <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={14} className="text-yellow-400 shrink-0" />
+                  <span className="text-xs text-yellow-300">Game in progress — Watch live!</span>
                 </div>
                 <button
                   onClick={() => navigate(`/multiplayer/${selectedRoom.id}?spectate=true`)}
@@ -486,6 +518,7 @@ const MODE_COLORS: Record<string, { bg: string; border: string; glow: string; te
               </button>
             )}
           </div>
+          </BorderGlow>
         </div>
       )}
     </div>
