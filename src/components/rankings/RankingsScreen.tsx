@@ -176,7 +176,7 @@ export default function RankingsScreen() {
                 borderRadius={10}
                 glowColor={isCurrentUser ? '140 200 80' : '100 100 100'}
                 glowRadius={isCurrentUser ? 15 : 5}
-                glowIntensity={isCurrentUser ? 0.3 : 0.1}
+                glowIntensity={isCurrentUser ? 0.8 : 0.5}
                 edgeSensitivity={25}
                 colors={isCurrentUser ? ['#22c55e', '#16a34a', '#15803d'] : ['#6b7280', '#4b5563', '#374151']}
               >

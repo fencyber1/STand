@@ -140,7 +140,7 @@ function OverviewTab({ userRanking, stats, displayRank }: { userRanking: UserRan
 
   return (
     <div className="space-y-4">
-      <BorderGlow backgroundColor="#1f2937" borderRadius={16} glowColor="140 200 80" glowRadius={15} glowIntensity={0.3} edgeSensitivity={25} colors={['#22c55e', '#16a34a', '#15803d']}>
+      <BorderGlow backgroundColor="#1f2937" borderRadius={16} glowColor="140 200 80" glowRadius={15} glowIntensity={0.7} edgeSensitivity={25} colors={['#22c55e', '#16a34a', '#15803d']}>
         <div className="p-5 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="text-center">
