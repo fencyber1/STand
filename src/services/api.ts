@@ -11,10 +11,10 @@ function getApiUrl(): string {
 async function callAI(prompt: string): Promise<string> {
   let lastError = '';
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), 20000);
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 

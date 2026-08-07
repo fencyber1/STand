@@ -177,7 +177,7 @@ export default function GameRoom() {
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
+        setTimeout(() => reject(new Error('TIMEOUT')), 50000)
       );
 
       const result = await Promise.race([generatePromise, timeoutPromise]);
@@ -199,7 +199,7 @@ export default function GameRoom() {
     } catch (e: any) {
       console.error('[MP] Question generation failed:', e);
       if (e.message === 'TIMEOUT') {
-        alert('Question generation timed out after 30s. Check NVIDIA API key and try again.');
+        alert('Question generation timed out. The AI service may be slow. Please try again.');
       } else {
         alert(`Failed to generate questions: ${e.message}`);
       }
