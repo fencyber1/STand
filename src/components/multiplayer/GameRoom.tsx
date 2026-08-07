@@ -49,6 +49,7 @@ export default function GameRoom() {
   const [searchParams] = useSearchParams();
   const isSpectator = searchParams.get('spectate') === 'true';
   const [spectatorChat, setSpectatorChat] = useState('');
+  const [waitingChat, setWaitingChat] = useState('');
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const reactionEmojis = ['🔥', '❤️', '👏', '😂', '⚡', '🎉', '💪', '👀'];
 
@@ -80,6 +81,18 @@ export default function GameRoom() {
       type: 'message',
     });
     setSpectatorChat('');
+  };
+
+  const handleSendWaitingChat = async () => {
+    if (!user || !roomId || !waitingChat.trim()) return;
+    await sendChatMessage(roomId, {
+      uid: user.uid,
+      name: user.fullName || 'Player',
+      text: waitingChat.trim(),
+      type: 'message',
+    });
+    setWaitingChat('');
+    setTimeout(() => fetchRoom(), 500);
   };
 
   const fetchRoom = useCallback(async () => {
@@ -459,6 +472,38 @@ export default function GameRoom() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageCircle size={14} className="text-gray-400" />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Chat</span>
+          </div>
+          <div className="max-h-40 overflow-y-auto mb-3 space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2">
+            {(room.liveChat || []).filter((m) => m.type === 'message').length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No messages yet. Say hi!</p>
+            ) : (
+              room.liveChat.filter((m) => m.type === 'message').slice(-20).map((msg, i) => (
+                <div key={i} className="text-xs">
+                  <span className="font-medium text-primary-600 dark:text-primary-400">{msg.name}: </span>
+                  <span className="text-gray-700 dark:text-gray-300">{msg.text}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={waitingChat}
+              onChange={(e) => setWaitingChat(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendWaitingChat()}
+              placeholder="Type a message..."
+              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-primary-500"
+            />
+            <button onClick={handleSendWaitingChat} className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition">
+              <Send size={14} />
+            </button>
           </div>
         </div>
 
