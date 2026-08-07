@@ -261,7 +261,7 @@ export default function GameRoom() {
       const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
-      const questionCount = room.totalQuestions;
+      const questionCount = Math.min(room.totalQuestions, 3);
       console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
 
       const generatePromise = generateQuestions({
