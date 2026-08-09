@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Timer, ChevronDown, ChevronUp, Loader2, Bookmark, BookmarkCheck, Volume2, VolumeX, Calculator, BookOpen, Zap, Lightbulb, X, StickyNote, Check } from 'lucide-react';
 import type { Question, QuestionTiming } from '../../types';
 import { getDeepExplanation, gradeTheoryAnswer, generateQuestionsProgressive, getDocumentQuestionsProgressive } from '../../services/api';
 import { saveDailyChallengeResult } from '../../services/dailyChallenge';
@@ -554,22 +554,29 @@ export default function QuizScreen() {
               const correctVal = stripPrefix(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
               const isCorrectOpt = stripPrefix(opt) === correctVal;
               const isSelectedWrong = showResult && selectedAnswer === opt && !isCorrectOpt;
+              const isSelected = selectedAnswer === opt && !showResult;
               return (
                 <button
                   key={i}
                   onClick={() => handleMCQSelect(opt)}
                   disabled={showResult}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition ${
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${
                     showResult && isCorrectOpt
                       ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                       : isSelectedWrong
                       ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                      : selectedAnswer === opt
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : isSelected
+                      ? 'border-primary-500 bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-200 border-l-4 border-l-primary-600 shadow-lg shadow-primary-500/20 scale-[1.01]'
                       : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:border-primary-400 dark:hover:border-primary-500'
                   }`}
                 >
-                  {opt}
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                    isSelected ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}>
+                    {isSelected ? <Check size={16} /> : String.fromCharCode(65 + i)}
+                  </span>
+                  <span className="flex-1">{opt}</span>
+                  {isSelected && <CheckCircle size={18} className="text-primary-500 shrink-0" />}
                 </button>
               );
             })}
@@ -583,21 +590,23 @@ export default function QuizScreen() {
               const correctVal = stripPrefix(String(Array.isArray(current.correctAnswer) ? current.correctAnswer[0] : current.correctAnswer));
               const isCorrect = stripPrefix(val) === correctVal;
               const isSelectedWrong = showResult && selectedAnswer === val && !isCorrect;
+              const isSelected = selectedAnswer === val && !showResult;
               return (
                 <button
                   key={val}
                   onClick={() => handleTrueFalseSelect(val)}
                   disabled={showResult}
-                  className={`flex-1 py-4 rounded-lg border-2 text-lg font-semibold transition ${
+                  className={`flex-1 py-4 rounded-lg border-2 text-lg font-semibold transition-all flex items-center justify-center gap-2 ${
                     showResult && isCorrect
                       ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                       : isSelectedWrong
                       ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                      : selectedAnswer === val
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300'
+                      : isSelected
+                      ? 'border-primary-500 bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-200 border-l-4 border-l-primary-600 shadow-lg shadow-primary-500/20 scale-[1.02]'
                       : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:border-primary-400 dark:hover:border-primary-500'
                   }`}
                 >
+                  {isSelected && <Check size={20} />}
                   {val}
                 </button>
               );

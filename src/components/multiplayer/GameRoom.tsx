@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Clock, CheckCircle, XCircle, Users, Crown, Trophy,
-  Zap, MessageCircle, Send, Eye, RefreshCw, ArrowRight, Loader2, LogOut,
+  Zap, MessageCircle, Send, Eye, RefreshCw, ArrowRight, Loader2, LogOut, Check,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -911,12 +911,15 @@ const handleStartGame = async () => {
                   key={idx}
                   onClick={() => handleAnswer(option)}
                   disabled={hasAnswered}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition text-left ${borderColor} ${isSelected || (hasAnswered && isCorrectAnswer) ? (isSelected && isCorrectAnswer ? 'bg-green-50 dark:bg-green-900/20' : hasAnswered && isCorrectAnswer ? 'bg-green-50 dark:bg-green-900/20' : isSelected && !isCorrectAnswer ? 'bg-red-50 dark:bg-red-900/20' : '') : 'hover:border-primary-300 dark:hover:border-primary-600'}`}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${borderColor} ${isSelected && !hasAnswered ? 'bg-primary-100 dark:bg-primary-900/40 border-l-4 border-l-primary-600 shadow-lg shadow-primary-500/20 scale-[1.01]' : isSelected || (hasAnswered && isCorrectAnswer) ? (isSelected && isCorrectAnswer ? 'bg-green-50 dark:bg-green-900/20' : hasAnswered && isCorrectAnswer ? 'bg-green-50 dark:bg-green-900/20' : isSelected && !isCorrectAnswer ? 'bg-red-50 dark:bg-red-900/20' : '') : 'hover:border-primary-300 dark:hover:border-primary-600'}`}
                 >
                   <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${bgColor} ${textColor}`}>
-                    {hasAnswered && isCorrectAnswer ? <CheckCircle size={16} /> : hasAnswered && isSelected && !isCorrectAnswer ? <XCircle size={16} /> : letter}
+                    {hasAnswered && isCorrectAnswer ? <CheckCircle size={16} /> : hasAnswered && isSelected && !isCorrectAnswer ? <XCircle size={16} /> : isSelected ? <Check size={16} /> : letter}
                   </span>
                   <span className="text-sm text-gray-800 dark:text-gray-100 flex-1">{option}</span>
+                  {isSelected && !hasAnswered && (
+                    <CheckCircle size={16} className="text-primary-500 shrink-0" />
+                  )}
                   {hasAnswered && isCorrectAnswer && (
                     <CheckCircle size={16} className="text-green-500" />
                   )}
