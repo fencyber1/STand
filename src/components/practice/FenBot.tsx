@@ -300,7 +300,7 @@ export default function FenBot() {
   const [mode, setMode] = useState<'teach' | 'fast'>('teach');
   const [fastLength, setFastLength] = useState<'short' | 'medium' | 'detailed'>('medium');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -366,6 +366,14 @@ export default function FenBot() {
   // Sync refs with state to avoid stale closures
   useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }, [input]);
 
   // Voice recognition setup
   const SpeechRecognitionAPI = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
@@ -757,6 +765,10 @@ export default function FenBot() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   }, [input, sendMessage]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
+
   return (
     <div className="h-full flex bg-[#0a0e1a] relative overflow-hidden">
       {/* Overlay */}
@@ -958,7 +970,7 @@ export default function FenBot() {
                       </div>
                     )}
                     {!listening && (
-                      <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2" disabled={loading} />
+                      <textarea ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2 resize-none overflow-hidden max-h-[120px]" rows={1} disabled={loading} />
                     )}
                     {voiceSupported && (
                       <button
@@ -1131,7 +1143,7 @@ export default function FenBot() {
                     </div>
                   )}
                   {!listening && (
-                    <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2" disabled={loading} />
+                    <textarea ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Ask me anything ..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none py-2 resize-none overflow-hidden max-h-[120px]" rows={1} disabled={loading} />
                   )}
                   {voiceSupported && (
                     <button
