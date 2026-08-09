@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Send, Loader2, Sparkles, Plus, Trash2, Clock } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Sparkles, Plus, Trash2, Clock, Save, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { loadStudyPlanConversations, saveStudyPlanConversation, deleteStudyPlanConversation, type StudyPlanConversation, type StudyPlanMessage } from '../../services/studyPlanChatService';
+import { storage } from '../../services/storage';
+import { SECTORS } from '../../constants';
 
 function getApiUrl(): string { return '/api/generate'; }
 function getHeaders(): Record<string, string> { return { 'Content-Type': 'application/json' }; }
@@ -54,6 +56,12 @@ export default function StudyPlanAI({ open, onClose }: Props) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveGoal, setSaveGoal] = useState('');
+  const [saveTargetDate, setSaveTargetDate] = useState('');
+  const [saveDailyGoal, setSaveDailyGoal] = useState(30);
+  const [saveSubjects, setSaveSubjects] = useState<string[]>([]);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -270,9 +278,49 @@ export default function StudyPlanAI({ open, onClose }: Props) {
     }
   }, [handleSend]);
 
+  const extractPlanData = useCallback(() => {
+    const allText = messages.map((m) => m.content).join(' ');
+    const foundSubjects = SECTORS.filter((s) => allText.toLowerCase().includes(s.toLowerCase()));
+    const dateMatch = allText.match(/\b(\d{4}-\d{1,2}-\d{1,2})\b/) || allText.match(/(?:by|before|until|target[:\s]+)\s*(\w+\s+\d{1,2},?\s*\d{4})/i);
+    const goal = activeConvo?.title && activeConvo.title !== 'New Study Plan' ? activeConvo.title : (messages.find((m) => m.role === 'user')?.content?.slice(0, 80) || '');
+    setSaveGoal(goal);
+    setSaveSubjects(foundSubjects.length > 0 ? foundSubjects : []);
+    setSaveTargetDate(dateMatch ? dateMatch[1] : '');
+    setSaveDailyGoal(30);
+    setSaveSuccess(false);
+    setShowSaveModal(true);
+  }, [messages, activeConvo]);
+
+  const handleSavePlan = useCallback(() => {
+    if (!saveGoal.trim() || saveSubjects.length === 0) return;
+    const aiContent = messages.filter((m) => m.role === 'assistant').map((m) => m.content).join('\n\n');
+    const start = new Date();
+    const end = saveTargetDate ? new Date(saveTargetDate) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    const plan = {
+      id: Date.now().toString(),
+      goal: saveGoal.trim(),
+      targetDate: saveTargetDate || end.toISOString().split('T')[0],
+      dailyGoal: saveDailyGoal,
+      currentStreak: 0,
+      completedDays: 0,
+      totalDays,
+      subjects: saveSubjects,
+      content: aiContent,
+    };
+    storage.saveStudyPlan(plan);
+    setSaveSuccess(true);
+    setTimeout(() => setShowSaveModal(false), 1200);
+  }, [saveGoal, saveTargetDate, saveDailyGoal, saveSubjects, messages]);
+
+  const toggleSaveSubject = (s: string) => {
+    setSaveSubjects((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+  };
+
   if (!open) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0e1627' }}>
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/10" style={{ background: '#111827' }}>
@@ -291,6 +339,11 @@ export default function StudyPlanAI({ open, onClose }: Props) {
         <button onClick={handleNewChat} className="text-gray-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/10" title="New chat">
           <Plus size={18} />
         </button>
+        {activeId && messages.length > 1 && !loading && (
+          <button onClick={extractPlanData} className="text-gray-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/10" title="Save plan">
+            <Save size={18} />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-1 min-h-0">
@@ -411,6 +464,50 @@ export default function StudyPlanAI({ open, onClose }: Props) {
         </div>
       </div>
     </div>
+    {showSaveModal && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4" onClick={() => setShowSaveModal(false)}>
+        <div className="bg-[#141926] rounded-2xl border border-white/10 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <h3 className="text-white font-bold flex items-center gap-2"><Save size={18} className="text-violet-400" /> Save Study Plan</h3>
+            <button onClick={() => setShowSaveModal(false)} className="text-gray-400 hover:text-white transition text-lg leading-none">&times;</button>
+          </div>
+          {saveSuccess ? (
+            <div className="p-8 text-center">
+              <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3"><Check size={28} className="text-green-400" /></div>
+              <p className="text-white font-semibold mb-1">Plan Saved!</p>
+              <p className="text-gray-400 text-sm">Find it in Study Plans</p>
+            </div>
+          ) : (
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Goal</label>
+                <input type="text" value={saveGoal} onChange={(e) => setSaveGoal(e.target.value)} placeholder="e.g. Ace my WAEC Mathematics exam" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-violet-500 transition" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Target Date</label>
+                  <input type="date" value={saveTargetDate} onChange={(e) => setSaveTargetDate(e.target.value)} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-violet-500 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Daily Goal (min)</label>
+                  <input type="number" value={saveDailyGoal} onChange={(e) => setSaveDailyGoal(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-violet-500 transition" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Subjects</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {SECTORS.slice(0, 8).map((s) => (
+                    <button key={s} onClick={() => toggleSaveSubject(s)} className={`px-2.5 py-1 text-xs rounded-full font-medium transition ${saveSubjects.includes(s) ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{s}</button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleSavePlan} disabled={!saveGoal.trim() || saveSubjects.length === 0} className="w-full py-2.5 bg-violet-600 text-white rounded-lg font-semibold text-sm hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition">Save Plan</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { storage } from '../../services/storage';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Plus, Trash2, CalendarDays, Target, Flame, Sparkles } from 'lucide-react';
+import { Plus, Trash2, CalendarDays, Target, Flame, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { SECTORS } from '../../constants';
 import StudyPlanAI from './StudyPlanAI';
 
@@ -14,6 +14,7 @@ interface StudyPlan {
   completedDays: number;
   totalDays: number;
   subjects: string[];
+  content?: string;
 }
 
 export default function StudyPlansScreen() {
@@ -63,6 +64,10 @@ export default function StudyPlansScreen() {
       setPlans(storage.getStudyPlans());
     }
   };
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const toggleExpand = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
   const toggleSubject = (s: string) => {
     setSelectedSubjects((prev) =>
@@ -213,12 +218,34 @@ export default function StudyPlansScreen() {
                     </span>
                   ))}
                 </div>
+
+                {plan.content && (
+                  <div className="mt-3">
+                    <button onClick={() => toggleExpand(plan.id)} className="flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 hover:underline">
+                      <Sparkles size={12} />
+                      AI-generated plan
+                      {expandedId === plan.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                    {expandedId === plan.id && (
+                      <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 text-xs text-gray-700 dark:text-gray-300 leading-relaxed max-h-64 overflow-y-auto">
+                        {plan.content.split('\n').map((line, i) => {
+                          if (line.startsWith('### ')) return <p key={i} className="font-bold text-gray-900 dark:text-gray-100 mt-2 mb-1">{line.slice(4)}</p>;
+                          if (line.startsWith('## ')) return <p key={i} className="font-bold text-gray-900 dark:text-gray-100 mt-2 mb-1">{line.slice(3)}</p>;
+                          if (line.startsWith('# ')) return <p key={i} className="font-bold text-gray-900 dark:text-gray-100 text-sm mt-2 mb-1">{line.slice(2)}</p>;
+                          if (line.startsWith('- ') || line.startsWith('* ')) return <p key={i} className="ml-2">• {line.slice(2)}</p>;
+                          if (line.trim() === '') return <br key={i} />;
+                          return <p key={i} className="my-0.5">{line}</p>;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
-      <StudyPlanAI open={showAI} onClose={() => setShowAI(false)} />
+      <StudyPlanAI open={showAI} onClose={() => { setShowAI(false); setPlans(storage.getStudyPlans()); }} />
     </div>
   );
 }
