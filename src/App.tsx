@@ -31,6 +31,7 @@ const SessionCompareScreen = lazy(() => import('./components/practice/SessionCom
 const StudyGroupsScreen = lazy(() => import('./components/groups/StudyGroupsScreen'));
 const MultiplayerLobbyScreen = lazy(() => import('./components/multiplayer/MultiplayerArena'));
 const MultiplayerGameScreen = lazy(() => import('./components/multiplayer/GameRoom'));
+const TournamentDashboard = lazy(() => import('./components/tournament/TournamentDashboard'));
 const DocumentQuizScreen = lazy(() => import('./components/practice/DocumentQuizScreen'));
 const FriendsScreen = lazy(() => import('./components/social/FriendsScreen'));
 const FeedScreen = lazy(() => import('./components/social/FeedScreen'));
@@ -135,7 +136,7 @@ export default function App() {
                 <Route path="compare" element={<SessionCompareScreen />} />
                 <Route path="study-plans" element={<StudyPlansScreen />} />
                 <Route path="groups" element={<StudyGroupsScreen />} />
-                <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
+                <Route path="tournaments" element={<TournamentDashboard />} />
                 <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
                 <Route path="profile" element={<ProfileScreen />} />
                 <Route path="settings" element={<SettingsScreen />} />

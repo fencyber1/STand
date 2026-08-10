@@ -30,6 +30,7 @@ import {
   Settings,
   Home,
   BarChart3,
+  Crown,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -184,6 +185,7 @@ export default function Layout() {
       items: [
         { to: '/groups', label: t('Study Groups'), icon: Users },
         { to: '/multiplayer', label: t('Multiplayer'), icon: Swords },
+        { to: '/tournaments', label: t('Tournaments'), icon: Crown },
         { to: '/study-plans', label: t('Study Plans'), icon: CalendarDays },
       ],
     },
@@ -210,8 +212,8 @@ export default function Layout() {
   const mobileTabs = [
     { to: '/', label: t('Home'), icon: Home },
     { to: '/practice', label: t('Practice'), icon: GraduationCap },
+    { to: '/tournaments', label: t('Tournaments'), icon: Crown },
     { to: '/multiplayer', label: t('Multiplayer'), icon: Users },
-    { to: '/history', label: t('Results'), icon: BarChart3 },
     { to: '/profile', label: t('Profile'), icon: User },
   ];
 
