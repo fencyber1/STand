@@ -45,9 +45,10 @@ const WELCOME_MESSAGE = "Hi! I'm StudyPlan AI — I'll help you build a personal
 interface Props {
   open: boolean;
   onClose: () => void;
+  onPlanSaved?: () => void;
 }
 
-export default function StudyPlanAI({ open, onClose }: Props) {
+export default function StudyPlanAI({ open, onClose, onPlanSaved }: Props) {
   const { user } = useAuth();
   const uid = user?.uid || '';
 
@@ -322,8 +323,12 @@ export default function StudyPlanAI({ open, onClose }: Props) {
     };
     storage.saveStudyPlan(plan);
     setSaveSuccess(true);
-    setTimeout(() => setShowSaveModal(false), 1200);
-  }, [saveGoal, saveTargetDate, saveDailyGoal, saveSubjects, messages]);
+    onPlanSaved?.();
+    setTimeout(() => {
+      setShowSaveModal(false);
+      onClose();
+    }, 1500);
+  }, [saveGoal, saveTargetDate, saveDailyGoal, saveSubjects, messages, onPlanSaved, onClose]);
 
   const toggleSaveSubject = (s: string) => {
     setSaveSubjects((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
@@ -488,7 +493,7 @@ export default function StudyPlanAI({ open, onClose }: Props) {
             <div className="p-8 text-center">
               <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3"><Check size={28} className="text-green-400" /></div>
               <p className="text-white font-semibold mb-1">Plan Saved!</p>
-              <p className="text-gray-400 text-sm">Find it in Study Plans</p>
+              <p className="text-gray-400 text-sm">Opening your study plans...</p>
             </div>
           ) : (
             <div className="p-5 space-y-4">

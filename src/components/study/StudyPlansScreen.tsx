@@ -245,7 +245,7 @@ export default function StudyPlansScreen() {
           })}
         </div>
       )}
-      <StudyPlanAI open={showAI} onClose={() => { setShowAI(false); setPlans(storage.getStudyPlans()); }} />
+      <StudyPlanAI open={showAI} onClose={() => { setShowAI(false); setPlans(storage.getStudyPlans()); }} onPlanSaved={() => setPlans(storage.getStudyPlans())} />
     </div>
   );
 }
