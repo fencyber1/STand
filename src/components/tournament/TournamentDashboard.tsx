@@ -142,15 +142,15 @@ function TournamentDetail({ tournament, onBack, onUpdate }: { tournament: Tourna
       <button onClick={onBack} className="text-gray-400 hover:text-white text-sm mb-4 flex items-center gap-1 transition">← Back to Tournaments</button>
       <div className="rounded-2xl border border-white/5 p-6 mb-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.5))' }}>
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.1), transparent)' }} />
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${formatColors[tournament.format]}15`, border: `1px solid ${formatColors[tournament.format]}40` }}>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: `${formatColors[tournament.format]}15`, border: `1px solid ${formatColors[tournament.format]}40` }}>
               <FormatIcon size={28} style={{ color: formatColors[tournament.format] }} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-white">{tournament.name}</h2>
               <p className="text-gray-400 text-sm mt-1">{tournament.description}</p>
-              <div className="flex items-center gap-4 mt-3">
+              <div className="flex flex-wrap items-center gap-2 mt-3">
                 <span className="text-xs font-bold uppercase px-3 py-1 rounded-full text-cyan-400 bg-cyan-400/10">{tournament.status.replace(/_/g, ' ')}</span>
                 <span className="text-xs text-gray-500">{tournament.participants.length} Players</span>
                 <span className="text-xs text-gray-500">{tournament.prizes.xpPool.toLocaleString()} XP Pool</span>
