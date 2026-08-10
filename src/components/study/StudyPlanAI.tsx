@@ -42,10 +42,22 @@ Be concise, structured, and actionable. Use tables and bullet points. Never be o
 
 const WELCOME_MESSAGE = "Hi! I'm StudyPlan AI — I'll help you build a personalized study plan step by step.\n\nLet's start: What subject or exam are you preparing for, and when is your target date?";
 
+export interface StudyPlan {
+  id: string;
+  goal: string;
+  targetDate: string;
+  dailyGoal: number;
+  currentStreak: number;
+  completedDays: number;
+  totalDays: number;
+  subjects: string[];
+  content?: string;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  onPlanSaved?: () => void;
+  onPlanSaved?: (plan: StudyPlan) => void;
 }
 
 export default function StudyPlanAI({ open, onClose, onPlanSaved }: Props) {
@@ -323,7 +335,7 @@ export default function StudyPlanAI({ open, onClose, onPlanSaved }: Props) {
     };
     storage.saveStudyPlan(plan);
     setSaveSuccess(true);
-    onPlanSaved?.();
+    onPlanSaved?.(plan);
     setTimeout(() => {
       setShowSaveModal(false);
       onClose();
