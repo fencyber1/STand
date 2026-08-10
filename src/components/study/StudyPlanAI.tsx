@@ -63,7 +63,7 @@ export default function StudyPlanAI({ open, onClose }: Props) {
   const [saveSubjects, setSaveSubjects] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const renderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,6 +73,14 @@ export default function StudyPlanAI({ open, onClose }: Props) {
 
   useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }, [input]);
 
   useEffect(() => {
     if (!uid || !open) return;
@@ -278,6 +286,10 @@ export default function StudyPlanAI({ open, onClose }: Props) {
     }
   }, [handleSend]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
+
   const extractPlanData = useCallback(() => {
     const allText = messages.map((m) => m.content).join(' ');
     const foundSubjects = SECTORS.filter((s) => allText.toLowerCase().includes(s.toLowerCase()));
@@ -442,13 +454,14 @@ export default function StudyPlanAI({ open, onClose }: Props) {
           {activeId && (
             <div className="shrink-0 px-4 pb-4 pt-2">
               <div className="max-w-2xl mx-auto flex items-center gap-2 bg-[#141926] rounded-2xl border border-white/10 px-3 py-2">
-                <input
+                <textarea
                   ref={inputRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
                   placeholder="Describe your study goal..."
-                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/30"
+                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/30 resize-none overflow-hidden max-h-[120px]"
+                  rows={1}
                   disabled={loading}
                 />
                 <button

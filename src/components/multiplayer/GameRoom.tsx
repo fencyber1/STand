@@ -554,13 +554,13 @@ const handleStartGame = async () => {
             )}
           </div>
           <div className="flex gap-2">
-            <input
-              type="text"
+            <textarea
               value={waitingChat}
-              onChange={(e) => setWaitingChat(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendWaitingChat()}
+              onChange={(e) => { setWaitingChat(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px'; }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendWaitingChat(); } }}
               placeholder="Type a message..."
-              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-primary-500"
+              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-primary-500 resize-none overflow-hidden max-h-[80px]"
+              rows={1}
             />
             <button onClick={handleSendWaitingChat} className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition">
               <Send size={14} />
@@ -742,13 +742,13 @@ const handleStartGame = async () => {
             ))}
           </div>
           <div className="flex gap-2">
-            <input
-              type="text"
+            <textarea
               value={spectatorChat}
-              onChange={(e) => setSpectatorChat(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendSpectatorChat()}
+              onChange={(e) => { setSpectatorChat(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px'; }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendSpectatorChat(); } }}
               placeholder="Cheer for your player..."
-              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-purple-500"
+              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:border-purple-500 resize-none overflow-hidden max-h-[80px]"
+              rows={1}
             />
             <button onClick={handleSendSpectatorChat} className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition">
               <Send size={14} />
