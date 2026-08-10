@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { auth } from '../../services/firebase';
 import { SECTORS } from '../../constants';
-import { getAllTournaments, createTournament, joinTournament, getTournament, startTournament, updateMatchResult, advanceToKnockout, finishTournament, deleteTournament, getTournamentProfile, clearAllTournaments } from '../../services/tournamentService';
+import { getAllTournaments, createTournament, joinTournament, getTournament, startTournament, updateMatchResult, advanceToKnockout, finishTournament, deleteTournament, getTournamentProfile } from '../../services/tournamentService';
 import type { Tournament, TournamentPlayer, TournamentMatch, TournamentGroup, TournamentFormat, TournamentConfig } from '../../types/tournament';
 import { TOURNAMENT_FORMAT_LABELS, KNOCKOUT_ROUND_LABELS } from '../../types/tournament';
 
@@ -55,17 +55,9 @@ export default function TournamentDashboard() {
               <p className="text-xs text-gray-500">Compete. Conquer. Champion.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { clearAllTournaments(); loadTournaments(); }} className="px-3 py-2 rounded-lg text-xs font-medium text-red-400 border border-red-500/30 hover:bg-red-500/10 transition">
-              Clear Tournaments
-            </button>
-            <button onClick={() => { localStorage.clear(); sessionStorage.clear(); loadTournaments(); alert('All storage cleared! You can now create tournaments.'); }} className="px-3 py-2 rounded-lg text-xs font-medium text-orange-400 border border-orange-500/30 hover:bg-orange-500/10 transition">
-              Clear All Storage
-            </button>
-            <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105" style={{ background: `linear-gradient(135deg, ${NEON_CYAN}, ${NEON_BLUE})`, boxShadow: `0 0 20px rgba(6,182,212,0.3)` }}>
-              + Create Tournament
-            </button>
-          </div>
+          <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105" style={{ background: `linear-gradient(135deg, ${NEON_CYAN}, ${NEON_BLUE})`, boxShadow: `0 0 20px rgba(6,182,212,0.3)` }}>
+            + Create Tournament
+          </button>
         </div>
 
         {showCreate && <TournamentCreate onClose={() => setShowCreate(false)} onCreated={(t) => { setShowCreate(false); loadTournaments(); setSelectedTournament(t); }} />}
@@ -423,7 +415,7 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
         createdByName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Player',
       });
       if (!t) {
-        setError('Storage full! Click "Clear All Storage" on the main page to free up space, then try again.');
+        setError('Storage full! Please clear your browser site data and try again.');
         setCreating(false);
         return;
       }
@@ -433,12 +425,6 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
       setError('Failed to create tournament. Please try again.');
       setCreating(false);
     }
-  };
-
-  const handleClearAndRetry = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    setError('All storage cleared! You can now create a tournament.');
   };
 
   return (
@@ -466,16 +452,9 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
           </div>
           <div><label className="block text-xs text-gray-400 mb-1">XP Prize Pool</label><input type="number" value={xpPool} onChange={(e) => setXpPool(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-              <div className="flex items-center gap-2 mb-2">
-                <XCircle size={14} className="text-red-400 shrink-0" />
-                <p className="text-xs text-red-400">{error}</p>
-              </div>
-              {error.includes('Storage full') && (
-                <button onClick={handleClearAndRetry} className="w-full mt-2 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition">
-                  Clear All Storage & Retry
-                </button>
-              )}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+              <XCircle size={14} className="text-red-400 shrink-0" />
+              <p className="text-xs text-red-400">{error}</p>
             </div>
           )}
           <button onClick={handleCreate} disabled={creating} className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', boxShadow: '0 0 20px rgba(6,182,212,0.3)' }}>
