@@ -262,21 +262,32 @@ const handleStartGame = async () => {
     setGenerating(true);
     setGenProgress({ current: 0, total: room.totalQuestions });
     try {
-      const subjects = SECTORS.filter((s) => s !== 'Other');
-      const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
-      const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
-      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      let selectedSubject = room.subject || 'General Knowledge';
+      let selectedTopic = room.topic || selectedSubject;
+
+      // If General Knowledge or Mixed, pick random subjects
+      if (selectedSubject === 'General Knowledge' || selectedSubject === 'Mixed') {
+        const subjects = SECTORS.filter((s) => s !== 'Other');
+        selectedSubject = subjects[Math.floor(Math.random() * subjects.length)];
+        const topics = ['General', 'Fundamentals', 'Key Concepts', 'Applications', 'Advanced Topics'];
+        selectedTopic = topics[Math.floor(Math.random() * topics.length)];
+      } else if (!selectedTopic || selectedTopic === selectedSubject) {
+        // Subject selected but no specific topic - use general
+        selectedTopic = 'General ' + selectedSubject;
+      }
 
       const questionCount = room.totalQuestions;
-      console.log('[MP] Generating questions:', { sector: randomSubject, topic: randomTopic, count: questionCount });
+      console.log('[MP] Generating questions:', { sector: selectedSubject, topic: selectedTopic, count: questionCount });
 
       await updateDoc(doc(db, 'gameRooms', roomId), {
+        subject: selectedSubject,
+        topic: selectedTopic,
         genProgress: { current: 0, total: questionCount },
       });
 
       const questions = await generateQuestionsProgressive({
-        topic: randomTopic,
-        sector: randomSubject,
+        topic: selectedTopic,
+        sector: selectedSubject,
         level: 'High School',
         questionType: 'MCQ Only',
         count: questionCount,
@@ -472,6 +483,9 @@ const handleStartGame = async () => {
                 </span>
               )}
               <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">{room.mode}</span>
+              {room.subject && room.subject !== 'Mixed' && (
+                <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">{room.subject}{room.topic && room.topic !== room.subject ? ` · ${room.topic}` : ''}</span>
+              )}
             </div>
           </div>
         </div>

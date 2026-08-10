@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Swords, Users, Trophy, Zap, Crown, Clock, Target,
   Flame, Timer, Award, TrendingUp, Play, Search, Plus,
-  X, LogIn, UserCheck, AlertCircle, Eye, ChevronRight,
+  X, LogIn, UserCheck, AlertCircle, Eye, ChevronRight, Loader2,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import BorderGlow from '../ui/BorderGlow';
+import { SECTORS } from '../../constants';
 import {
   subscribeToActiveGames,
   getAllGameModes,
@@ -38,6 +39,9 @@ export default function MultiplayerArena() {
   const [joining, setJoining] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [hostLevels, setHostLevels] = useState<Record<string, number>>({});
+  const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [specificTopic, setSpecificTopic] = useState('');
 
 const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: string; colors: string[]; text: string }> = {
   '1v1':      { gradient: 'from-red-500 to-red-600', glow: 'shadow-red-500/25', glowColor: '0 80 65', text: 'text-red-400', colors: ['#ef4444', '#f87171', '#dc2626'] },
@@ -98,20 +102,32 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
       return;
     }
     setLastMode(mode);
+    setSelectedMode(mode);
+    setSelectedSubject('');
+    setSpecificTopic('');
+  };
+
+  const handleConfirmCreate = async () => {
+    if (!user || !selectedMode) return;
     setCreating(true);
     setCreateError('');
     try {
-      console.log('[MP] Creating room with mode:', mode);
+      const subject = selectedSubject || 'General Knowledge';
+      const topic = specificTopic.trim() || subject;
+      console.log('[MP] Creating room with mode:', selectedMode, 'subject:', subject, 'topic:', topic);
       const roomId = await createGameRoom({
         host: { uid: user.uid, name: user.fullName || 'Player', photo: user.photoURL },
-        mode,
-        subject: 'Mixed',
-        topic: 'Mixed',
+        mode: selectedMode,
+        subject,
+        topic,
         difficulty: 'mixed',
-        isPrivate: mode === '1v1',
+        isPrivate: selectedMode === '1v1',
       });
       console.log('[MP] Room created:', roomId);
       if (roomId) {
+        setSelectedMode(null);
+        setSelectedSubject('');
+        setSpecificTopic('');
         console.log('[MP] Navigating to:', `/multiplayer/${roomId}`);
         navigate(`/multiplayer/${roomId}`);
         setTimeout(() => {
@@ -302,35 +318,63 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
       {showCreate && (
         <div className="mb-6">
           <h3 className="font-semibold text-white mb-3">Create Game Room</h3>
-          <div className="space-y-3">
-            {gameModes.map(({ mode, label, icon, questions, time, maxPlayers, xpReward }) => {
-              const colors = MODE_COLORS[mode] || MODE_COLORS['1v1'];
-              return (
-                <BorderGlow key={mode} backgroundColor="#141e35" borderRadius={16} glowColor={colors.glowColor} glowRadius={20}
-                  glowIntensity={0.8} edgeSensitivity={35} colors={colors.colors}>
-                  <button
-                    onClick={() => handleCreateGame(mode)}
-                    className="relative group w-full flex items-center justify-between p-4 overflow-hidden text-left"
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-[0.06] group-hover:opacity-[0.12] transition-opacity`} />
-                    <div className="relative flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shrink-0 shadow-lg ${colors.glow}`}>
-                        <span className="text-white text-lg leading-none">{icon}</span>
+          {!selectedMode ? (
+            <div className="space-y-3">
+              {gameModes.map(({ mode, label, icon, questions, time, maxPlayers, xpReward }) => {
+                const colors = MODE_COLORS[mode] || MODE_COLORS['1v1'];
+                return (
+                  <BorderGlow key={mode} backgroundColor="#141e35" borderRadius={16} glowColor={colors.glowColor} glowRadius={20}
+                    glowIntensity={0.8} edgeSensitivity={35} colors={colors.colors}>
+                    <button
+                      onClick={() => handleCreateGame(mode)}
+                      className="relative group w-full flex items-center justify-between p-4 overflow-hidden text-left"
+                    >
+                      <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-[0.06] group-hover:opacity-[0.12] transition-opacity`} />
+                      <div className="relative flex items-center gap-3">
+                        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shrink-0 shadow-lg ${colors.glow}`}>
+                          <span className="text-white text-lg leading-none">{icon}</span>
+                        </div>
+                        <div>
+                          <div className={`font-semibold text-sm ${colors.text}`}>{label}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{questions} questions, {time}s each, {maxPlayers} players</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className={`font-semibold text-sm ${colors.text}`}>{label}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{questions} questions, {time}s each, {maxPlayers} players</div>
+                      <div className="relative flex items-center gap-1">
+                        <span className={`text-xs font-bold ${colors.text}`}>+{xpReward} XP</span>
+                        <ChevronRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
                       </div>
-                    </div>
-                    <div className="relative flex items-center gap-1">
-                      <span className={`text-xs font-bold ${colors.text}`}>+{xpReward} XP</span>
-                      <ChevronRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
-                    </div>
-                  </button>
-                </BorderGlow>
-              );
-            })}
-          </div>
+                    </button>
+                  </BorderGlow>
+                );
+              })}
+            </div>
+          ) : (
+            <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="270 80 60" glowRadius={20} glowIntensity={0.8} edgeSensitivity={35} colors={['#a855f7', '#c084fc', '#7c3aed']}>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <button onClick={() => setSelectedMode(null)} className="text-gray-400 hover:text-white text-sm flex items-center gap-1">← Back</button>
+                  <span className="text-xs text-gray-400">{MODE_COLORS[selectedMode]?.text && <span className={MODE_COLORS[selectedMode].text}>{gameModes.find(m => m.mode === selectedMode)?.label}</span>}</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-2">Select a subject:</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button onClick={() => setSelectedSubject('General Knowledge')} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === 'General Knowledge' ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>General Knowledge</button>
+                  {SECTORS.filter(s => s !== 'Other').map((s) => (
+                    <button key={s} onClick={() => setSelectedSubject(s)} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === s ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{s}</button>
+                  ))}
+                </div>
+                {selectedSubject && selectedSubject !== 'General Knowledge' && (
+                  <div className="mb-4">
+                    <label className="block text-xs text-gray-400 mb-1">Specific topic (optional)</label>
+                    <input type="text" value={specificTopic} onChange={(e) => setSpecificTopic(e.target.value)} placeholder={`e.g. Photosynthesis, Newton's Laws...`} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-violet-500 transition" />
+                    <p className="text-[10px] text-gray-500 mt-1">Leave empty for general {selectedSubject} questions</p>
+                  </div>
+                )}
+                <button onClick={handleConfirmCreate} disabled={!selectedSubject || creating} className="w-full py-2.5 bg-violet-600 text-white rounded-lg font-semibold text-sm hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                  {creating ? <><Loader2 size={16} className="animate-spin" /> Creating...</> : 'Create Room'}
+                </button>
+              </div>
+            </BorderGlow>
+          )}
         </div>
       )}
 
