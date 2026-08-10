@@ -454,46 +454,44 @@ export function subscribeToGameRoom(roomId: string, cb: (room: GameRoom | null) 
 }
 
 export function subscribeToActiveGames(cb: (rooms: GameRoom[]) => void): () => void {
-  let active = true;
-  const fetchGames = async () => {
-    if (!active) return;
-    try {
-      console.log('[MP] Fetching active games...');
-      const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']));
-      const snap = await getDocs(q);
-      const now = Date.now();
-      const rooms: GameRoom[] = [];
-      const expired: string[] = [];
+  const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']));
+  
+  return onSnapshot(q, async (snapshot) => {
+    const now = Date.now();
+    const rooms: GameRoom[] = [];
+    const expired: string[] = [];
 
-      for (const d of snap.docs) {
-        const data = { id: d.id, ...d.data() } as GameRoom;
-        if (data.expiresAt && data.expiresAt < now && data.players.length < 2) {
-          expired.push(d.id);
-        } else {
-          rooms.push(data);
-        }
+    for (const d of snapshot.docs) {
+      const data = { id: d.id, ...d.data() } as GameRoom;
+      if (data.expiresAt && data.expiresAt < now && data.players.length < 2) {
+        expired.push(d.id);
+      } else {
+        rooms.push(data);
       }
+    }
 
-      if (expired.length > 0) {
-        console.log('[MP] Cleaning up expired rooms:', expired.length);
+    if (expired.length > 0) {
+      try {
         const batch = writeBatch(db);
         for (const id of expired) {
           batch.delete(doc(db, 'gameRooms', id));
         }
         await batch.commit();
+      } catch (e) {
+        console.error('[MP] Failed to clean expired rooms:', e);
       }
-
-      rooms.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      console.log('[MP] Found active games:', rooms.length);
-      if (active) cb(rooms);
-    } catch (e) {
-      console.error('[MP] fetchGames error:', e);
-      if (active) cb([]);
     }
-  };
-  fetchGames();
-  const interval = setInterval(fetchGames, 5000);
-  return () => { active = false; clearInterval(interval); };
+
+    rooms.sort((a, b) => {
+      const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : (a.createdAt || 0);
+      const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : (b.createdAt || 0);
+      return bTime - aTime;
+    });
+    cb(rooms);
+  }, (err) => {
+    console.error('[MP] subscribeToActiveGames error:', err);
+    cb([]);
+  });
 }
 
 export async function getPlayerStats(uid: string): Promise<PlayerStats> {
