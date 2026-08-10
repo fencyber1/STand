@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Crown, Swords, Users, Clock, Star, Target, Zap, Shield, Flame, Award, ChevronRight, Play, CheckCircle, XCircle, Eye, Calendar, BarChart3, Medal } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { auth } from '../../services/firebase';
 import { SECTORS } from '../../constants';
 import { getAllTournaments, createTournament, joinTournament, getTournament, startTournament, updateMatchResult, advanceToKnockout, finishTournament, deleteTournament, getTournamentProfile } from '../../services/tournamentService';
 import type { Tournament, TournamentPlayer, TournamentMatch, TournamentGroup, TournamentFormat, TournamentConfig } from '../../types/tournament';
@@ -67,7 +68,9 @@ export default function TournamentDashboard() {
           <div className="space-y-4">
             {tournaments.length === 0 ? (
               <div className="text-center py-20">
-                <Crown size={48} className="mx-auto mb-4 text-gray-700" />
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                  <Trophy size={32} className="text-cyan-700" />
+                </div>
                 <p className="text-gray-400 text-lg font-semibold">No tournaments yet</p>
                 <p className="text-gray-600 text-sm mt-1">Create one to start the competition!</p>
               </div>
@@ -85,12 +88,15 @@ export default function TournamentDashboard() {
 
 function TournamentCard({ tournament, onSelect, onJoin }: { tournament: Tournament; onSelect: () => void; onJoin: () => void }) {
   const statusColors: Record<string, string> = { upcoming: 'text-gray-400 bg-gray-400/10', registration: 'text-cyan-400 bg-cyan-400/10', group_stage: 'text-blue-400 bg-blue-400/10', knockout: 'text-purple-400 bg-purple-400/10', finished: 'text-green-400 bg-green-400/10' };
+  const formatColors: Record<string, string> = { worldcup: '#ffd700', champions: '#3b82f6', single: '#ef4444', league: '#f59e0b', survival: '#22c55e', double: '#a855f7' };
+  const formatIcons: Record<string, typeof Trophy> = { worldcup: Trophy, champions: Crown, single: Swords, league: Users, survival: Shield, double: Flame };
+  const FormatIcon = formatIcons[tournament.format] || Trophy;
   return (
     <div onClick={onSelect} className="group cursor-pointer rounded-2xl border border-white/5 p-5 transition-all hover:border-cyan-500/30 hover:bg-white/[0.02]" style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.8), rgba(15,23,42,0.4))' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))', border: '1px solid rgba(6,182,212,0.3)' }}>
-            <Trophy size={24} style={{ color: NEON_CYAN }} />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${formatColors[tournament.format]}15`, border: `1px solid ${formatColors[tournament.format]}40` }}>
+            <FormatIcon size={24} style={{ color: formatColors[tournament.format] }} />
           </div>
           <div>
             <h3 className="text-white font-bold text-lg">{tournament.name}</h3>
@@ -118,6 +124,9 @@ function TournamentCard({ tournament, onSelect, onJoin }: { tournament: Tourname
 
 function TournamentDetail({ tournament, onBack, onUpdate }: { tournament: Tournament; onBack: () => void; onUpdate: () => void }) {
   const { user } = useAuth();
+  const formatColors: Record<string, string> = { worldcup: '#ffd700', champions: '#3b82f6', single: '#ef4444', league: '#f59e0b', survival: '#22c55e', double: '#a855f7' };
+  const formatIcons: Record<string, typeof Trophy> = { worldcup: Trophy, champions: Crown, single: Swords, league: Users, survival: Shield, double: Flame };
+  const FormatIcon = formatIcons[tournament.format] || Trophy;
   const [tab, setTab] = useState('overview');
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Eye },
@@ -134,13 +143,19 @@ function TournamentDetail({ tournament, onBack, onUpdate }: { tournament: Tourna
       <div className="rounded-2xl border border-white/5 p-6 mb-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.5))' }}>
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.1), transparent)' }} />
         <div className="relative flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-black text-white">{tournament.name}</h2>
-            <p className="text-gray-400 text-sm mt-1">{tournament.description}</p>
-            <div className="flex items-center gap-4 mt-3">
-              <span className="text-xs font-bold uppercase px-3 py-1 rounded-full text-cyan-400 bg-cyan-400/10">{tournament.status.replace(/_/g, ' ')}</span>
-              <span className="text-xs text-gray-500">{tournament.participants.length} Players</span>
-              <span className="text-xs text-gray-500">{tournament.prizes.xpPool.toLocaleString()} XP Pool</span>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${formatColors[tournament.format]}15`, border: `1px solid ${formatColors[tournament.format]}40` }}>
+              <FormatIcon size={28} style={{ color: formatColors[tournament.format] }} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-white">{tournament.name}</h2>
+              <p className="text-gray-400 text-sm mt-1">{tournament.description}</p>
+              <div className="flex items-center gap-4 mt-3">
+                <span className="text-xs font-bold uppercase px-3 py-1 rounded-full text-cyan-400 bg-cyan-400/10">{tournament.status.replace(/_/g, ' ')}</span>
+                <span className="text-xs text-gray-500">{tournament.participants.length} Players</span>
+                <span className="text-xs text-gray-500">{tournament.prizes.xpPool.toLocaleString()} XP Pool</span>
+                <span className="text-xs text-gray-500">{TOURNAMENT_FORMAT_LABELS[tournament.format]}</span>
+              </div>
             </div>
           </div>
           <TournamentActions tournament={tournament} onUpdate={onUpdate} />
@@ -353,7 +368,6 @@ function TournamentResults({ tournament }: { tournament: Tournament }) {
 }
 
 function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreated: (t: Tournament) => void }) {
-  const { user } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [format, setFormat] = useState<TournamentFormat>('worldcup');
@@ -366,27 +380,49 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
   const [groupSize, setGroupSize] = useState(4);
   const [qualifyPerGroup, setQualifyPerGroup] = useState(2);
   const [xpPool, setXpPool] = useState(10000);
-  const [created, setCreated] = useState(false);
+  const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const handleCreate = () => {
-    if (!name.trim() || !user) return;
-    if (subject === 'Other' && !topic.trim()) return;
-    const finalSubject = subject === 'Other' ? topic.trim() : subject;
-    const finalTopic = subject === 'Other' ? topic.trim() : (topic.trim() || subject);
-    const config: TournamentConfig = { questionsCount, timePerQuestion, difficulty, subject: finalSubject, topic: finalTopic, groupSize, qualifyPerGroup };
-    const t = createTournament({
-      name: name.trim(),
-      description: description.trim() || `${TOURNAMENT_FORMAT_LABELS[format]} tournament`,
-      format,
-      config,
-      prizes: { xpPool, winnerXP: Math.round(xpPool * 0.4), finalistXP: Math.round(xpPool * 0.25), semiFinalistXP: Math.round(xpPool * 0.15) },
-      registrationDeadline: Date.now() + 7 * 86400000,
-      startDate: Date.now() + 8 * 86400000,
-      createdBy: user.uid,
-      createdByName: user.fullName || 'Player',
-    });
-    setCreated(true);
-    setTimeout(() => onCreated(t), 1000);
+    alert('Create button clicked! Name: ' + name.trim() + ', User: ' + (auth.currentUser ? 'yes' : 'no'));
+    setError('');
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setError('You must be logged in to create a tournament.');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Please enter a tournament name.');
+      return;
+    }
+    if (subject === 'Other' && !topic.trim()) {
+      setError('Please enter a custom subject.');
+      return;
+    }
+    setCreating(true);
+    try {
+      const finalSubject = subject === 'Other' ? topic.trim() : subject;
+      const finalTopic = subject === 'Other' ? topic.trim() : (topic.trim() || subject);
+      const config: TournamentConfig = { questionsCount, timePerQuestion, difficulty, subject: finalSubject, topic: finalTopic, groupSize, qualifyPerGroup };
+      const t = createTournament({
+        name: name.trim(),
+        description: description.trim() || `${TOURNAMENT_FORMAT_LABELS[format]} tournament`,
+        format,
+        config,
+        prizes: { xpPool, winnerXP: Math.round(xpPool * 0.4), finalistXP: Math.round(xpPool * 0.25), semiFinalistXP: Math.round(xpPool * 0.15) },
+        registrationDeadline: Date.now() + 7 * 86400000,
+        startDate: Date.now() + 8 * 86400000,
+        createdBy: currentUser.uid,
+        createdByName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Player',
+      });
+      alert('Tournament created! ID: ' + t.id);
+      onCreated(t);
+    } catch (e) {
+      console.error('[TournamentCreate] error:', e);
+      alert('Error: ' + e);
+      setError('Failed to create tournament. Please try again.');
+      setCreating(false);
+    }
   };
 
   return (
@@ -396,17 +432,10 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
           <h3 className="text-white font-bold text-lg flex items-center gap-2"><Crown size={20} style={{ color: NEON_CYAN }} /> Create Tournament</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">&times;</button>
         </div>
-        {created ? (
-          <div className="p-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3"><CheckCircle size={28} className="text-green-400" /></div>
-            <p className="text-white font-semibold mb-1">Tournament Created!</p>
-            <p className="text-gray-400 text-sm">Opening tournament...</p>
-          </div>
-        ) : (
         <div className="p-6 space-y-4">
           <div><label className="block text-xs text-gray-400 mb-1">Tournament Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. STAnd Championship" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>
           <div><label className="block text-xs text-gray-400 mb-1">Description</label><input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>
-          <div><label className="block text-xs text-gray-400 mb-1">Format</label><div className="grid grid-cols-2 gap-2">{Object.entries(TOURNAMENT_FORMAT_LABELS).map(([k, v]) => <button key={k} onClick={() => setFormat(k as TournamentFormat)} className={`px-3 py-2 text-xs rounded-lg font-medium transition ${format === k ? 'text-white' : 'text-gray-400 bg-white/5 hover:bg-white/10'}`} style={format === k ? { background: 'rgba(6,182,212,0.2)', border: '1px solid rgba(6,182,212,0.4)' } : {}}>{v}</button>)}</div></div>
+          <div><label className="block text-xs text-gray-400 mb-1">Format</label><div className="grid grid-cols-2 gap-2">{(Object.entries(TOURNAMENT_FORMAT_LABELS) as [TournamentFormat, string][]).map(([k, v]) => <button key={k} onClick={() => setFormat(k)} className={`px-3 py-2.5 text-xs rounded-lg font-medium transition text-left ${format === k ? 'text-white' : 'text-gray-400 bg-white/5 hover:bg-white/10'}`} style={format === k ? { background: 'rgba(6,182,212,0.2)', border: '1px solid rgba(6,182,212,0.4)' } : { border: '1px solid transparent' }}>{v}</button>)}</div></div>
           <div><label className="block text-xs text-gray-400 mb-1">Subject</label><div className="flex flex-wrap gap-1.5"><button onClick={() => { setSubject('General Knowledge'); setTopic(''); }} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === 'General Knowledge' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>General Knowledge</button>{SECTORS.filter(s => s !== 'Other').slice(0, 8).map((s) => <button key={s} onClick={() => { setSubject(s); setTopic(''); }} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === s ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>{s}</button>)}<button onClick={() => { setSubject('Other'); setTopic(''); }} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === 'Other' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>Other</button></div></div>
           {subject && subject !== 'General Knowledge' && <div><label className="block text-xs text-gray-400 mb-1">{subject === 'Other' ? 'Custom Subject' : 'Specific Topic (optional)'}</label><input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={subject === 'Other' ? 'Type custom subject...' : `Specific ${subject} topic...`} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>}
           <div className="grid grid-cols-2 gap-3">
@@ -420,9 +449,21 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
             <div><label className="block text-xs text-gray-400 mb-1">Qualify/Group</label><input type="number" value={qualifyPerGroup} onChange={(e) => setQualifyPerGroup(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
           </div>
           <div><label className="block text-xs text-gray-400 mb-1">XP Prize Pool</label><input type="number" value={xpPool} onChange={(e) => setXpPool(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
-          <button onClick={handleCreate} disabled={!name.trim() || (subject === 'Other' && !topic.trim())} className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-40" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', boxShadow: '0 0 20px rgba(6,182,212,0.3)' }}>Create Tournament</button>
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+              <XCircle size={14} className="text-red-400 shrink-0" />
+              <p className="text-xs text-red-400">{error}</p>
+            </div>
+          )}
+          <button onClick={handleCreate} disabled={creating} className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', boxShadow: '0 0 20px rgba(6,182,212,0.3)' }}>
+            {creating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Creating...
+              </>
+            ) : 'Create Tournament'}
+          </button>
         </div>
-        )}
       </div>
     </div>
   );
