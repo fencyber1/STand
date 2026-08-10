@@ -384,7 +384,6 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
   const [creating, setCreating] = useState(false);
 
   const handleCreate = () => {
-    alert('Create button clicked! Name: ' + name.trim() + ', User: ' + (auth.currentUser ? 'yes' : 'no'));
     setError('');
     const currentUser = auth.currentUser;
     if (!currentUser) {
@@ -415,11 +414,14 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
         createdBy: currentUser.uid,
         createdByName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Player',
       });
-      alert('Tournament created! ID: ' + t.id);
+      if (!t) {
+        setError('Storage full! Old tournaments were cleared. Please try again.');
+        setCreating(false);
+        return;
+      }
       onCreated(t);
     } catch (e) {
       console.error('[TournamentCreate] error:', e);
-      alert('Error: ' + e);
       setError('Failed to create tournament. Please try again.');
       setCreating(false);
     }
