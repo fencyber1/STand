@@ -1,7 +1,7 @@
 import {
   collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
   onSnapshot, query, where, orderBy, limit, serverTimestamp,
-  writeBatch,
+  writeBatch, runTransaction,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { addXP } from '../rankingService';
@@ -131,42 +131,45 @@ export async function createGameRoom(params: {
 export async function joinGameRoom(roomId: string, player: { uid: string; name: string; photo: string | null }): Promise<{ success: boolean; error?: string }> {
   try {
     const ref = doc(db, 'gameRooms', roomId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return { success: false, error: 'Room not found' };
 
-    const room = snap.data() as GameRoom;
-    if (room.status !== 'waiting') return { success: false, error: 'Game already started' };
-    if (room.players.length >= room.maxPlayers) return { success: false, error: 'Room is full' };
-    if (room.players.some((p) => p.uid === player.uid)) return { success: false, error: 'Already in room' };
+    return await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) return { success: false, error: 'Room not found' };
 
-    const newPlayer: GamePlayer = {
-      uid: player.uid,
-      displayName: player.name,
-      photoURL: player.photo,
-      score: 0,
-      correctAnswers: 0,
-      totalAnswers: 0,
-      answers: [],
-      ready: false,
-      connected: true,
-      finished: false,
-      streak: 0,
-      bestStreak: 0,
-      totalTime: 0,
-    };
+      const room = snap.data() as GameRoom;
+      if (room.status !== 'waiting') return { success: false, error: 'Game already started' };
+      if (room.players.length >= room.maxPlayers) return { success: false, error: 'Room is full' };
+      if (room.players.some((p) => p.uid === player.uid)) return { success: false, error: 'Already in room' };
 
-    await updateDoc(ref, {
-      players: [...room.players, newPlayer],
-      liveChat: [...room.liveChat, {
-        uid: 'system',
-        name: 'System',
-        text: `${player.name} joined the game`,
-        timestamp: ts(),
-        type: 'system',
-      }],
+      const newPlayer: GamePlayer = {
+        uid: player.uid,
+        displayName: player.name,
+        photoURL: player.photo,
+        score: 0,
+        correctAnswers: 0,
+        totalAnswers: 0,
+        answers: [],
+        ready: false,
+        connected: true,
+        finished: false,
+        streak: 0,
+        bestStreak: 0,
+        totalTime: 0,
+      };
+
+      transaction.update(ref, {
+        players: [...room.players, newPlayer],
+        liveChat: [...room.liveChat, {
+          uid: 'system',
+          name: 'System',
+          text: `${player.name} joined the game`,
+          timestamp: ts(),
+          type: 'system',
+        }],
+      });
+
+      return { success: true };
     });
-
-    return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || 'Failed to join' };
   }
@@ -238,65 +241,75 @@ export async function submitAnswer(
   isCorrect: boolean,
 ): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
 
-  const room = snap.data() as GameRoom;
-  const points = calculateAnswerPoints(isCorrect, timeSpent, room.timePerQuestion);
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
 
-  const playerAnswer: PlayerAnswer = {
-    questionId: room.questions[questionIndex]?.id || '',
-    answer,
-    correct: isCorrect,
-    timeSpent,
-    points,
-  };
+    const room = snap.data() as GameRoom;
+    const points = calculateAnswerPoints(isCorrect, timeSpent, room.timePerQuestion);
 
-  // Check if player is already eliminated
-  const currentPlayer = room.players.find((p) => p.uid === uid);
-  if (currentPlayer?.eliminated) return;
-
-  const players = room.players.map((p) => {
-    if (p.uid !== uid) return p;
-    const newStreak = isCorrect ? p.streak + 1 : 0;
-    const updated = {
-      ...p,
-      score: p.score + points,
-      correctAnswers: p.correctAnswers + (isCorrect ? 1 : 0),
-      totalAnswers: p.totalAnswers + 1,
-      answers: [...p.answers, playerAnswer],
-      streak: newStreak,
-      bestStreak: Math.max(p.bestStreak, newStreak),
-      totalTime: p.totalTime + timeSpent,
+    const playerAnswer: PlayerAnswer = {
+      questionId: room.questions[questionIndex]?.id || '',
+      answer,
+      correct: isCorrect,
+      timeSpent,
+      points,
     };
 
-    // Survival mode: eliminate on wrong answer
-    if (room.mode === 'survival' && !isCorrect) {
-      return { ...updated, eliminated: true };
-    }
-    return updated;
+    // Check if player is already eliminated
+    const currentPlayer = room.players.find((p) => p.uid === uid);
+    if (currentPlayer?.eliminated) return;
+
+    const players = room.players.map((p) => {
+      if (p.uid !== uid) return p;
+      const newStreak = isCorrect ? p.streak + 1 : 0;
+      const updated = {
+        ...p,
+        score: p.score + points,
+        correctAnswers: p.correctAnswers + (isCorrect ? 1 : 0),
+        totalAnswers: p.totalAnswers + 1,
+        answers: [...p.answers, playerAnswer],
+        streak: newStreak,
+        bestStreak: Math.max(p.bestStreak, newStreak),
+        totalTime: p.totalTime + timeSpent,
+      };
+
+      // Survival mode: eliminate on wrong answer
+      if (room.mode === 'survival' && !isCorrect) {
+        return { ...updated, eliminated: true };
+      }
+      return updated;
+    });
+
+    const answers = { ...room.answers };
+    if (!answers[uid]) answers[uid] = {};
+    answers[uid][questionIndex.toString()] = playerAnswer;
+
+    transaction.update(ref, { players, answers: sanitize(answers) });
   });
 
-  const answers = { ...room.answers };
-  if (!answers[uid]) answers[uid] = {};
-  answers[uid][questionIndex.toString()] = playerAnswer;
-
-  await updateDoc(ref, { players, answers: sanitize(answers) });
-
-  // Check if survival mode should end (only 1 player alive)
-  if (room.mode === 'survival') {
-    const alivePlayers = room.players.filter((p) => !p.eliminated && p.uid !== uid);
-    if (isCorrect) {
-      // Count alive after this answer
-      const aliveAfter = room.players.filter((p) => !p.eliminated && (p.uid !== uid || isCorrect)).length;
-      if (aliveAfter <= 1) {
-        await endGame(roomId);
+  // Check if survival mode should end (after transaction completes)
+  if (isCorrect) {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const room = snap.data() as GameRoom;
+      if (room.mode === 'survival') {
+        const aliveAfter = room.players.filter((p) => !p.eliminated).length;
+        if (aliveAfter <= 1) {
+          await endGame(roomId);
+        }
       }
-    } else {
-      // Wrong answer - check if only one player left alive
-      const aliveAfter = room.players.filter((p) => !p.eliminated && p.uid !== uid).length;
-      if (aliveAfter <= 1) {
-        await endGame(roomId);
+    }
+  } else {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const room = snap.data() as GameRoom;
+      if (room.mode === 'survival') {
+        const aliveAfter = room.players.filter((p) => !p.eliminated).length;
+        if (aliveAfter <= 1) {
+          await endGame(roomId);
+        }
       }
     }
   }
@@ -500,14 +513,16 @@ export async function updatePlayerStats(uid: string, stats: Partial<PlayerStats>
 
 export async function recordMatchResult(uid: string, result: MatchResult): Promise<void> {
   const stats = await getPlayerStats(uid);
+  const newMatchesPlayed = stats.matchesPlayed + 1;
+  const newWins = stats.wins + (result.result === 'win' ? 1 : 0);
   const newStats: PlayerStats = {
     ...stats,
-    matchesPlayed: stats.matchesPlayed + 1,
-    wins: stats.wins + (result.result === 'win' ? 1 : 0),
+    matchesPlayed: newMatchesPlayed,
+    wins: newWins,
     losses: stats.losses + (result.result === 'loss' ? 1 : 0),
     draws: stats.draws + (result.result === 'draw' ? 1 : 0),
     totalXPEarned: stats.totalXPEarned + result.xpEarned,
-    winRate: stats.matchesPlayed > 0 ? Math.round(((stats.wins + (result.result === 'win' ? 1 : 0)) / (stats.matchesPlayed + 1)) * 100) : 0,
+    winRate: newMatchesPlayed > 0 ? Math.round((newWins / newMatchesPlayed) * 100) : 0,
     matchHistory: [result, ...stats.matchHistory.slice(0, 49)],
   };
   await updatePlayerStats(uid, newStats);

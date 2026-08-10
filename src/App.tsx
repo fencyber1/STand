@@ -137,6 +137,7 @@ export default function App() {
                 <Route path="study-plans" element={<StudyPlansScreen />} />
                 <Route path="groups" element={<StudyGroupsScreen />} />
                 <Route path="tournaments" element={<TournamentDashboard />} />
+                <Route path="multiplayer" element={<MultiplayerLobbyScreen />} />
                 <Route path="multiplayer/:code" element={<MultiplayerGameScreen />} />
                 <Route path="profile" element={<ProfileScreen />} />
                 <Route path="settings" element={<SettingsScreen />} />

@@ -21,6 +21,7 @@ import {
   addSpectator,
   removeSpectator,
   sendReaction,
+  subscribeToGameRoom,
 } from '../../services/multiplayer/multiplayerService';
 import type { GameRoom, Reaction } from '../../types';
 import { SECTORS } from '../../constants';
@@ -168,20 +169,29 @@ export default function GameRoom() {
   useEffect(() => {
     if (!roomId) return;
     setLoading(true);
-    setPollCount(0);
 
-    fetchRoom();
+    const unsub = subscribeToGameRoom(roomId, (data) => {
+      if (data) {
+        if (data.expiresAt && data.expiresAt < Date.now() && data.players.length < 2) {
+          deleteDoc(doc(db, 'gameRooms', roomId));
+          setLoadError('This room expired because nobody joined within 2 minutes.');
+          setLoading(false);
+          return;
+        }
+        setRoom(data);
+        setLoadError('');
+        setLoading(false);
+        if (data?.status === 'finished') {
+          setShowResults(true);
+        }
+      } else {
+        setLoadError('Room not found. It may have been deleted or expired.');
+        setLoading(false);
+      }
+    });
 
-    const interval = room?.status === 'waiting' ? 2000 : 3000;
-    pollRef.current = setInterval(async () => {
-      setPollCount((c) => c + 1);
-      await fetchRoom();
-    }, interval);
-
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [roomId, fetchRoom]);
+    return () => unsub();
+  }, [roomId]);
 
   useEffect(() => {
     if (room?.status === 'starting' && (room.countdown ?? 0) > 0) {
