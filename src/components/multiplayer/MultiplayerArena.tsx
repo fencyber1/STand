@@ -112,8 +112,8 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
     setCreating(true);
     setCreateError('');
     try {
-      const subject = selectedSubject || 'General Knowledge';
-      const topic = specificTopic.trim() || subject;
+      const subject = selectedSubject === 'Other' ? (specificTopic.trim() || 'Other') : (selectedSubject || 'General Knowledge');
+      const topic = selectedSubject === 'Other' ? subject : (specificTopic.trim() || subject);
       console.log('[MP] Creating room with mode:', selectedMode, 'subject:', subject, 'topic:', topic);
       const roomId = await createGameRoom({
         host: { uid: user.uid, name: user.fullName || 'Player', photo: user.photoURL },
@@ -357,16 +357,17 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
                 </div>
                 <p className="text-xs text-gray-400 mb-2">Select a subject:</p>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <button onClick={() => setSelectedSubject('General Knowledge')} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === 'General Knowledge' ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>General Knowledge</button>
+                  <button onClick={() => { setSelectedSubject('General Knowledge'); setSpecificTopic(''); }} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === 'General Knowledge' ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>General Knowledge</button>
                   {SECTORS.filter(s => s !== 'Other').map((s) => (
-                    <button key={s} onClick={() => setSelectedSubject(s)} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === s ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{s}</button>
+                    <button key={s} onClick={() => { setSelectedSubject(s); setSpecificTopic(''); }} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === s ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{s}</button>
                   ))}
+                  <button onClick={() => { setSelectedSubject('Other'); setSpecificTopic(''); }} className={`px-3 py-1.5 text-xs rounded-full font-medium transition ${selectedSubject === 'Other' ? 'bg-violet-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>Other</button>
                 </div>
                 {selectedSubject && selectedSubject !== 'General Knowledge' && (
                   <div className="mb-4">
-                    <label className="block text-xs text-gray-400 mb-1">Specific topic (optional)</label>
-                    <input type="text" value={specificTopic} onChange={(e) => setSpecificTopic(e.target.value)} placeholder={`e.g. Photosynthesis, Newton's Laws...`} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-violet-500 transition" />
-                    <p className="text-[10px] text-gray-500 mt-1">Leave empty for general {selectedSubject} questions</p>
+                    <label className="block text-xs text-gray-400 mb-1">{selectedSubject === 'Other' ? 'Custom Subject *' : 'Specific topic (optional)'}</label>
+                    <input type="text" value={specificTopic} onChange={(e) => setSpecificTopic(e.target.value)} placeholder={selectedSubject === 'Other' ? 'Type custom subject...' : `e.g. Photosynthesis, Newton's Laws...`} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-violet-500 transition" />
+                    {selectedSubject !== 'Other' && <p className="text-[10px] text-gray-500 mt-1">Leave empty for general {selectedSubject} questions</p>}
                   </div>
                 )}
                 <button onClick={handleConfirmCreate} disabled={!selectedSubject || creating} className="w-full py-2.5 bg-violet-600 text-white rounded-lg font-semibold text-sm hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">

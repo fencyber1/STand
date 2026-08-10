@@ -366,10 +366,14 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
   const [groupSize, setGroupSize] = useState(4);
   const [qualifyPerGroup, setQualifyPerGroup] = useState(2);
   const [xpPool, setXpPool] = useState(10000);
+  const [created, setCreated] = useState(false);
 
   const handleCreate = () => {
     if (!name.trim() || !user) return;
-    const config: TournamentConfig = { questionsCount, timePerQuestion, difficulty, subject, topic: topic || subject, groupSize, qualifyPerGroup };
+    if (subject === 'Other' && !topic.trim()) return;
+    const finalSubject = subject === 'Other' ? topic.trim() : subject;
+    const finalTopic = subject === 'Other' ? topic.trim() : (topic.trim() || subject);
+    const config: TournamentConfig = { questionsCount, timePerQuestion, difficulty, subject: finalSubject, topic: finalTopic, groupSize, qualifyPerGroup };
     const t = createTournament({
       name: name.trim(),
       description: description.trim() || `${TOURNAMENT_FORMAT_LABELS[format]} tournament`,
@@ -381,7 +385,8 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
       createdBy: user.uid,
       createdByName: user.fullName || 'Player',
     });
-    onCreated(t);
+    setCreated(true);
+    setTimeout(() => onCreated(t), 1000);
   };
 
   return (
@@ -391,12 +396,19 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
           <h3 className="text-white font-bold text-lg flex items-center gap-2"><Crown size={20} style={{ color: NEON_CYAN }} /> Create Tournament</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">&times;</button>
         </div>
+        {created ? (
+          <div className="p-8 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3"><CheckCircle size={28} className="text-green-400" /></div>
+            <p className="text-white font-semibold mb-1">Tournament Created!</p>
+            <p className="text-gray-400 text-sm">Opening tournament...</p>
+          </div>
+        ) : (
         <div className="p-6 space-y-4">
           <div><label className="block text-xs text-gray-400 mb-1">Tournament Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. STAnd Championship" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>
           <div><label className="block text-xs text-gray-400 mb-1">Description</label><input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>
           <div><label className="block text-xs text-gray-400 mb-1">Format</label><div className="grid grid-cols-2 gap-2">{Object.entries(TOURNAMENT_FORMAT_LABELS).map(([k, v]) => <button key={k} onClick={() => setFormat(k as TournamentFormat)} className={`px-3 py-2 text-xs rounded-lg font-medium transition ${format === k ? 'text-white' : 'text-gray-400 bg-white/5 hover:bg-white/10'}`} style={format === k ? { background: 'rgba(6,182,212,0.2)', border: '1px solid rgba(6,182,212,0.4)' } : {}}>{v}</button>)}</div></div>
-          <div><label className="block text-xs text-gray-400 mb-1">Subject</label><div className="flex flex-wrap gap-1.5"><button onClick={() => setSubject('General Knowledge')} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === 'General Knowledge' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>General Knowledge</button>{SECTORS.filter(s => s !== 'Other').slice(0, 8).map((s) => <button key={s} onClick={() => setSubject(s)} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === s ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>{s}</button>)}</div></div>
-          {subject !== 'General Knowledge' && <div><label className="block text-xs text-gray-400 mb-1">Specific Topic (optional)</label><input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={`Specific ${subject} topic...`} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>}
+          <div><label className="block text-xs text-gray-400 mb-1">Subject</label><div className="flex flex-wrap gap-1.5"><button onClick={() => { setSubject('General Knowledge'); setTopic(''); }} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === 'General Knowledge' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>General Knowledge</button>{SECTORS.filter(s => s !== 'Other').slice(0, 8).map((s) => <button key={s} onClick={() => { setSubject(s); setTopic(''); }} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === s ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>{s}</button>)}<button onClick={() => { setSubject('Other'); setTopic(''); }} className={`px-2.5 py-1 text-[10px] rounded-full font-medium transition ${subject === 'Other' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400'}`}>Other</button></div></div>
+          {subject && subject !== 'General Knowledge' && <div><label className="block text-xs text-gray-400 mb-1">{subject === 'Other' ? 'Custom Subject' : 'Specific Topic (optional)'}</label><input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={subject === 'Other' ? 'Type custom subject...' : `Specific ${subject} topic...`} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-cyan-500" /></div>}
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs text-gray-400 mb-1">Max Players</label><input type="number" value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
             <div><label className="block text-xs text-gray-400 mb-1">Questions</label><input type="number" value={questionsCount} onChange={(e) => setQuestionsCount(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
@@ -408,8 +420,9 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
             <div><label className="block text-xs text-gray-400 mb-1">Qualify/Group</label><input type="number" value={qualifyPerGroup} onChange={(e) => setQualifyPerGroup(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
           </div>
           <div><label className="block text-xs text-gray-400 mb-1">XP Prize Pool</label><input type="number" value={xpPool} onChange={(e) => setXpPool(Number(e.target.value))} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-500" /></div>
-          <button onClick={handleCreate} disabled={!name.trim()} className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-40" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', boxShadow: '0 0 20px rgba(6,182,212,0.3)' }}>Create Tournament</button>
+          <button onClick={handleCreate} disabled={!name.trim() || (subject === 'Other' && !topic.trim())} className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-40" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', boxShadow: '0 0 20px rgba(6,182,212,0.3)' }}>Create Tournament</button>
         </div>
+        )}
       </div>
     </div>
   );
