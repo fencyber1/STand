@@ -56,11 +56,12 @@ export default function TournamentDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {tournaments.length > 0 && (
-              <button onClick={() => { clearAllTournaments(); loadTournaments(); }} className="px-3 py-2 rounded-lg text-xs font-medium text-red-400 border border-red-500/30 hover:bg-red-500/10 transition">
-                Clear All
-              </button>
-            )}
+            <button onClick={() => { clearAllTournaments(); loadTournaments(); }} className="px-3 py-2 rounded-lg text-xs font-medium text-red-400 border border-red-500/30 hover:bg-red-500/10 transition">
+              Clear Tournaments
+            </button>
+            <button onClick={() => { localStorage.clear(); sessionStorage.clear(); loadTournaments(); alert('All storage cleared! You can now create tournaments.'); }} className="px-3 py-2 rounded-lg text-xs font-medium text-orange-400 border border-orange-500/30 hover:bg-orange-500/10 transition">
+              Clear All Storage
+            </button>
             <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:scale-105" style={{ background: `linear-gradient(135deg, ${NEON_CYAN}, ${NEON_BLUE})`, boxShadow: `0 0 20px rgba(6,182,212,0.3)` }}>
               + Create Tournament
             </button>
@@ -422,7 +423,7 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
         createdByName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Player',
       });
       if (!t) {
-        setError('Storage full! Old tournaments were cleared. Please try again.');
+        setError('Storage full! Click "Clear All Storage" on the main page to free up space, then try again.');
         setCreating(false);
         return;
       }
@@ -435,8 +436,9 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
   };
 
   const handleClearAndRetry = () => {
-    clearAllTournaments();
-    setError('');
+    localStorage.clear();
+    sessionStorage.clear();
+    setError('All storage cleared! You can now create a tournament.');
   };
 
   return (
@@ -471,7 +473,7 @@ function TournamentCreate({ onClose, onCreated }: { onClose: () => void; onCreat
               </div>
               {error.includes('Storage full') && (
                 <button onClick={handleClearAndRetry} className="w-full mt-2 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition">
-                  Clear All Tournament Data & Retry
+                  Clear All Storage & Retry
                 </button>
               )}
             </div>
