@@ -1,6 +1,7 @@
 import type { Tournament, TournamentPlayer, TournamentMatch, TournamentGroup, TournamentFormat, TournamentConfig, KnockoutRound, MatchStatus } from '../types/tournament';
 
 const STORAGE_KEY = 'stand_tournaments';
+const SESSION_KEY = 'stand_tournaments_session';
 
 function readStorage(): Tournament[] {
   try {
@@ -9,26 +10,56 @@ function readStorage(): Tournament[] {
   } catch { return []; }
 }
 
+function readStorageWithFallback(): Tournament[] {
+  const local = readStorage();
+  if (local.length > 0) return local;
+  try {
+    const session = sessionStorage.getItem(SESSION_KEY);
+    return session ? JSON.parse(session) : [];
+  } catch { return []; }
+}
+
 function writeStorage(tournaments: Tournament[]): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments));
+    const data = JSON.stringify(tournaments);
+    localStorage.setItem(STORAGE_KEY, data);
     return true;
   } catch (e) {
-    console.error('[TournamentService] writeStorage failed:', e);
-    return false;
+    console.error('[TournamentService] localStorage write failed, trying sessionStorage:', e);
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(tournaments));
+      return true;
+    } catch (e2) {
+      console.error('[TournamentService] sessionStorage also failed:', e2);
+      return false;
+    }
   }
 }
 
 export function clearAllTournaments(): void {
   localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+export function getStorageUsage(): { used: number; total: number; tournaments: number } {
+  let totalSize = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) {
+      totalSize += localStorage.getItem(key)?.length || 0;
+    }
+  }
+  const tournaments = readStorage();
+  const tournamentSize = localStorage.getItem(STORAGE_KEY)?.length || 0;
+  return { used: totalSize, tournaments: tournaments.length, total: tournamentSize };
 }
 
 export function getAllTournaments(): Tournament[] {
-  return readStorage();
+  return readStorageWithFallback();
 }
 
 export function getTournament(id: string): Tournament | undefined {
-  return readStorage().find((t) => t.id === id);
+  return readStorageWithFallback().find((t) => t.id === id);
 }
 
 export function createTournament(params: {
@@ -42,7 +73,6 @@ export function createTournament(params: {
   createdBy: string;
   createdByName: string;
 }): Tournament | null {
-  let tournaments = readStorage();
   const tournament: Tournament = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name: params.name,
@@ -73,20 +103,15 @@ export function createTournament(params: {
     createdBy: params.createdBy,
     currentMatchday: 1,
   };
-  tournaments.push(tournament);
-  if (!writeStorage(tournaments)) {
-    // Storage full - clear and retry with just this tournament
-    localStorage.removeItem(STORAGE_KEY);
-    const success = writeStorage([tournament]);
-    if (!success) {
-      return null; // Still can't save
-    }
+  // Always write just this tournament (fresh start)
+  if (!writeStorage([tournament])) {
+    return null;
   }
   return tournament;
 }
 
 export function joinTournament(tournamentId: string, player: { uid: string; name: string; photo?: string }): boolean {
-  const tournaments = readStorage();
+  const tournaments = readStorageWithFallback();
   const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return false;
   if (tournament.participants.find((p) => p.uid === player.uid)) return true;
@@ -203,7 +228,7 @@ function getRoundsForFormat(format: TournamentFormat, playerCount: number): Knoc
 }
 
 export function updateMatchResult(tournamentId: string, matchId: string, score1: number, score2: number): boolean {
-  const tournaments = readStorage();
+  const tournaments = readStorageWithFallback();
   const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return false;
   const allMatches = [...tournament.groups.flatMap((g) => g.matches), ...tournament.knockoutMatches];
@@ -218,7 +243,7 @@ export function updateMatchResult(tournamentId: string, matchId: string, score1:
 }
 
 export function startTournament(tournamentId: string): Tournament | undefined {
-  const tournaments = readStorage();
+  const tournaments = readStorageWithFallback();
   const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return undefined;
   tournament.groups = generateGroups(tournament);
@@ -228,7 +253,7 @@ export function startTournament(tournamentId: string): Tournament | undefined {
 }
 
 export function advanceToKnockout(tournamentId: string): Tournament | undefined {
-  const tournaments = readStorage();
+  const tournaments = readStorageWithFallback();
   const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return undefined;
   const qualified: TournamentPlayer[] = [];
@@ -243,7 +268,7 @@ export function advanceToKnockout(tournamentId: string): Tournament | undefined 
 }
 
 export function finishTournament(tournamentId: string): boolean {
-  const tournaments = readStorage();
+  const tournaments = readStorageWithFallback();
   const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return false;
   tournament.status = 'finished';
@@ -251,7 +276,7 @@ export function finishTournament(tournamentId: string): boolean {
 }
 
 export function deleteTournament(tournamentId: string): void {
-  const tournaments = readStorage().filter((t) => t.id !== tournamentId);
+  const tournaments = readStorageWithFallback().filter((t) => t.id !== tournamentId);
   writeStorage(tournaments);
 }
 
@@ -264,7 +289,7 @@ export function getTournamentProfile(uid: string): {
   xpEarned: number;
   bestFinish: number;
 } {
-  const tournaments = readStorage();
+  const tournaments = readStorageWithFallback();
   let tournamentsPlayed = 0;
   let tournamentsWon = 0;
   let matchesPlayed = 0;
