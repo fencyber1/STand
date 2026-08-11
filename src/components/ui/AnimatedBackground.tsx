@@ -27,15 +27,15 @@ export default function AnimatedBackground() {
     };
 
     const createParticles = () => {
-      const count = Math.floor((canvas.width * canvas.height) / 12000);
+      const count = Math.min(Math.floor((canvas.width * canvas.height) / 25000), 60);
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 2 + 0.5,
-        opacity: Math.random() * 0.4 + 0.1,
-        hue: Math.random() * 60 + 220,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        size: Math.random() * 1.5 + 0.5,
+        opacity: Math.random() * 0.25 + 0.05,
+        hue: Math.random() * 40 + 250,
       }));
     };
 
@@ -79,7 +79,7 @@ export default function AnimatedBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.5 }}
+      style={{ opacity: 0.35 }}
     />
   );
 }

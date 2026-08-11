@@ -237,8 +237,8 @@ export default function Layout() {
       )}
 
       {/* Desktop sidebar */}
-      <aside data-tour-id="tour-sidebar" className={`fixed z-40 inset-y-0 left-0 w-64 border-r border-white/5 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: NAVY }}>
-        <div className="flex items-center justify-between h-14 px-4 border-b border-white/5 shrink-0">
+      <aside data-tour-id="tour-sidebar" className={`fixed z-40 inset-y-0 left-0 w-64 border-r border-white/8 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: NAVY }}>
+        <div className="flex items-center justify-between h-14 px-4 border-b border-white/8 shrink-0">
           <div className="text-white">
             <Logo size={130} />
           </div>
@@ -308,7 +308,7 @@ export default function Layout() {
         </header>
 
         {/* Mobile top bar */}
-        <header className="flex lg:hidden items-center h-14 px-4 border-b border-white/5 shrink-0" style={{ background: NAVY }}>
+        <header className="flex lg:hidden items-center h-14 px-4 border-b border-white/8 shrink-0" style={{ background: NAVY }}>
           <button data-tour-id="tour-hamburger" className="text-white/60 hover:text-white mr-3" onClick={() => setSidebarOpen(true)}>
             <Menu size={22} />
           </button>
@@ -319,14 +319,14 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-transparent to-purple-900/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/5 via-transparent to-purple-900/5 pointer-events-none" />
           <div className="relative z-10">
             <Outlet />
           </div>
         </main>
 
         {/* Mobile bottom tab bar */}
-        <nav className="lg:hidden flex items-center justify-around border-t border-white/5 safe-area-bottom shrink-0" style={{ background: NAVY }}>
+        <nav className="lg:hidden flex items-center justify-around border-t border-white/8 safe-area-bottom shrink-0" style={{ background: NAVY }}>
           {mobileTabs.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
