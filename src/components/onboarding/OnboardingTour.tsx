@@ -246,13 +246,20 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     };
   }, [open, updateSpotlight]);
 
-  const handleNext = () => {
+  const handleNext = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (step < STEPS.length - 1) setStep(step + 1);
     else onComplete();
   };
 
-  const handleBack = () => {
+  const handleBack = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (step > 0) setStep(step - 1);
+  };
+
+  const handleSkip = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    onComplete();
   };
 
   if (!open) return null;
@@ -266,7 +273,7 @@ export default function OnboardingTour({ open, onComplete }: Props) {
       <div
         className="tour-backdrop"
         style={{ clipPath, WebkitClipPath: clipPath }}
-        onClick={onComplete}
+        onClick={(e) => { e.stopPropagation(); onComplete(); }}
       />
 
       {spotRect && (
@@ -288,7 +295,7 @@ export default function OnboardingTour({ open, onComplete }: Props) {
         <div className="tour-description">{current.description}</div>
 
         <div className="tour-footer">
-          <button className="tour-btn tour-btn-skip" onClick={onComplete}>Skip</button>
+          <button className="tour-btn tour-btn-skip" onClick={handleSkip}>Skip</button>
 
           <div className="tour-dots">
             {STEPS.map((_, i) => (

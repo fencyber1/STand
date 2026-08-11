@@ -50,6 +50,7 @@
     0 0 30px rgba(139, 92, 246, 0.12),
     0 20px 40px -12px rgba(0, 0, 0, 0.5);
   animation: tourFadeIn 0.25s ease-out;
+  pointer-events: auto;
 }
 
 @keyframes tourFadeIn {
@@ -167,6 +168,9 @@
   border: none;
   outline: none;
   white-space: nowrap;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .tour-btn-inner {
