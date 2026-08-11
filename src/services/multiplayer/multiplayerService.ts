@@ -7,8 +7,7 @@ import { db } from '../firebase';
 import { addXP } from '../rankingService';
 import type { Question, GameRoom, GamePlayer, PlayerAnswer, GameMode, GameStatus, GameDifficulty, GameReward, GameChatMessage, TournamentBracket, TournamentRound, TournamentMatch, PlayerStats, MatchResult } from '../../types';
 
-const ROOM_TIMEOUT_MINUTES = 2;
-const ROOM_TIMEOUT_MS = ROOM_TIMEOUT_MINUTES * 60 * 1000;
+const ROOM_TIMEOUT_MS = 3 * 60 * 1000;
 
 function ts(): string {
   return new Date().toISOString();
@@ -63,70 +62,88 @@ export async function createGameRoom(params: {
   difficulty: GameDifficulty;
   isPrivate?: boolean;
 }): Promise<string> {
-    try {
-      const ref = doc(collection(db, 'gameRooms'));
-      const config = GAME_MODE_CONFIG[params.mode];
-      const roomCode = params.isPrivate || params.mode === '1v1' ? generateRoomCode() : undefined;
+  const config = GAME_MODE_CONFIG[params.mode];
+  if (!config) throw new Error('Invalid game mode');
 
-      const room: any = {
-        id: ref.id,
-        mode: params.mode,
-        status: 'waiting',
-        host: params.host.uid,
-        hostName: params.host.name,
-        players: [{
-          uid: params.host.uid,
-          displayName: params.host.name,
-          photoURL: params.host.photo,
-          score: 0,
-          correctAnswers: 0,
-          totalAnswers: 0,
-          answers: [],
-          ready: false,
-          connected: true,
-          finished: false,
-          streak: 0,
-          bestStreak: 0,
-          totalTime: 0,
-        }],
-        maxPlayers: config.maxPlayers,
-        subject: params.subject,
-        topic: params.topic,
-        difficulty: params.difficulty,
-        totalQuestions: config.questions,
-        timePerQuestion: config.time,
-        currentQuestion: 0,
-        questions: [],
-        answers: {},
-        spectators: [],
-        rewards: { xp: config.xpReward, coins: config.coinReward },
-        isPrivate: params.isPrivate || false,
-        roomCode,
-        createdAt: ts(),
-        expiresAt: Date.now() + ROOM_TIMEOUT_MS,
-        liveChat: [],
-      };
+  try {
+    const ref = doc(collection(db, 'gameRooms'));
+    const needsCode = params.isPrivate || params.mode === '1v1';
+    let roomCode: string | undefined;
 
-      const writePromise = setDoc(ref, sanitize(room));
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('CONNECTION_TIMEOUT')), 5000)
-      );
-      await Promise.race([writePromise, timeoutPromise]);
-      return ref.id;
-    } catch (e: any) {
-      console.error('[MP] Failed to create game room:', e);
-      if (e.message === 'CONNECTION_TIMEOUT' || e.code === 'unavailable') {
-        throw new Error('Cannot reach Firebase. Check your internet connection.');
+    if (needsCode) {
+      let attempts = 0;
+      let isUnique = false;
+      while (!isUnique && attempts < 10) {
+        const candidate = generateRoomCode();
+        const existing = await getDocs(query(collection(db, 'gameRooms'), where('roomCode', '==', candidate)));
+        if (existing.empty) {
+          roomCode = candidate;
+          isUnique = true;
+        }
+        attempts++;
       }
-      if (e.code === 'permission-denied') {
-        throw new Error('Permission denied. Firestore rules may not allow this.');
-      }
-      if (e.code === 'unauthenticated') {
-        throw new Error('Not authenticated. Please log in again.');
-      }
-      throw new Error(e.message || 'Failed to create room');
+      if (!roomCode) roomCode = generateRoomCode();
     }
+
+    const room: any = {
+      id: ref.id,
+      mode: params.mode,
+      status: 'waiting',
+      host: params.host.uid,
+      hostName: params.host.name,
+      players: [{
+        uid: params.host.uid,
+        displayName: params.host.name,
+        photoURL: params.host.photo,
+        score: 0,
+        correctAnswers: 0,
+        totalAnswers: 0,
+        answers: [],
+        ready: false,
+        connected: true,
+        finished: false,
+        streak: 0,
+        bestStreak: 0,
+        totalTime: 0,
+      }],
+      maxPlayers: config.maxPlayers,
+      subject: params.subject,
+      topic: params.topic,
+      difficulty: params.difficulty,
+      totalQuestions: config.questions,
+      timePerQuestion: config.time,
+      currentQuestion: 0,
+      questions: [],
+      answers: {},
+      spectators: [],
+      rewards: { xp: config.xpReward, coins: config.coinReward },
+      isPrivate: params.isPrivate || false,
+      roomCode: roomCode || null,
+      createdAt: ts(),
+      expiresAt: Date.now() + ROOM_TIMEOUT_MS,
+      liveChat: [],
+    };
+
+    const writePromise = setDoc(ref, sanitize(room));
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('CONNECTION_TIMEOUT')), 15000)
+    );
+    await Promise.race([writePromise, timeoutPromise]);
+    return ref.id;
+  } catch (e: any) {
+    console.error('[MP] Failed to create game room:', e);
+    if (e.message === 'CONNECTION_TIMEOUT' || e.code === 'unavailable') {
+      throw new Error('Cannot reach Firebase. Check your internet connection.');
+    }
+    if (e.code === 'permission-denied') {
+      throw new Error('Permission denied. Firestore rules may not allow this.');
+    }
+    if (e.code === 'unauthenticated') {
+      throw new Error('Not authenticated. Please log in again.');
+    }
+    throw new Error(e.message || 'Failed to create room');
   }
+}
 
 export async function joinGameRoom(roomId: string, player: { uid: string; name: string; photo: string | null }): Promise<{ success: boolean; error?: string }> {
   try {
@@ -140,6 +157,7 @@ export async function joinGameRoom(roomId: string, player: { uid: string; name: 
       if (room.status !== 'waiting') return { success: false, error: 'Game already started' };
       if (room.players.length >= room.maxPlayers) return { success: false, error: 'Room is full' };
       if (room.players.some((p) => p.uid === player.uid)) return { success: false, error: 'Already in room' };
+      if (room.expiresAt && room.expiresAt < Date.now()) return { success: false, error: 'Room expired' };
 
       const newPlayer: GamePlayer = {
         uid: player.uid,
@@ -159,7 +177,7 @@ export async function joinGameRoom(roomId: string, player: { uid: string; name: 
 
       transaction.update(ref, {
         players: [...room.players, newPlayer],
-        liveChat: [...room.liveChat, {
+        liveChat: [...room.liveChat.slice(-99), {
           uid: 'system',
           name: 'System',
           text: `${player.name} joined the game`,
@@ -177,8 +195,8 @@ export async function joinGameRoom(roomId: string, player: { uid: string; name: 
 
 export async function joinByCode(roomCode: string, player: { uid: string; name: string; photo: string | null }): Promise<{ success: boolean; roomId?: string; error?: string }> {
   try {
-    const snap = await getDocs(query(collection(db, 'gameRooms'), where('roomCode', '==', roomCode)));
-    if (snap.empty) return { success: false, error: 'Invalid room code' };
+    const snap = await getDocs(query(collection(db, 'gameRooms'), where('roomCode', '==', roomCode), where('status', '==', 'waiting')));
+    if (snap.empty) return { success: false, error: 'Invalid room code or game already started' };
 
     const roomDoc = snap.docs[0];
     const result = await joinGameRoom(roomDoc.id, player);
@@ -190,46 +208,48 @@ export async function joinByCode(roomCode: string, player: { uid: string; name: 
 
 export async function setPlayerReady(roomId: string, uid: string, ready: boolean): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
-  const players = room.players.map((p) => p.uid === uid ? { ...p, ready } : p);
-  await updateDoc(ref, { players });
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    const players = room.players.map((p) => p.uid === uid ? { ...p, ready } : p);
+    transaction.update(ref, { players });
+  });
 }
 
 export async function startGame(roomId: string, questions: Question[]): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  await updateDoc(ref, {
-    status: 'starting',
-    questions,
-    currentQuestion: 0,
-    totalQuestions: questions.length,
-    countdown: 5,
-    startedAt: ts(),
-    liveChat: [],
-    genProgress: null,
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    if (room.status !== 'waiting') return;
+    transaction.update(ref, {
+      status: 'starting',
+      questions,
+      currentQuestion: 0,
+      totalQuestions: questions.length,
+      countdown: 5,
+      startedAt: ts(),
+      liveChat: [],
+      genProgress: null,
+    });
   });
 }
 
 export async function tickCountdown(roomId: string): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
-  const currentCount = room.countdown ?? 0;
-
-  if (currentCount <= 1) {
-    await updateDoc(ref, {
-      countdown: 0,
-      status: 'in_progress',
-    });
-  } else {
-    await updateDoc(ref, {
-      countdown: currentCount - 1,
-    });
-  }
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    const currentCount = room.countdown ?? 0;
+    if (currentCount <= 1) {
+      transaction.update(ref, { countdown: 0, status: 'in_progress' });
+    } else {
+      transaction.update(ref, { countdown: currentCount - 1 });
+    }
+  });
 }
 
 export async function submitAnswer(
@@ -241,12 +261,15 @@ export async function submitAnswer(
   isCorrect: boolean,
 ): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
+  let shouldEndGame = false;
 
   await runTransaction(db, async (transaction) => {
     const snap = await transaction.get(ref);
     if (!snap.exists()) return;
 
     const room = snap.data() as GameRoom;
+    if (room.status === 'finished') return;
+
     const points = calculateAnswerPoints(isCorrect, timeSpent, room.timePerQuestion);
 
     const playerAnswer: PlayerAnswer = {
@@ -257,7 +280,6 @@ export async function submitAnswer(
       points,
     };
 
-    // Check if player is already eliminated
     const currentPlayer = room.players.find((p) => p.uid === uid);
     if (currentPlayer?.eliminated) return;
 
@@ -275,7 +297,6 @@ export async function submitAnswer(
         totalTime: p.totalTime + timeSpent,
       };
 
-      // Survival mode: eliminate on wrong answer
       if (room.mode === 'survival' && !isCorrect) {
         return { ...updated, eliminated: true };
       }
@@ -287,31 +308,17 @@ export async function submitAnswer(
     answers[uid][questionIndex.toString()] = playerAnswer;
 
     transaction.update(ref, { players, answers: sanitize(answers) });
+
+    if (room.mode === 'survival') {
+      const aliveAfter = players.filter((p) => !p.eliminated).length;
+      if (aliveAfter <= 1) {
+        shouldEndGame = true;
+      }
+    }
   });
 
-  // Check if survival mode should end (after transaction completes)
-  if (isCorrect) {
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const room = snap.data() as GameRoom;
-      if (room.mode === 'survival') {
-        const aliveAfter = room.players.filter((p) => !p.eliminated).length;
-        if (aliveAfter <= 1) {
-          await endGame(roomId);
-        }
-      }
-    }
-  } else {
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const room = snap.data() as GameRoom;
-      if (room.mode === 'survival') {
-        const aliveAfter = room.players.filter((p) => !p.eliminated).length;
-        if (aliveAfter <= 1) {
-          await endGame(roomId);
-        }
-      }
-    }
+  if (shouldEndGame) {
+    await endGame(roomId);
   }
 }
 
@@ -324,122 +331,147 @@ function calculateAnswerPoints(correct: boolean, timeSpent: number, maxTime: num
 
 export async function nextQuestion(roomId: string): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
+  let shouldEndGame = false;
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    if (room.status === 'finished') return;
 
-  const room = snap.data() as GameRoom;
-  const nextQ = room.currentQuestion + 1;
-
-  if (nextQ >= room.totalQuestions) {
+    const nextQ = room.currentQuestion + 1;
+    if (nextQ >= room.totalQuestions) {
+      shouldEndGame = true;
+    } else {
+      transaction.update(ref, { currentQuestion: nextQ });
+    }
+  });
+  if (shouldEndGame) {
     await endGame(roomId);
-  } else {
-    await updateDoc(ref, { currentQuestion: nextQ });
   }
 }
 
 export async function endGame(roomId: string): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
 
-  const room = snap.data() as GameRoom;
-  const sortedPlayers = [...room.players].sort((a, b) => b.score - a.score);
-  const rankedPlayers = sortedPlayers.map((p, idx) => ({ ...p, rank: idx + 1 }));
-  const winner = rankedPlayers[0]?.uid;
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
 
-  await updateDoc(ref, {
-    status: 'finished',
-    players: rankedPlayers,
-    winner,
-    endedAt: ts(),
+    const room = snap.data() as GameRoom;
+    if (room.status === 'finished') return;
+
+    const sortedPlayers = [...room.players].sort((a, b) => b.score - a.score);
+    const rankedPlayers = sortedPlayers.map((p, idx) => ({ ...p, rank: idx + 1 }));
+    const winner = rankedPlayers[0]?.uid;
+
+    transaction.update(ref, {
+      status: 'finished',
+      players: rankedPlayers,
+      winner,
+      endedAt: ts(),
+    });
   });
 
-  for (const player of rankedPlayers) {
-    const isWinner = player.uid === winner;
-    const opponent = rankedPlayers.find((p) => p.uid !== player.uid);
-    const result: MatchResult = {
-      id: `${roomId}-${player.uid}`,
-      mode: room.mode,
-      opponent: opponent?.uid || '',
-      opponentName: opponent?.displayName || 'Unknown',
-      result: isWinner ? 'win' : opponent ? 'loss' : 'draw',
-      score: player.score,
-      opponentScore: opponent?.score || 0,
-      xpEarned: room.rewards.xp + (isWinner ? 50 : 0),
-      date: ts(),
-      subject: room.subject,
-    };
-    await recordMatchResult(player.uid, result);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    if (room.status !== 'finished') return;
+
+    for (const player of room.players) {
+      const isWinner = player.uid === room.winner;
+      const opponent = room.players.find((p) => p.uid !== player.uid);
+      const result: MatchResult = {
+        id: `${roomId}-${player.uid}`,
+        mode: room.mode,
+        opponent: opponent?.uid || '',
+        opponentName: opponent?.displayName || 'Unknown',
+        result: isWinner ? 'win' : opponent ? 'loss' : 'draw',
+        score: player.score,
+        opponentScore: opponent?.score || 0,
+        xpEarned: room.rewards.xp + (isWinner ? 50 : 0),
+        date: ts(),
+        subject: room.subject,
+      };
+      await recordMatchResult(player.uid, result);
+    }
+  } catch (e) {
+    console.error('[MP] Error recording match results:', e);
   }
 }
 
 export async function leaveGame(roomId: string, uid: string): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
-  const players = room.players.filter((p) => p.uid !== uid);
-  if (players.length === 0) {
-    await deleteDoc(ref);
-  } else {
-    await updateDoc(ref, { players });
-  }
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    const players = room.players.filter((p) => p.uid !== uid);
+    if (players.length === 0) {
+      transaction.delete(ref);
+    } else {
+      transaction.update(ref, { players });
+    }
+  });
 }
 
 export async function sendChatMessage(roomId: string, message: Omit<GameChatMessage, 'timestamp'>): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
-  await updateDoc(ref, {
-    liveChat: [...room.liveChat.slice(-99), { ...message, timestamp: ts() }],
+  const newMessage = { ...message, timestamp: ts(), id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    transaction.update(ref, { liveChat: [...room.liveChat.slice(-99), newMessage] });
   });
 }
 
 export async function addSpectator(roomId: string, uid: string): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
-  if (!room.spectators.includes(uid)) {
-    await updateDoc(ref, { spectators: [...room.spectators, uid] });
-  }
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    if (!room.spectators.includes(uid)) {
+      transaction.update(ref, { spectators: [...room.spectators, uid] });
+    }
+  });
 }
 
 export async function removeSpectator(roomId: string, uid: string): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
-  await updateDoc(ref, { spectators: room.spectators.filter((s) => s !== uid) });
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    transaction.update(ref, { spectators: room.spectators.filter((s) => s !== uid) });
+  });
 }
 
 export async function sendReaction(roomId: string, reaction: { uid: string; name: string; emoji: string }): Promise<void> {
   const ref = doc(db, 'gameRooms', roomId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
-
-  const room = snap.data() as GameRoom;
   const newReaction = {
     id: `reaction-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     ...reaction,
     timestamp: ts(),
   };
-  const reactions = [...(room.reactions || []), newReaction].slice(-50);
-  await updateDoc(ref, { reactions });
-
-  await updateDoc(ref, {
-    liveChat: [...room.liveChat.slice(-99), {
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    const reactions = [...(room.reactions || []), newReaction].slice(-50);
+    const chatMessage = {
       uid: reaction.uid,
       name: reaction.name,
       text: reaction.emoji,
       timestamp: ts(),
       type: 'reaction' as const,
-    }],
+      id: `react-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    };
+    transaction.update(ref, {
+      reactions,
+      liveChat: [...room.liveChat.slice(-99), chatMessage],
+    });
   });
 }
 
@@ -454,39 +486,25 @@ export function subscribeToGameRoom(roomId: string, cb: (room: GameRoom | null) 
 }
 
 export function subscribeToActiveGames(cb: (rooms: GameRoom[]) => void): () => void {
-  const q = query(collection(db, 'gameRooms'), where('status', 'in', ['waiting', 'in_progress']));
-  
-  return onSnapshot(q, async (snapshot) => {
+  const q = query(
+    collection(db, 'gameRooms'),
+    where('status', 'in', ['waiting', 'in_progress']),
+    orderBy('createdAt', 'desc'),
+    limit(20)
+  );
+
+  return onSnapshot(q, (snapshot) => {
     const now = Date.now();
     const rooms: GameRoom[] = [];
-    const expired: string[] = [];
 
     for (const d of snapshot.docs) {
       const data = { id: d.id, ...d.data() } as GameRoom;
       if (data.expiresAt && data.expiresAt < now && data.players.length < 2) {
-        expired.push(d.id);
+        deleteDoc(doc(db, 'gameRooms', d.id)).catch(() => {});
       } else {
         rooms.push(data);
       }
     }
-
-    if (expired.length > 0) {
-      try {
-        const batch = writeBatch(db);
-        for (const id of expired) {
-          batch.delete(doc(db, 'gameRooms', id));
-        }
-        await batch.commit();
-      } catch (e) {
-        console.error('[MP] Failed to clean expired rooms:', e);
-      }
-    }
-
-    rooms.sort((a, b) => {
-      const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : (a.createdAt || 0);
-      const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : (b.createdAt || 0);
-      return bTime - aTime;
-    });
     cb(rooms);
   }, (err) => {
     console.error('[MP] subscribeToActiveGames error:', err);
@@ -510,20 +528,24 @@ export async function updatePlayerStats(uid: string, stats: Partial<PlayerStats>
 }
 
 export async function recordMatchResult(uid: string, result: MatchResult): Promise<void> {
-  const stats = await getPlayerStats(uid);
-  const newMatchesPlayed = stats.matchesPlayed + 1;
-  const newWins = stats.wins + (result.result === 'win' ? 1 : 0);
-  const newStats: PlayerStats = {
-    ...stats,
-    matchesPlayed: newMatchesPlayed,
-    wins: newWins,
-    losses: stats.losses + (result.result === 'loss' ? 1 : 0),
-    draws: stats.draws + (result.result === 'draw' ? 1 : 0),
-    totalXPEarned: stats.totalXPEarned + result.xpEarned,
-    winRate: newMatchesPlayed > 0 ? Math.round((newWins / newMatchesPlayed) * 100) : 0,
-    matchHistory: [result, ...stats.matchHistory.slice(0, 49)],
-  };
-  await updatePlayerStats(uid, newStats);
+  const ref = doc(db, 'playerStats', uid);
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+    const stats = snap.exists() ? snap.data() as PlayerStats : getDefaultPlayerStats(uid);
+    const newMatchesPlayed = stats.matchesPlayed + 1;
+    const newWins = stats.wins + (result.result === 'win' ? 1 : 0);
+    const newStats: PlayerStats = {
+      ...stats,
+      matchesPlayed: newMatchesPlayed,
+      wins: newWins,
+      losses: stats.losses + (result.result === 'loss' ? 1 : 0),
+      draws: stats.draws + (result.result === 'draw' ? 1 : 0),
+      totalXPEarned: stats.totalXPEarned + result.xpEarned,
+      winRate: newMatchesPlayed > 0 ? Math.round((newWins / newMatchesPlayed) * 100) : 0,
+      matchHistory: [result, ...stats.matchHistory.slice(0, 49)],
+    };
+    transaction.set(ref, sanitize(newStats));
+  });
 
   try {
     await addXP(uid, 'multiplayerWin', result.xpEarned, { result: result.result, mode: result.mode });
@@ -562,8 +584,10 @@ export async function createTournament(params: {
   maxPlayers: number;
   host: { uid: string; name: string; photo: string | null };
 }): Promise<string> {
-  const ref = doc(collection(db, 'gameRooms'));
   const config = GAME_MODE_CONFIG[params.mode];
+  if (!config) throw new Error('Invalid game mode');
+
+  const ref = doc(collection(db, 'gameRooms'));
 
   const bracket: TournamentBracket = {
     rounds: [],
@@ -604,6 +628,7 @@ export async function createTournament(params: {
     rewards: { xp: config.xpReward * 2, coins: config.coinReward * 2 },
     isPrivate: false,
     createdAt: ts(),
+    expiresAt: Date.now() + ROOM_TIMEOUT_MS,
     liveChat: [],
     bracket,
   };
@@ -617,13 +642,16 @@ export function generateBracket(players: GamePlayer[]): TournamentBracket {
   const rounds: TournamentRound[] = [];
   let matchesInRound = Math.floor(shuffled.length / 2);
 
+  let playerIdx = 0;
   while (matchesInRound >= 1) {
     const round: TournamentRound = { matches: [] };
     for (let i = 0; i < matchesInRound; i++) {
+      const p1 = shuffled[playerIdx++] || null;
+      const p2 = shuffled[playerIdx++] || null;
       round.matches.push({
         id: `match-${rounds.length}-${i}`,
-        player1: shuffled[i * 2]?.uid || '',
-        player2: shuffled[i * 2 + 1]?.uid || '',
+        player1: p1?.uid || '',
+        player2: p2?.uid || '',
         score1: 0,
         score2: 0,
         status: 'pending',

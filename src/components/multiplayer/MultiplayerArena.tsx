@@ -109,12 +109,15 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
 
   const handleConfirmCreate = async () => {
     if (!user || !selectedMode) return;
+    if (selectedSubject === 'Other' && !specificTopic.trim()) {
+      setCreateError('Please enter a custom subject.');
+      return;
+    }
     setCreating(true);
     setCreateError('');
     try {
-      const subject = selectedSubject === 'Other' ? (specificTopic.trim() || 'Other') : (selectedSubject || 'General Knowledge');
+      const subject = selectedSubject === 'Other' ? specificTopic.trim() : (selectedSubject || 'General Knowledge');
       const topic = selectedSubject === 'Other' ? subject : (specificTopic.trim() || subject);
-      console.log('[MP] Creating room with mode:', selectedMode, 'subject:', subject, 'topic:', topic);
       const roomId = await createGameRoom({
         host: { uid: user.uid, name: user.fullName || 'Player', photo: user.photoURL },
         mode: selectedMode,
@@ -123,19 +126,11 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
         difficulty: 'mixed',
         isPrivate: selectedMode === '1v1',
       });
-      console.log('[MP] Room created:', roomId);
       if (roomId) {
         setSelectedMode(null);
         setSelectedSubject('');
         setSpecificTopic('');
-        console.log('[MP] Navigating to:', `/multiplayer/${roomId}`);
         navigate(`/multiplayer/${roomId}`);
-        setTimeout(() => {
-          if (window.location.pathname === '/multiplayer') {
-            console.log('[MP] Navigation failed, using href fallback');
-            window.location.href = `/multiplayer/${roomId}`;
-          }
-        }, 1000);
       } else {
         setCreateError('Failed to create room. Please try again.');
       }
@@ -352,8 +347,8 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
             <BorderGlow backgroundColor="#141e35" borderRadius={16} glowColor="270 80 60" glowRadius={20} glowIntensity={0.8} edgeSensitivity={35} colors={['#a855f7', '#c084fc', '#7c3aed']}>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <button onClick={() => setSelectedMode(null)} className="text-gray-400 hover:text-white text-sm flex items-center gap-1">← Back</button>
-                  <span className="text-xs text-gray-400">{MODE_COLORS[selectedMode]?.text && <span className={MODE_COLORS[selectedMode].text}>{gameModes.find(m => m.mode === selectedMode)?.label}</span>}</span>
+                  <button onClick={() => { setSelectedMode(null); setSelectedSubject(''); setSpecificTopic(''); }} className="text-gray-400 hover:text-white text-sm flex items-center gap-1">← Back</button>
+                  <span className="text-xs text-gray-400">{gameModes.find(m => m.mode === selectedMode)?.label || ''}</span>
                 </div>
                 <p className="text-xs text-gray-400 mb-2">Select a subject:</p>
                 <div className="flex flex-wrap gap-2 mb-4">

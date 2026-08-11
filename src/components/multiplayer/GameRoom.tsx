@@ -50,6 +50,7 @@ export default function GameRoom() {
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState({ current: 0, total: 0 });
+  const hasAnsweredRef = useRef(false);
 
   const [searchParams] = useSearchParams();
   const isSpectator = searchParams.get('spectate') === 'true';
@@ -85,15 +86,20 @@ export default function GameRoom() {
   };
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const reactionEmojis = ['🔥', '❤️', '👏', '😂', '⚡', '🎉', '💪', '👀'];
+  const [userAchievements, setUserAchievements] = useState<string[]>([]);
 
   useEffect(() => {
-    if (isSpectator && user?.uid && roomId) {
+    setUserAchievements(storage.getAchievements().map(a => a.id));
+  }, []);
+
+  useEffect(() => {
+    if (isSpectator && user?.uid && roomId && room && (room.status === 'waiting' || room.status === 'in_progress')) {
       addSpectator(roomId, user.uid);
       return () => {
         removeSpectator(roomId, user.uid);
       };
     }
-  }, [isSpectator, user?.uid, roomId]);
+  }, [isSpectator, user?.uid, roomId, room?.status]);
 
   const handleSendReaction = async (emoji: string) => {
     if (!user || !roomId) return;
@@ -125,7 +131,6 @@ export default function GameRoom() {
       type: 'message',
     });
     setWaitingChat('');
-    setTimeout(() => fetchRoom(), 500);
   };
 
   const fetchRoom = useCallback(async () => {
@@ -235,11 +240,12 @@ export default function GameRoom() {
   }, [room?.currentQuestion, room?.status]);
 
   const handleAnswer = async (answer: string) => {
-    if (!roomId || !user || !room || hasAnswered) return;
+    if (!roomId || !user || !room || hasAnsweredRef.current) return;
     const currentPlayer = room.players.find((p) => p.uid === user.uid);
     if (currentPlayer?.eliminated) return;
-    setSelectedAnswer(answer);
+    hasAnsweredRef.current = true;
     setHasAnswered(true);
+    setSelectedAnswer(answer);
 
     const currentQ = room.questions[room.currentQuestion];
     if (!currentQ) return;
@@ -248,23 +254,24 @@ export default function GameRoom() {
     setLastAnswerCorrect(isCorrect);
     const timeSpent = room.timePerQuestion - timeLeft;
 
+    if (timerRef.current) clearInterval(timerRef.current);
+
     await submitAnswer(roomId, user.uid, room.currentQuestion, answer, timeSpent, isCorrect);
   };
 
   const handleNextQuestion = async () => {
     if (!roomId) return;
-    await nextQuestion(roomId);
-    setSelectedAnswer(null);
+    hasAnsweredRef.current = false;
     setHasAnswered(false);
+    setSelectedAnswer(null);
     setLastAnswerCorrect(null);
-    setTimeout(() => fetchRoom(), 500);
+    await nextQuestion(roomId);
   };
 
   const handleReady = async () => {
     if (!roomId || !user) return;
     const player = room?.players.find((p) => p.uid === user.uid);
     await setPlayerReady(roomId, user.uid, !player?.ready);
-    setTimeout(() => fetchRoom(), 500);
   };
 
 const handleStartGame = async () => {
@@ -834,8 +841,9 @@ const handleStartGame = async () => {
                 </div>
                 <div className="flex gap-0.5">
                   {(() => {
-                    const unlocked = room.players[0]?.uid === user?.uid ? storage.getAchievements().map(a => a.id) : [];
-                    const badges = unlocked.length > 0 ? (ACHIEVEMENTS.filter(a => unlocked.includes(a.id)).slice(0, 3).map(a => a.icon)) : (playerLevels[room.players[0]?.uid || ''] || 1) >= 50 ? ['🏆', '👑', '🎯'] : (playerLevels[room.players[0]?.uid || ''] || 1) >= 20 ? ['🔥', '⚡', '📚'] : ['🎯', '💪', '📚'];
+                    const p0 = room.players[0];
+                    const unlocked = p0?.uid === user?.uid ? userAchievements : [];
+                    const badges = unlocked.length > 0 ? (ACHIEVEMENTS.filter(a => unlocked.includes(a.id)).slice(0, 3).map(a => a.icon)) : (playerLevels[p0?.uid || ''] || 1) >= 50 ? ['🏆', '👑', '🎯'] : (playerLevels[p0?.uid || ''] || 1) >= 20 ? ['🔥', '⚡', '📚'] : ['🎯', '💪', '📚'];
                     return badges.map((emoji, i) => <span key={i} className="text-[10px] bg-white/10 rounded px-1 py-0.5 text-white/80">{emoji}</span>);
                   })()}
                 </div>
@@ -868,8 +876,9 @@ const handleStartGame = async () => {
                 </div>
                 <div className="flex gap-0.5">
                   {(() => {
-                    const unlocked = room.players[1]?.uid === user?.uid ? storage.getAchievements().map(a => a.id) : [];
-                    const badges = unlocked.length > 0 ? (ACHIEVEMENTS.filter(a => unlocked.includes(a.id)).slice(0, 3).map(a => a.icon)) : (playerLevels[room.players[1]?.uid || ''] || 1) >= 50 ? ['🏆', '👑', '🎯'] : (playerLevels[room.players[1]?.uid || ''] || 1) >= 20 ? ['🔥', '⚡', '📚'] : ['🎯', '💪', '📚'];
+                    const p1 = room.players[1];
+                    const unlocked = p1?.uid === user?.uid ? userAchievements : [];
+                    const badges = unlocked.length > 0 ? (ACHIEVEMENTS.filter(a => unlocked.includes(a.id)).slice(0, 3).map(a => a.icon)) : (playerLevels[p1?.uid || ''] || 1) >= 50 ? ['🏆', '👑', '🎯'] : (playerLevels[p1?.uid || ''] || 1) >= 20 ? ['🔥', '⚡', '📚'] : ['🎯', '💪', '📚'];
                     return badges.map((emoji, i) => <span key={i} className="text-[10px] bg-white/10 rounded px-1 py-0.5 text-white/80">{emoji}</span>);
                   })()}
                 </div>
