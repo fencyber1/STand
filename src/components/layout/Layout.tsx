@@ -40,7 +40,7 @@ import FenBotIcon from '../effects/FenBotIcon';
 import NotificationBell from '../notifications/NotificationBell';
 import AnimatedBackground from '../ui/AnimatedBackground';
 
-const NAVY = '#0e1627';
+const NAVY = '#111b2e';
 
 function FenBotNavIcon({ size }: { size: number }) {
   return <FenBotIcon size={size} />;
