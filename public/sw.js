@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stand-v2';
+const CACHE_NAME = 'stand-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -13,7 +13,6 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) =>
       Promise.allSettled(STATIC_ASSETS.map((url) => cache.add(url)))
     ).then(() => {
-      // Precache main bundles by parsing index.html
       return fetch('/index.html').then((response) => response.text()).then((html) => {
         const urls = new Set();
         const scriptRegex = /<script[^>]*src="([^"]+)"/g;
@@ -47,7 +46,6 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Don't intercept Firebase/FCM/Google requests
   if (url.hostname.includes('firebaseio') ||
       url.hostname.includes('firebase') ||
       url.hostname.includes('gstatic') ||
@@ -58,7 +56,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for API calls (always fresh)
   if (url.pathname.includes('/api/')) {
     event.respondWith(
       fetch(event.request)
@@ -74,7 +71,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for same-origin static assets
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -90,6 +101,4 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-
-  // Default: network only (for external resources not listed above)
 });
