@@ -96,7 +96,7 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
     return () => unsub();
   }, [user?.uid]);
 
-  const handleCreateGame = async (mode: GameMode) => {
+  const handleCreateGame = (mode: GameMode) => {
     if (!user) {
       setCreateError('Please log in to create a game room');
       return;
@@ -105,6 +105,9 @@ const MODE_COLORS: Record<string, { gradient: string; glow: string; glowColor: s
     setSelectedMode(mode);
     setSelectedSubject('');
     setSpecificTopic('');
+    setShowCreate(true);
+    setShowJoinCode(false);
+    setCreateError('');
   };
 
   const handleConfirmCreate = async () => {
