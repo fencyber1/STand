@@ -268,12 +268,17 @@ export default function OnboardingTour({ open, onComplete }: Props) {
     ? `polygon(0% 0%, 0% 100%, ${spotRect.left}px 100%, ${spotRect.left}px ${spotRect.top}px, ${spotRect.left + spotRect.width}px ${spotRect.top}px, ${spotRect.left + spotRect.width}px ${spotRect.top + spotRect.height}px, ${spotRect.left}px ${spotRect.top + spotRect.height}px, ${spotRect.left}px 100%, 100% 100%, 100% 0%)`
     : 'none';
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+      onComplete();
+    }
+  };
+
   return (
-    <div className="tour-overlay">
+    <div className="tour-overlay" onClick={handleOverlayClick}>
       <div
         className="tour-backdrop"
         style={{ clipPath, WebkitClipPath: clipPath }}
-        onClick={(e) => { e.stopPropagation(); onComplete(); }}
       />
 
       {spotRect && (
@@ -283,7 +288,7 @@ export default function OnboardingTour({ open, onComplete }: Props) {
         />
       )}
 
-      <div ref={tooltipRef} className="tour-tooltip" style={tooltipStyle}>
+      <div ref={tooltipRef} className="tour-tooltip" style={tooltipStyle} onClick={(e) => e.stopPropagation()}>
         <div className={`tour-tooltip-arrow ${arrowDir}`} style={arrowStyle} />
 
         <div className="tour-step-badge">
