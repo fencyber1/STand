@@ -102,7 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Handle redirect result from Google sign-in on mobile
-    getRedirectResult(auth).catch(() => {});
+    getRedirectResult(auth).catch((e: any) => {
+      console.error('Google redirect result error:', e?.code, e?.message);
+    });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -173,37 +175,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+   const isMobile =
+    (typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop|Mobile|Tablet/i.test(navigator.userAgent)) ||
+    typeof window === 'undefined';
 
-  const loginWithGoogle = useCallback(async () => {
-    try {
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-        return { success: true };
-      }
-      try {
-        await signInWithPopup(auth, googleProvider);
-        return { success: true };
-      } catch (popupError: any) {
-        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-          console.log('[Auth] Popup blocked, falling back to redirect');
-          await signInWithRedirect(auth, googleProvider);
-          return { success: true };
-        }
-        throw popupError;
-      }
-    } catch (e: any) {
-      console.error('Google sign-in error:', e.code, e.message);
-      const msg =
-        e.code === 'auth/popup-blocked' ? 'Popup was blocked by your browser. Allow popups and try again.'
-        : e.code === 'auth/popup-closed-by-user' ? 'Sign-in cancelled. Please try again.'
-        : e.code === 'auth/cancelled-popup-request' ? 'Sign-in cancelled. Please try again.'
-        : e.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
-        : e.code === 'auth/configuration-not-found' ? 'Google sign-in is not available. Please try email sign-in.'
-        : 'Failed to sign in with Google. Please try again.';
-      return { success: false, error: msg };
-    }
-  }, [isMobile]);
+   const loginWithGoogle = useCallback(async () => {
+     try {
+       if (isMobile) {
+         await signInWithRedirect(auth, googleProvider);
+         return { success: true };
+       }
+       try {
+         await signInWithPopup(auth, googleProvider);
+         return { success: true };
+       } catch (popupError: any) {
+         if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+           console.log('[Auth] Popup blocked, falling back to redirect');
+           await signInWithRedirect(auth, googleProvider);
+           return { success: true };
+         }
+         throw popupError;
+       }
+     } catch (e: any) {
+       console.error('Google sign-in error:', e.code, e.message);
+       const msg =
+         e.code === 'auth/popup-blocked' ? 'Popup was blocked by your browser. Allow popups and try again.'
+         : e.code === 'auth/popup-closed-by-user' ? 'Sign-in cancelled. Please try again.'
+         : e.code === 'auth/cancelled-popup-request' ? 'Sign-in cancelled. Please try again.'
+         : e.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
+         : e.code === 'auth/configuration-not-found' ? 'Google sign-in is not available. Please try email sign-in.'
+         : 'Failed to sign in with Google. Please try again.';
+       return { success: false, error: msg };
+     }
+   }, [isMobile]);
 
   const register = useCallback(async (fullName: string, email: string, password: string) => {
     try {
