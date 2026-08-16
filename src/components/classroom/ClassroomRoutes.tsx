@@ -3,6 +3,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import ClassroomHome from '../../screens/ClassroomHome';
 import TeacherDashboard, { TeacherDashboardContent } from '../../screens/TeacherDashboard';
 import StudentDashboard from '../../screens/StudentDashboard';
+import StudentTopicListScreen from '../../screens/classroom/StudentTopicListScreen';
+import StudentTopicReader from '../../screens/classroom/StudentTopicReader';
+import StudentProgressScreen from '../../screens/classroom/StudentProgressScreen';
 import TopicListScreen from '../../screens/classroom/TopicListScreen';
 import AddTopicForm from '../../screens/classroom/AddTopicForm';
 import TopicDraftReview from '../../screens/classroom/TopicDraftReview';
@@ -30,6 +33,9 @@ export default function ClassroomRoutes() {
 
       {/* Student Dashboard */}
       <Route path="/:roomId/learn" element={<StudentDashboard />} />
+      <Route path="/:roomId/learn/topics" element={<StudentTopicListScreen />} />
+      <Route path="/:roomId/learn/topics/:topicId" element={<StudentTopicReader />} />
+      <Route path="/:roomId/learn/progress" element={<StudentProgressScreen />} />
 
       {/* Teacher Dashboard with nested routes for Phase 2 screens */}
       <Route path="/:roomId" element={<TeacherDashboard />}>

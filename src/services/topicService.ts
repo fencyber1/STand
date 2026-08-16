@@ -16,6 +16,18 @@ import {
 } from 'firebase/firestore';
 import { Topic, TopicStatus, TopicContent } from '../types/classroom';
 
+export interface TopicProgress {
+  id: string;
+  userId: string;
+  topicId: string;
+  roomId: string;
+  progress: number;
+  completed: boolean;
+  lastSection?: string;
+  timeSpent: number;
+  updatedAt: Date;
+}
+
 /**
  * Service layer for managing classroom topics.
  * Does not interact with any existing codebase functionality.
@@ -312,6 +324,102 @@ class TopicService {
       lastGeneratedAt: data.lastGeneratedAt ? new Date(data.lastGeneratedAt) : undefined,
       roomId: data.roomId,
     };
+  }
+
+  /**
+   * Gets student progress for all topics in a room
+   */
+  async getStudentProgress(roomId: string): Promise<TopicProgress[]> {
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const user = getAuth().currentUser;
+      if (!user) return [];
+
+      const q = query(
+        collection(db, 'topicProgress'),
+        where('roomId', '==', roomId),
+        where('userId', '==', user.uid)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userId: data.userId,
+          topicId: data.topicId,
+          roomId: data.roomId,
+          progress: data.progress ?? 0,
+          completed: data.completed ?? false,
+          lastSection: data.lastSection,
+          timeSpent: data.timeSpent ?? 0,
+          updatedAt: new Date(data.updatedAt),
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get student progress:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Updates student progress for a topic
+   */
+  async updateStudentProgress(
+    roomId: string,
+    topicId: string,
+    progress: Partial<TopicProgress>
+  ): Promise<void> {
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const user = getAuth().currentUser;
+      if (!user) throw new Error('User not authenticated');
+
+      const progressRef = doc(db, 'topicProgress', `${user.uid}_${topicId}`);
+      await setDoc(progressRef, {
+        userId: user.uid,
+        topicId,
+        roomId,
+        progress: progress.progress ?? 0,
+        completed: progress.completed ?? false,
+        lastSection: progress.lastSection,
+        timeSpent: progress.timeSpent ?? 0,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch (error) {
+      console.error('Failed to update student progress:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets progress for a specific topic
+   */
+  async getTopicProgress(roomId: string, topicId: string): Promise<TopicProgress | null> {
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const user = getAuth().currentUser;
+      if (!user) return null;
+
+      const progressRef = doc(db, 'topicProgress', `${user.uid}_${topicId}`);
+      const snap = await getDoc(progressRef);
+      if (!snap.exists()) return null;
+
+      const data = snap.data();
+      return {
+        id: snap.id,
+        userId: data.userId,
+        topicId: data.topicId,
+        roomId: data.roomId,
+        progress: data.progress ?? 0,
+        completed: data.completed ?? false,
+        lastSection: data.lastSection,
+        timeSpent: data.timeSpent ?? 0,
+        updatedAt: new Date(data.updatedAt),
+      };
+    } catch (error) {
+      console.error('Failed to get topic progress:', error);
+      return null;
+    }
   }
 }
 
