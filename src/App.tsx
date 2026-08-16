@@ -44,6 +44,7 @@ const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen')
 const PrivacySettingsScreen = lazy(() => import('./components/settings/PrivacySettingsScreen'));
 const AboutScreen = lazy(() => import('./components/settings/AboutScreen'));
 const FenBot = lazy(() => import('./components/practice/FenBot'));
+const ClassroomRoutes = lazy(() => import('./components/classroom/ClassroomRoutes'));
 
 function RouteSpinner() {
   return (
@@ -108,10 +109,11 @@ export default function App() {
     <Suspense fallback={<RouteSpinner />}>
       {showTour && <OnboardingTour open={showTour} onComplete={handleTourComplete} />}
       {isLoggedIn ? (
-        <NotificationProvider>
-          <ChatThemeProvider>
-            <Routes>
-              <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
+          <NotificationProvider>
+           <ChatThemeProvider>
+             <Routes>
+               <Route path="/classroom/*" element={<ClassroomRoutes />} />
+               <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
               <Route path="/chat/:chatId" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
               <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
               <Route path="/groups-chat/:groupId" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />
@@ -154,6 +156,7 @@ export default function App() {
         </NotificationProvider>
       ) : (
         <Routes>
+          <Route path="/classroom/*" element={<ClassroomRoutes />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/register" element={<RegisterScreen />} />
           <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />

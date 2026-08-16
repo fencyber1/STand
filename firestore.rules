@@ -89,5 +89,109 @@ service cloud.firestore {
       allow read, write: if request.auth != null && resource.data.uid == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
     }
+
+    // ——————————————————————————————
+    // STAND Classroom Collections
+    // ——————————————————————————————
+
+    // Room helper functions
+    function is_classroom_room_owner(roomId) {
+      return get(/databases/$(database)/documents/classroomRooms/$(roomId)).data.ownerId == request.auth.uid;
+    }
+
+    function is_classroom_room_member(roomId) {
+      let memberCheck = get(/databases/$(database)/documents/classroomRooms/$(roomId));
+      return memberCheck.data.ownerId == request.auth.uid
+        || exists(/databases/$(database)/documents/roomMembers/$(roomId)_$(request.auth.uid)_room_access);
+    }
+
+    // Rooms
+    match /classroomRooms/{roomId} {
+      allow read: if is_classroom_room_member(roomId);
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if is_classroom_room_owner(roomId);
+      allow delete: if is_classroom_room_owner(roomId);
+    }
+
+    // Room members
+    match /roomMembers/{membershipId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid
+        || is_classroom_room_owner(resource.data.roomId)
+      );
+      allow create: if request.auth != null;
+      allow update, delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Topics
+    match /topics/{topicId} {
+      allow read: if is_classroom_room_member(resource.data.roomId);
+      allow create, update, delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Assessments
+    match /assessments/{assessmentId} {
+      allow read: if is_classroom_room_member(resource.data.roomId);
+      allow create, update, delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Questions
+    match /questions/{questionId} {
+      allow read: if is_classroom_room_member(resource.data.roomId);
+      allow create, update, delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Submissions
+    match /submissions/{submissionId} {
+      allow read: if request.auth != null && (
+        resource.data.studentId == request.auth.uid
+        || is_classroom_room_owner(resource.data.roomId)
+      );
+      allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+      allow update: if request.auth != null && (
+        request.resource.data.studentId == request.auth.uid
+        || is_classroom_room_owner(request.resource.data.roomId)
+      );
+      allow delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Student progress
+    match /progress/{progressId} {
+      allow read: if request.auth != null && (
+        resource.data.studentId == request.auth.uid
+        || is_classroom_room_owner(resource.data.roomId)
+      );
+      allow create, update: if request.auth != null && (
+        request.resource.data.studentId == request.auth.uid
+        || is_classroom_room_owner(request.resource.data.roomId)
+      );
+      allow delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Attendance
+    match /attendance/{attendanceId} {
+      allow read: if is_classroom_room_member(resource.data.roomId);
+      allow create, update: if request.auth != null && (
+        request.resource.data.verifiedBy == request.auth.uid
+        || request.resource.data.studentId == request.auth.uid
+        || is_classroom_room_owner(request.resource.data.roomId)
+      );
+      allow delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // Announcements
+    match /announcements/{announcementId} {
+      allow read: if is_classroom_room_member(resource.data.roomId);
+      allow create: if request.auth != null;
+      allow update, delete: if is_classroom_room_owner(resource.data.roomId);
+    }
+
+    // AI insights
+    match /aiInsights/{insightId} {
+      allow read: if is_classroom_room_member(resource.data.roomId);
+      allow create: if request.auth != null;
+      allow update, delete: if is_classroom_room_owner(resource.data.roomId);
+    }
   }
 }

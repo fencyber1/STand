@@ -1,0 +1,314 @@
+import { db } from '../services/firebase';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  addDoc,
+  query,
+  where,
+  onSnapshot,
+  DocumentData,
+  FirestoreError,
+} from 'firebase/firestore';
+import { Room, RoomType, ClassroomUserRole } from '../types/classroom';
+import { generateRoomCode } from '../utils/roomCode';
+
+/**
+ * Handles all classroom/room-related Firestore operations.
+ * Isolated to avoid affecting existing auth/profile code.
+ */
+class ClassroomService {
+  /**
+   * Creates a new classroom room
+   */
+  async createRoom(data: Omit<Room, 'id'>): Promise<Room> {
+    try {
+      const roomCode = data.roomCode ?? generateRoomCode();
+      const now = new Date();
+
+      const newRoom: Room = {
+        ...data,
+        id: '',
+        roomCode,
+        status: data.status ?? 'active',
+        studentCount: 0,
+        topicsPublished: 0,
+        totalTopics: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      // Check for duplicate room code
+      const existingRoom = await this.getRoomByCode(roomCode);
+      if (existingRoom) {
+        throw new Error('Room code collision detected, retrying...');
+      }
+
+      const roomRef = doc(collection(db, 'classroomRooms'));
+      newRoom.id = roomRef.id;
+
+      await setDoc(roomRef, {
+        ...newRoom,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        startDate: newRoom.startDate?.toISOString() ?? null,
+        endDate: newRoom.endDate?.toISOString() ?? null,
+      });
+
+      // Create teacher membership record
+      await this.addRoomMember(roomRef.id, data.ownerId, 'teacher');
+
+      return { ...newRoom };
+      } catch (error) {
+      const e = error as Error;
+      if (e.message.includes('collision')) {
+        // Retry with a new generated code
+        return this.createRoom({
+          ...data,
+          roomCode: generateRoomCode(),
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves a room by its ID
+   */
+  async getRoomById(roomId: string): Promise<Room | null> {
+    try {
+      const roomSnap = await getDoc(doc(db, 'classroomRooms', roomId));
+      if (!roomSnap.exists()) return null;
+
+      const data = roomSnap.data();
+      return {
+        id: roomSnap.id,
+        ...(data as Omit<Room, 'id'>),
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+        startDate: data.startDate ? new Date(data.startDate) : undefined,
+        endDate: data.endDate ? new Date(data.endDate) : undefined,
+      };
+    } catch (error) {
+      console.error('Failed to get room:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves a room by its unique room code
+   */
+  async getRoomByCode(code: string): Promise<Room | null> {
+    try {
+      const q = query(
+        collection(db, 'classroomRooms'),
+        where('roomCode', '==', code)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) return null;
+
+      const data = snapshot.docs[0].data();
+      return {
+        id: snapshot.docs[0].id,
+        ...(data as Omit<Room, 'id'>),
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+        startDate: data.startDate ? new Date(data.startDate) : undefined,
+        endDate: data.endDate ? new Date(data.endDate) : undefined,
+      };
+    } catch (error) {
+      console.error('Failed to get room by code:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates room settings
+   */
+  async updateRoom(roomId: string, updates: Partial<Room>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'classroomRooms', roomId), {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Failed to update room:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all rooms accessible to a user
+   */
+  async getRoomsByUser(userId: string): Promise<Room[]> {
+    try {
+      // Rooms where user is owner
+      const ownedRooms = await getDocs(
+        query(collection(db, 'classroomRooms'), where('ownerId', '==', userId))
+      );
+
+      // Rooms where user is a member
+      const memberRooms = await getDocs(
+        query(
+          collection(db, 'roomMembers'),
+          where('userId', '==', userId),
+          where('status', '==', 'active')
+        )
+      );
+
+      const roomIds = new Set<string>();
+      const rooms: Room[] = [];
+
+      ownedRooms.forEach((snap) => {
+        const data = snap.data();
+        roomIds.add(snap.id);
+        rooms.push({
+          id: snap.id,
+          ...(data as Omit<Room, 'id'>),
+          createdAt: new Date(data.createdAt),
+          updatedAt: new Date(data.updatedAt),
+          startDate: data.startDate ? new Date(data.startDate) : undefined,
+          endDate: data.endDate ? new Date(data.endDate) : undefined,
+        });
+      });
+
+      for (const memberSnap of memberRooms.docs) {
+        const memberData = memberSnap.data();
+        if (roomIds.has(memberData.roomId)) continue;
+
+        const roomSnap = await getDoc(doc(db, 'classroomRooms', memberData.roomId));
+        if (roomSnap.exists()) {
+          const data = roomSnap.data();
+          rooms.push({
+            id: roomSnap.id,
+            ...(data as Omit<Room, 'id'>),
+            createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt),
+            startDate: data.startDate ? new Date(data.startDate) : undefined,
+            endDate: data.endDate ? new Date(data.endDate) : undefined,
+          });
+        }
+      }
+
+      return rooms;
+    } catch (error) {
+      console.error('Failed to get user rooms:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adds a member to a classroom
+   */
+  async addRoomMember(
+    roomId: string,
+    userId: string,
+    role: ClassroomUserRole,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    try {
+      // Check if already a member
+      const memberQuery = query(
+        collection(db, 'roomMembers'),
+        where('roomId', '==', roomId),
+        where('userId', '==', userId)
+      );
+      const existing = await getDocs(memberQuery);
+
+      if (existing.empty) {
+        await addDoc(collection(db, 'roomMembers'), {
+          roomId,
+          userId,
+          role,
+          joinedAt: new Date().toISOString(),
+          status: 'active',
+          ...(metadata ?? {}),
+        });
+      }
+
+      // Update student count if adding a student
+      if (role === 'student') {
+        const room = await this.getRoomById(roomId);
+        if (room) {
+          await this.updateRoom(roomId, {
+            studentCount: (room.studentCount ?? 0) + 1,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add room member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all members of a classroom
+   */
+  async getRoomMembers(roomId: string): Promise<DocumentData[]> {
+    try {
+      const q = query(
+        collection(db, 'roomMembers'),
+        where('roomId', '==', roomId),
+        where('status', '==', 'active')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('Failed to get room members:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Joins a classroom by room code
+   */
+  async joinRoom(userId: string, roomCode: string): Promise<Room> {
+    const room = await this.getRoomByCode(roomCode);
+    if (!room) {
+      throw new Error('Room not found with that code');
+    }
+
+    await this.addRoomMember(room.id, userId, 'student');
+    return room;
+  }
+
+  /**
+   * Sets up real-time listener for room updates
+   */
+  subscribeToRoom(roomId: string, callback: (room: Room) => void): () => void {
+    const unsubscribe = onSnapshot(
+      doc(db, 'classroomRooms', roomId),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          callback({
+            id: snap.id,
+            ...(data as Omit<Room, 'id'>),
+            createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt),
+            startDate: data.startDate ? new Date(data.startDate) : undefined,
+            endDate: data.endDate ? new Date(data.endDate) : undefined,
+          });
+        }
+      },
+      (error: FirestoreError) => {
+        console.error('Room listener error:', error);
+      }
+    );
+
+    return unsubscribe;
+  }
+
+  /**
+   * Deletes a room (soft delete)
+   */
+  async archiveRoom(roomId: string): Promise<void> {
+    await this.updateRoom(roomId, { status: 'archived' });
+  }
+}
+
+export const classroomService = new ClassroomService();
