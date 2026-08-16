@@ -141,49 +141,22 @@ export default function ClassroomSettingsScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center text-slate-400">Loading...</div>
-      </div>
-    );
-  }
-
   if (!currentRoom) {
     return (
-      <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center text-slate-400">Loading classroom...</div>
+      <div className="text-center text-slate-400 py-12">
+        Loading classroom...
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-      <div className="border-b border-slate-700 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Settings</h1>
-            <p className="text-slate-400">
-              {currentRoom.name} · {currentRoom.course}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/classroom/${roomId}/dashboard`)}>
-            Back to Dashboard
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Room Settings</h1>
+        <Badge variant="secondary">
+          Room Code: {currentRoom.roomCode}
+        </Badge>
       </div>
-
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Room Settings
-            </h2>
-            <Badge variant="secondary">
-              Room Code: {currentRoom.roomCode}
-            </Badge>
-          </div>
 
           {error && (
             <div className="bg-red-900/30 border border-red-800 text-red-300 p-3 rounded-md mb-4">
@@ -446,8 +419,6 @@ export default function ClassroomSettingsScreen() {
               )}
             </Button>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

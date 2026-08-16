@@ -16,11 +16,8 @@ import {
   Edit,
   Trash2,
   Send,
-  Copy,
-  Check,
 } from 'lucide-react';
-import { Assessment, Question } from '../../types/classroom';
-import { generateRoomCode } from '../../utils/roomCode';
+import { Assessment } from '../../types/classroom';
 
 /**
  * Assessments list screen for a classroom.
@@ -133,139 +130,110 @@ export default function AssessmentsListScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center text-slate-400">Loading assessments...</div>
-      </div>
-    );
-  }
-
   if (!currentRoom) {
     return (
-      <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center text-slate-400">Loading classroom...</div>
+      <div className="text-center text-slate-400 py-12">
+        Loading classroom...
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-      <div className="border-b border-slate-700 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">{currentRoom.name}</h1>
-            <p className="text-slate-400">
-              {currentRoom.course} · {currentRoom.level}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/classroom/${roomId}/dashboard`)}>
-            Back to Dashboard
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Assessments</h1>
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-indigo-600 hover:bg-indigo-700"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          New Assessment
+        </Button>
+      </div>
+
+      {error && (
+        <div className="bg-red-900/30 border border-red-800 text-red-300 p-3 rounded-md mb-4">
+          {error}
+        </div>
+      )}
+
+      {assessments.length === 0 ? (
+        <Card className="bg-slate-800 border-slate-700 p-8 text-center">
+          <ClipboardList className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">No assessments yet</h3>
+          <p className="text-slate-400 mb-4">
+            Create your first assessment to evaluate your students.
+          </p>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Assessment
           </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-              <ClipboardList className="w-5 h-5" />
-              Assessments
-            </h2>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Assessment
-            </Button>
-          </div>
-
-          {error && (
-            <div className="bg-red-900/30 border border-red-800 text-red-300 p-3 rounded-md mb-4">
-              {error}
-            </div>
-          )}
-
-          {assessments.length === 0 ? (
-            <Card className="bg-slate-800 border-slate-700 p-8 text-center">
-              <ClipboardList className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">No assessments yet</h3>
-              <p className="text-slate-400 mb-4">
-                Create your first assessment to evaluate your students.
-              </p>
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Assessment
-              </Button>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {assessments.map((assessment) => (
-                <Card key={assessment.id} className="bg-slate-800 border-slate-700 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-white">{assessment.title}</h3>
-                        <Badge className={getStatusColor(assessment.status)}>
-                          {assessment.status}
-                        </Badge>
-                      </div>
-                      {assessment.description && (
-                        <p className="text-sm text-slate-300 mb-2">{assessment.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>
-                            Scheduled: {new Date(assessment.scheduledAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{assessment.durationMinutes} min</span>
-                        </div>
-                        <span>{assessment.questionCount} questions</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => navigate(`/classroom/${roomId}/assessments/${assessment.id}`)}
-                        title="View / Take"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => navigate(`/classroom/${roomId}/assessments/${assessment.id}/edit`)}
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(assessment.id)}
-                        title="Delete"
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {assessments.map((assessment) => (
+            <Card key={assessment.id} className="bg-slate-800 border-slate-700 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-white">{assessment.title}</h3>
+                    <Badge className={getStatusColor(assessment.status)}>
+                      {assessment.status}
+                    </Badge>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
+                  {assessment.description && (
+                    <p className="text-sm text-slate-300 mb-2">{assessment.description}</p>
+                  )}
+                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>
+                        Scheduled: {new Date(assessment.scheduledAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{assessment.durationMinutes} min</span>
+                    </div>
+                    <span>{assessment.questionCount} questions</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 ml-4">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => navigate(`/classroom/${roomId}/assessments/${assessment.id}`)}
+                    title="View / Take"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => navigate(`/classroom/${roomId}/assessments/${assessment.id}/edit`)}
+                    title="Edit"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(assessment.id)}
+                    title="Delete"
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
-      </div>
+      )}
 
       {/* Create Assessment Modal */}
       {showCreateModal && (

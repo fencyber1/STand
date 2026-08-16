@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ClassroomHome from '../../screens/ClassroomHome';
-import TeacherDashboard from '../../screens/TeacherDashboard';
+import TeacherDashboard, { TeacherDashboardContent } from '../../screens/TeacherDashboard';
 import StudentDashboard from '../../screens/StudentDashboard';
 import TopicListScreen from '../../screens/classroom/TopicListScreen';
 import AddTopicForm from '../../screens/classroom/AddTopicForm';
@@ -17,7 +17,7 @@ import AssessmentsListScreen from '../../screens/classroom/AssessmentsListScreen
  * Does not affect existing app routes or functionality.
  */
 export default function ClassroomRoutes() {
-  const { user, isLoggedIn } = useAuth();
+  const { isLoggedIn } = useAuth();
 
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
@@ -28,23 +28,24 @@ export default function ClassroomRoutes() {
       {/* Classroom Entry */}
       <Route path="/" element={<ClassroomHome />} />
 
-      {/* Teacher Dashboard */}
-      <Route path="/:roomId/dashboard" element={<TeacherDashboard />} />
-
       {/* Student Dashboard */}
       <Route path="/:roomId/learn" element={<StudentDashboard />} />
 
-      {/* Placeholder routes for future phases */}
-      <Route path="/:roomId/topics" element={<TopicListScreen />} />
-      <Route path="/:roomId/topics/add" element={<AddTopicForm />} />
-      <Route path="/:roomId/topics/:topicId/edit" element={<AddTopicForm />} />
-      <Route path="/:roomId/topics/:topicId/review" element={<TopicDraftReview />} />
-      <Route path="/:roomId/topics/:topicId" element={<TopicReader />} />
-      <Route path="/:roomId/assessments" element={<AssessmentsListScreen />} />
-      <Route path="/:roomId/assessments/:assessmentId" element={<AssessmentsListScreen />} />
-      <Route path="/:roomId/students" element={<StudentsScreen />} />
-      <Route path="/:roomId/analytics" element={<AnalyticsScreen />} />
-      <Route path="/:roomId/settings" element={<ClassroomSettingsScreen />} />
+      {/* Teacher Dashboard with nested routes for Phase 2 screens */}
+      <Route path="/:roomId" element={<TeacherDashboard />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<TeacherDashboardContent />} />
+        <Route path="topics" element={<TopicListScreen />} />
+        <Route path="topics/add" element={<AddTopicForm />} />
+        <Route path="topics/:topicId/edit" element={<AddTopicForm />} />
+        <Route path="topics/:topicId/review" element={<TopicDraftReview />} />
+        <Route path="topics/:topicId" element={<TopicReader />} />
+        <Route path="assessments" element={<AssessmentsListScreen />} />
+        <Route path="assessments/:assessmentId" element={<AssessmentsListScreen />} />
+        <Route path="students" element={<StudentsScreen />} />
+        <Route path="analytics" element={<AnalyticsScreen />} />
+        <Route path="settings" element={<ClassroomSettingsScreen />} />
+      </Route>
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/classroom" replace />} />
