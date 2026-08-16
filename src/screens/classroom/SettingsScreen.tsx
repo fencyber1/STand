@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Calendar,
   GraduationCap,
+  Shield,
 } from 'lucide-react';
 import { Room, RoomType } from '../../types/classroom';
 
@@ -26,12 +27,13 @@ import { Room, RoomType } from '../../types/classroom';
 export default function ClassroomSettingsScreen() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { currentRoom, loadRoom, subscribeToCurrentRoom } = useClassroom();
+  const { currentRoom, loadRoom, subscribeToCurrentRoom, deleteRoom } = useClassroom();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -121,6 +123,21 @@ export default function ClassroomSettingsScreen() {
     } finally {
       setLoading(false);
       setShowArchiveConfirm(false);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!roomId) return;
+
+    setLoading(true);
+    try {
+      await deleteRoom(roomId);
+      navigate('/classroom');
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete room');
+    } finally {
+      setLoading(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -319,12 +336,22 @@ export default function ClassroomSettingsScreen() {
               Archiving this room will make it inaccessible to students.
               Existing data will be preserved but hidden.
             </p>
-            <Button
-              variant="destructive"
-              onClick={() => setShowArchiveConfirm(true)}
-            >
-              Archive Room
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="destructive"
+                onClick={() => setShowArchiveConfirm(true)}
+              >
+                Archive Room
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="bg-red-700 hover:bg-red-800 border border-red-500"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Delete Room Permanently
+              </Button>
+            </div>
           </Card>
 
           {/* Archive Confirmation */}
@@ -350,6 +377,52 @@ export default function ClassroomSettingsScreen() {
                     onClick={handleArchive}
                   >
                     Archive Room
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation */}
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center">
+              <div className="bg-slate-800 border border-slate-700 border-red-500 rounded-lg p-6 max-w-md w-full mx-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-red-900/50 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-red-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Delete Room Permanently?</h3>
+                </div>
+                <p className="text-slate-300 text-sm mb-4">
+                  This action <strong>cannot be undone</strong>. This will permanently delete:
+                </p>
+                <ul className="text-slate-400 text-sm space-y-1 mb-4 pl-4 list-disc">
+                  <li>The classroom and all its settings</li>
+                  <li>All topics and AI-generated content</li>
+                  <li>All assessments and student submissions</li>
+                  <li>All student records and progress data</li>
+                  <li>All room members and their access</li>
+                </ul>
+                <div className="bg-red-900/30 border border-red-800 p-3 rounded-md mb-4">
+                  <p className="text-red-300 text-xs">
+                    <strong>Warning:</strong> This action is irreversible. Consider archiving instead if you might need the data later.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteRoom}
+                    className="bg-red-700 hover:bg-red-800"
+                  >
+                    Delete Permanently
                   </Button>
                 </div>
               </div>

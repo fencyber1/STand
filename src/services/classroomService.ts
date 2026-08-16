@@ -403,6 +403,40 @@ class ClassroomService {
       throw error;
     }
   }
+
+  /**
+   * Permanently deletes a room and all associated data
+   */
+  async deleteRoom(roomId: string): Promise<void> {
+    try {
+      // Delete room members
+      const membersSnapshot = await getDocs(
+        query(collection(db, 'roomMembers'), where('roomId', '==', roomId))
+      );
+      const memberDeletes = membersSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(memberDeletes);
+
+      // Delete assessments
+      const assessmentsSnapshot = await getDocs(
+        query(collection(db, 'assessments'), where('roomId', '==', roomId))
+      );
+      const assessmentDeletes = assessmentsSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(assessmentDeletes);
+
+      // Delete topics
+      const topicsSnapshot = await getDocs(
+        query(collection(db, 'topics'), where('roomId', '==', roomId))
+      );
+      const topicDeletes = topicsSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(topicDeletes);
+
+      // Delete the room itself
+      await deleteDoc(doc(db, 'classroomRooms', roomId));
+    } catch (error) {
+      console.error('Failed to delete room:', error);
+      throw error;
+    }
+  }
 }
 
 export const classroomService = new ClassroomService();

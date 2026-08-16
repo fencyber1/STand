@@ -26,6 +26,7 @@ interface ClassroomContextType {
   refreshRoom: () => Promise<void>;
   loadRoom: (roomId: string) => Promise<void>;
   archiveRoom: (roomId: string) => Promise<void>;
+  deleteRoom: (roomId: string) => Promise<void>;
   subscribeToCurrentRoom: () => (() => void) | null;
   getUserRoleInRoom: (roomId: string) => Promise<ClassroomUserRole | null>;
   clearError: () => void;
@@ -47,6 +48,7 @@ const ClassroomContext = createContext<ClassroomContextType>({
   refreshRoom: async () => {},
   loadRoom: async () => {},
   archiveRoom: async () => {},
+  deleteRoom: async () => {},
   subscribeToCurrentRoom: () => null,
   getUserRoleInRoom: async () => null,
   clearError: () => {},
@@ -187,6 +189,22 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [currentRoom?.id]
   );
 
+  const deleteRoom = useCallback(
+    async (roomId: string) => {
+      try {
+        await classroomService.deleteRoom(roomId);
+        setRooms((prev) => prev.filter((r) => r.id !== roomId));
+        if (currentRoom?.id === roomId) {
+          setCurrentRoom(null);
+        }
+      } catch (e: any) {
+        setError(e.message || 'Failed to delete room');
+        throw e;
+      }
+    },
+    [currentRoom?.id]
+  );
+
   const getUserRoleInRoom = useCallback(
     async (roomId: string): Promise<ClassroomUserRole | null> => {
       if (!user?.uid) return null;
@@ -242,6 +260,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         refreshRoom,
         loadRoom,
         archiveRoom,
+        deleteRoom,
         subscribeToCurrentRoom,
         getUserRoleInRoom,
         clearError,
