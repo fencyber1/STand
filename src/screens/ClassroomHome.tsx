@@ -37,17 +37,17 @@ export default function ClassroomHome() {
       </p>
 
       {/* Primary Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mb-10">
+      <div className="grid grid-cols-2 gap-3 md:gap-6 w-full max-w-4xl mb-6 md:mb-10">
         <Card
           onClick={() => setShowCreateModal(true)}
           className="bg-slate-800 border-slate-700 hover:border-indigo-500 transition-all duration-200 cursor-pointer group"
         >
-          <div className="p-5 text-center">
-            <div className="bg-indigo-600/20 rounded-full p-3 w-16 h-16 mx-auto mb-3 group-hover:bg-indigo-600/30 transition-colors">
-              <LayoutDashboard className="w-8 h-8 text-indigo-400 mx-auto" />
+          <div className="p-3 md:p-5 text-center">
+            <div className="bg-indigo-600/20 rounded-full p-2 md:p-3 w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 md:mb-3 group-hover:bg-indigo-600/30 transition-colors">
+              <LayoutDashboard className="w-6 h-6 md:w-8 md:h-8 text-indigo-400 mx-auto" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-1">CREATE ROOM</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="text-base md:text-xl font-bold text-white mb-1">CREATE ROOM</h2>
+            <p className="text-xs md:text-sm text-slate-400">
               For teachers and instructors. Set up a private or institutional classroom.
             </p>
           </div>
@@ -57,12 +57,12 @@ export default function ClassroomHome() {
           onClick={() => setShowJoinModal(true)}
           className="bg-slate-800 border-slate-700 hover:border-blue-500 transition-all duration-200 cursor-pointer group"
         >
-          <div className="p-5 text-center">
-            <div className="bg-blue-600/20 rounded-full p-3 w-16 h-16 mx-auto mb-3 group-hover:bg-blue-600/30 transition-colors">
-              <Users className="w-8 h-8 text-blue-400 mx-auto" />
+          <div className="p-3 md:p-5 text-center">
+            <div className="bg-blue-600/20 rounded-full p-2 md:p-3 w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 md:mb-3 group-hover:bg-blue-600/30 transition-colors">
+              <Users className="w-6 h-6 md:w-8 md:h-8 text-blue-400 mx-auto" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-1">JOIN ROOM</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="text-base md:text-xl font-bold text-white mb-1">JOIN ROOM</h2>
+            <p className="text-xs md:text-sm text-slate-400">
               For students. Enter your class code to join a classroom.
             </p>
           </div>
