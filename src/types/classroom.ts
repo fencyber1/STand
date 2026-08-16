@@ -297,6 +297,8 @@ export interface Announcement {
   sentAt: Date;
   recipientCount: number;
   status: 'draft' | 'scheduled' | 'sent';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // --- ANALYTICS ---

@@ -8,6 +8,10 @@ import StudentTopicReader from '../../screens/classroom/StudentTopicReader';
 import StudentProgressScreen from '../../screens/classroom/StudentProgressScreen';
 import StudentAssessmentScreen from '../../screens/classroom/StudentAssessmentScreen';
 import AssessmentResultsScreen from '../../screens/classroom/AssessmentResultsScreen';
+import StudentAttendanceScreen from '../../screens/classroom/StudentAttendanceScreen';
+import StudentAnnouncementsScreen from '../../screens/classroom/StudentAnnouncementsScreen';
+import TeacherAttendanceScreen from '../../screens/classroom/TeacherAttendanceScreen';
+import TeacherAnnouncementsScreen from '../../screens/classroom/TeacherAnnouncementsScreen';
 import TopicListScreen from '../../screens/classroom/TopicListScreen';
 import AddTopicForm from '../../screens/classroom/AddTopicForm';
 import TopicDraftReview from '../../screens/classroom/TopicDraftReview';
@@ -40,6 +44,8 @@ export default function ClassroomRoutes() {
       <Route path="/:roomId/learn/progress" element={<StudentProgressScreen />} />
       <Route path="/:roomId/learn/assessments/:assessmentId" element={<StudentAssessmentScreen />} />
       <Route path="/:roomId/learn/assessments/:assessmentId/results" element={<AssessmentResultsScreen />} />
+      <Route path="/:roomId/learn/attendance" element={<StudentAttendanceScreen />} />
+      <Route path="/:roomId/learn/announcements" element={<StudentAnnouncementsScreen />} />
 
       {/* Teacher Dashboard with nested routes for Phase 2 screens */}
       <Route path="/:roomId" element={<TeacherDashboard />}>
@@ -55,6 +61,8 @@ export default function ClassroomRoutes() {
         <Route path="students" element={<StudentsScreen />} />
         <Route path="analytics" element={<AnalyticsScreen />} />
         <Route path="settings" element={<ClassroomSettingsScreen />} />
+        <Route path="attendance" element={<TeacherAttendanceScreen />} />
+        <Route path="announcements" element={<TeacherAnnouncementsScreen />} />
       </Route>
 
       {/* Fallback */}
