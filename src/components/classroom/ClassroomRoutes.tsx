@@ -3,6 +3,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import ClassroomHome from '../../screens/ClassroomHome';
 import TeacherDashboard from '../../screens/TeacherDashboard';
 import StudentDashboard from '../../screens/StudentDashboard';
+import TopicListScreen from '../../screens/classroom/TopicListScreen';
+import AddTopicForm from '../../screens/classroom/AddTopicForm';
+import TopicDraftReview from '../../screens/classroom/TopicDraftReview';
+import TopicReader from '../../screens/classroom/TopicReader';
 
 /**
  * Routes for the Classroom feature.
@@ -27,9 +31,11 @@ export default function ClassroomRoutes() {
       <Route path="/:roomId/learn" element={<StudentDashboard />} />
 
       {/* Placeholder routes for future phases */}
-      <Route path="/:roomId/topics" element={<TopicsPlaceholder />} />
-      <Route path="/:roomId/topics/add" element={<TopicsPlaceholder />} />
-      <Route path="/:roomId/topics/:topicId" element={<TopicsPlaceholder />} />
+      <Route path="/:roomId/topics" element={<TopicListScreen />} />
+      <Route path="/:roomId/topics/add" element={<AddTopicForm />} />
+      <Route path="/:roomId/topics/:topicId/edit" element={<AddTopicForm />} />
+      <Route path="/:roomId/topics/:topicId/review" element={<TopicDraftReview />} />
+      <Route path="/:roomId/topics/:topicId" element={<TopicReader />} />
       <Route path="/:roomId/assessments" element={<AssessmentsPlaceholder />} />
       <Route path="/:roomId/assessments/:assessmentId" element={<AssessmentsPlaceholder />} />
       <Route path="/:roomId/students" element={<StudentsPlaceholder />} />
