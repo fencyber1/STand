@@ -7,13 +7,14 @@ import {
   setDoc,
   updateDoc,
   addDoc,
+  deleteDoc,
   query,
   where,
   onSnapshot,
   DocumentData,
   FirestoreError,
 } from 'firebase/firestore';
-import { Room, RoomType, ClassroomUserRole } from '../types/classroom';
+import { Room, RoomType, ClassroomUserRole, Assessment } from '../types/classroom';
 import { generateRoomCode } from '../utils/roomCode';
 
 /**
@@ -308,6 +309,99 @@ class ClassroomService {
    */
   async archiveRoom(roomId: string): Promise<void> {
     await this.updateRoom(roomId, { status: 'archived' });
+  }
+
+  /**
+   * Removes a member from a classroom
+   */
+  async removeRoomMember(roomId: string, memberId: string): Promise<void> {
+    try {
+      const memberRef = doc(db, 'roomMembers', memberId);
+      await updateDoc(memberRef, {
+        status: 'removed',
+        removedAt: new Date().toISOString(),
+      });
+
+      const room = await this.getRoomById(roomId);
+      if (room) {
+        const member = (await this.getRoomMembers(roomId)).find((m: any) => m.id === memberId);
+        if (member && member.role === 'student') {
+          await this.updateRoom(roomId, {
+            studentCount: Math.max((room.studentCount ?? 1) - 1, 0),
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to remove room member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all assessments for a room
+   */
+  async getAssessmentsByRoom(roomId: string): Promise<Assessment[]> {
+    try {
+      const q = query(
+        collection(db, 'assessments'),
+        where('roomId', '==', roomId)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Assessment, 'id'>),
+        scheduledAt: new Date((doc.data() as any).scheduledAt),
+        createdAt: new Date((doc.data() as any).createdAt),
+        updatedAt: new Date((doc.data() as any).updatedAt),
+        startsAt: (doc.data() as any).startsAt
+          ? new Date((doc.data() as any).startsAt)
+          : undefined,
+        endsAt: (doc.data() as any).endsAt
+          ? new Date((doc.data() as any).endsAt)
+          : undefined,
+      }));
+    } catch (error) {
+      console.error('Failed to get assessments:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new assessment
+   */
+  async createAssessment(data: Omit<Assessment, 'id'>): Promise<Assessment> {
+    try {
+      const docRef = await addDoc(collection(db, 'assessments'), {
+        ...data,
+        scheduledAt: data.scheduledAt ?? new Date(),
+        createdAt: data.createdAt ?? new Date(),
+        updatedAt: data.updatedAt ?? new Date(),
+        startsAt: data.startsAt ?? undefined,
+        endsAt: data.endsAt ?? undefined,
+      });
+
+      return {
+        id: docRef.id,
+        ...data,
+        createdAt: data.createdAt ?? new Date(),
+        updatedAt: data.updatedAt ?? new Date(),
+      } as Assessment;
+    } catch (error) {
+      console.error('Failed to create assessment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes an assessment
+   */
+  async deleteAssessment(assessmentId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'assessments', assessmentId));
+    } catch (error) {
+      console.error('Failed to delete assessment:', error);
+      throw error;
+    }
   }
 }
 

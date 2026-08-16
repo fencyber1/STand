@@ -7,6 +7,10 @@ import TopicListScreen from '../../screens/classroom/TopicListScreen';
 import AddTopicForm from '../../screens/classroom/AddTopicForm';
 import TopicDraftReview from '../../screens/classroom/TopicDraftReview';
 import TopicReader from '../../screens/classroom/TopicReader';
+import StudentsScreen from '../../screens/classroom/StudentsScreen';
+import AnalyticsScreen from '../../screens/classroom/AnalyticsScreen';
+import ClassroomSettingsScreen from '../../screens/classroom/SettingsScreen';
+import AssessmentsListScreen from '../../screens/classroom/AssessmentsListScreen';
 
 /**
  * Routes for the Classroom feature.
@@ -36,64 +40,14 @@ export default function ClassroomRoutes() {
       <Route path="/:roomId/topics/:topicId/edit" element={<AddTopicForm />} />
       <Route path="/:roomId/topics/:topicId/review" element={<TopicDraftReview />} />
       <Route path="/:roomId/topics/:topicId" element={<TopicReader />} />
-      <Route path="/:roomId/assessments" element={<AssessmentsPlaceholder />} />
-      <Route path="/:roomId/assessments/:assessmentId" element={<AssessmentsPlaceholder />} />
-      <Route path="/:roomId/students" element={<StudentsPlaceholder />} />
-      <Route path="/:roomId/analytics" element={<AnalyticsPlaceholder />} />
-      <Route path="/:roomId/settings" element={<SettingsPlaceholder />} />
+      <Route path="/:roomId/assessments" element={<AssessmentsListScreen />} />
+      <Route path="/:roomId/assessments/:assessmentId" element={<AssessmentsListScreen />} />
+      <Route path="/:roomId/students" element={<StudentsScreen />} />
+      <Route path="/:roomId/analytics" element={<AnalyticsScreen />} />
+      <Route path="/:roomId/settings" element={<ClassroomSettingsScreen />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/classroom" replace />} />
     </Routes>
-  );
-}
-
-function TopicsPlaceholder() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="text-center text-slate-400">
-        Topics management coming soon...
-      </div>
-    </div>
-  );
-}
-
-function AssessmentsPlaceholder() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="text-center text-slate-400">
-        Assessments coming soon...
-      </div>
-    </div>
-  );
-}
-
-function StudentsPlaceholder() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="text-center text-slate-400">
-        Students management coming soon...
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsPlaceholder() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="text-center text-slate-400">
-        Analytics dashboard coming soon...
-      </div>
-    </div>
-  );
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="text-center text-slate-400">
-        Classroom settings coming soon...
-      </div>
-    </div>
   );
 }
