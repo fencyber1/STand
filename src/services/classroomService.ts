@@ -14,7 +14,7 @@ import {
   DocumentData,
   FirestoreError,
 } from 'firebase/firestore';
-import { Room, RoomType, ClassroomUserRole, Assessment } from '../types/classroom';
+import { Room, RoomType, ClassroomUserRole, Assessment, Submission } from '../types/classroom';
 import { generateRoomCode } from '../utils/roomCode';
 
 /**
@@ -434,6 +434,109 @@ class ClassroomService {
       await deleteDoc(doc(db, 'classroomRooms', roomId));
     } catch (error) {
       console.error('Failed to delete room:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets an assessment by ID
+   */
+  async getAssessmentById(assessmentId: string): Promise<Assessment | null> {
+    try {
+      const snap = await getDoc(doc(db, 'assessments', assessmentId));
+      if (!snap.exists()) return null;
+
+      const data = snap.data();
+      return {
+        id: snap.id,
+        ...(data as Omit<Assessment, 'id'>),
+        scheduledAt: new Date(data.scheduledAt),
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+        startsAt: data.startsAt ? new Date(data.startsAt) : undefined,
+        endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
+      };
+    } catch (error) {
+      console.error('Failed to get assessment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets a student's submission for an assessment
+   */
+  async getStudentSubmission(
+    roomId: string,
+    assessmentId: string,
+    studentId: string
+  ): Promise<Submission | null> {
+    try {
+      const q = query(
+        collection(db, 'submissions'),
+        where('roomId', '==', roomId),
+        where('assessmentId', '==', assessmentId),
+        where('studentId', '==', studentId)
+      );
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return null;
+
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...(data as Omit<Submission, 'id'>),
+        startedAt: new Date(data.startedAt),
+        submittedAt: data.submittedAt ? new Date(data.submittedAt) : undefined,
+      };
+    } catch (error) {
+      console.error('Failed to get student submission:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submits an assessment attempt
+   */
+  async submitAssessment(submission: Omit<Submission, 'id'>): Promise<void> {
+    try {
+      const submissionRef = doc(collection(db, 'submissions'));
+      await setDoc(submissionRef, {
+        ...submission,
+        id: submissionRef.id,
+        startedAt: submission.startedAt.toISOString(),
+        submittedAt: submission.submittedAt?.toISOString() ?? new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Failed to submit assessment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all submissions for an assessment (teacher view)
+   */
+  async getAssessmentSubmissions(
+    roomId: string,
+    assessmentId: string
+  ): Promise<Submission[]> {
+    try {
+      const q = query(
+        collection(db, 'submissions'),
+        where('roomId', '==', roomId),
+        where('assessmentId', '==', assessmentId)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...(data as Omit<Submission, 'id'>),
+          startedAt: new Date(data.startedAt),
+          submittedAt: data.submittedAt ? new Date(data.submittedAt) : undefined,
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get assessment submissions:', error);
       throw error;
     }
   }

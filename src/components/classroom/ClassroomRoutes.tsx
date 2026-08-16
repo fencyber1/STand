@@ -6,6 +6,8 @@ import StudentDashboard from '../../screens/StudentDashboard';
 import StudentTopicListScreen from '../../screens/classroom/StudentTopicListScreen';
 import StudentTopicReader from '../../screens/classroom/StudentTopicReader';
 import StudentProgressScreen from '../../screens/classroom/StudentProgressScreen';
+import StudentAssessmentScreen from '../../screens/classroom/StudentAssessmentScreen';
+import AssessmentResultsScreen from '../../screens/classroom/AssessmentResultsScreen';
 import TopicListScreen from '../../screens/classroom/TopicListScreen';
 import AddTopicForm from '../../screens/classroom/AddTopicForm';
 import TopicDraftReview from '../../screens/classroom/TopicDraftReview';
@@ -36,6 +38,8 @@ export default function ClassroomRoutes() {
       <Route path="/:roomId/learn/topics" element={<StudentTopicListScreen />} />
       <Route path="/:roomId/learn/topics/:topicId" element={<StudentTopicReader />} />
       <Route path="/:roomId/learn/progress" element={<StudentProgressScreen />} />
+      <Route path="/:roomId/learn/assessments/:assessmentId" element={<StudentAssessmentScreen />} />
+      <Route path="/:roomId/learn/assessments/:assessmentId/results" element={<AssessmentResultsScreen />} />
 
       {/* Teacher Dashboard with nested routes for Phase 2 screens */}
       <Route path="/:roomId" element={<TeacherDashboard />}>

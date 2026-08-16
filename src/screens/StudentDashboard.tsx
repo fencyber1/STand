@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useClassroom } from '../contexts/ClassroomContext';
 import { topicService, TopicProgress } from '../services/topicService';
+import { classroomService } from '../services/classroomService';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -14,8 +15,9 @@ import {
   FileText,
   Users,
   Award,
+  ClipboardList,
 } from 'lucide-react';
-import { Topic } from '../types/classroom';
+import { Topic, Assessment } from '../types/classroom';
 
 /**
  * Student dashboard showing their classroom learning progress.
@@ -27,6 +29,7 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const { currentRoom, loadRoom, subscribeToCurrentRoom } = useClassroom();
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [progressMap, setProgressMap] = useState<Map<string, TopicProgress>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -35,6 +38,7 @@ export default function StudentDashboard() {
       loadRoom(roomId);
       fetchTopics();
       fetchProgress();
+      fetchAssessments();
     }
 
     const unsubscribe = subscribeToCurrentRoom();
@@ -54,6 +58,19 @@ export default function StudentDashboard() {
       console.error('Failed to fetch topics:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAssessments = async () => {
+    if (!roomId) return;
+    try {
+      const data = await classroomService.getAssessmentsByRoom(roomId);
+      const liveAssessments = data.filter(
+        (a: Assessment) => a.status === 'live' || a.status === 'scheduled'
+      );
+      setAssessments(liveAssessments);
+    } catch (err) {
+      console.error('Failed to fetch assessments:', err);
     }
   };
 
@@ -191,6 +208,74 @@ export default function StudentDashboard() {
             </Card>
           )}
         </section>
+
+        {/* Upcoming Assessments */}
+        {assessments.length > 0 && (
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Upcoming Assessments
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/classroom/${roomId}/learn/assessments`)}
+              >
+                View All
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {assessments.slice(0, 3).map((assessment) => {
+                const now = new Date();
+                const startsAt = assessment.startsAt ? new Date(assessment.startsAt) : null;
+                const endsAt = assessment.endsAt ? new Date(assessment.endsAt) : null;
+                const isUpcoming = Boolean(startsAt && now < startsAt);
+                const isLive = Boolean((!startsAt || now >= startsAt) && (!endsAt || now <= endsAt));
+
+                return (
+                  <Card key={assessment.id} className="bg-slate-800 border-slate-700 hover:border-indigo-500 transition-colors">
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          isLive ? 'bg-green-600/20' : 'bg-blue-600/20'
+                        }`}>
+                          <ClipboardList className={`w-6 h-6 ${isLive ? 'text-green-400' : 'text-blue-400'}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">{assessment.title}</h3>
+                          <p className="text-sm text-slate-400">
+                            {assessment.questionCount} questions • {assessment.durationMinutes} min • {assessment.totalMarks} marks
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            isLive ? 'default' :
+                            isUpcoming ? 'secondary' :
+                            'destructive'
+                          }
+                        >
+                          {isLive ? 'Live' : isUpcoming ? 'Upcoming' : 'Ended'}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={() => navigate(`/classroom/${roomId}/learn/assessments/${assessment.id}`)}
+                          disabled={isUpcoming}
+                          className={isUpcoming ? 'opacity-50 cursor-not-allowed' : ''}
+                        >
+                          {isUpcoming ? 'Starts Soon' : 'Take Assessment'}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Progress Summary */}
         <section className="mb-8">
