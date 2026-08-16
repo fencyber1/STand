@@ -27,8 +27,11 @@ import {
   ArrowLeft,
   Save,
   Send,
+  MessageSquare,
+  Zap,
 } from 'lucide-react';
 import { Topic, SourceFile } from '../../types/classroom';
+import FenBotTopicModal from './FenBotTopicModal';
 
 export default function AddTopicForm() {
   const { roomId, topicId } = useParams<{ roomId: string; topicId: string }>();
@@ -50,8 +53,17 @@ export default function AddTopicForm() {
   const [error, setError] = useState('');
   const [existingTopic, setExistingTopic] = useState<Topic | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showFenBotModal, setShowFenBotModal] = useState(false);
+  const [fenBotContext, setFenBotContext] = useState<string>('');
 
   const isEditMode = !!topicId;
+
+  const handleFenBotGenerate = useCallback((context: string) => {
+    setFenBotContext(context);
+    setShowFenBotModal(false);
+    // Trigger generation with the FenBot context
+    handleGenerateWithFenBot();
+  }, []);
 
   useEffect(() => {
     if (topicId) {
@@ -197,6 +209,89 @@ export default function AddTopicForm() {
 
       // Save AI-generated content to topic
       await topicService.setAiContent(topic.id, content);
+
+      navigate(`/classroom/${roomId}/topics/${topic.id}/review`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate topic content');
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(null);
+    }
+  };
+
+  const handleGenerateWithFenBot = async () => {
+    if (!title) {
+      setError('Topic title is required');
+      return;
+    }
+
+    if (sourceType === 'upload' && uploadedFiles.length === 0 && !textContent) {
+      setError('Please provide source material (type or upload)');
+      return;
+    }
+
+    if (!roomId || !currentRoom) {
+      return;
+    }
+
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      // First, create or update the topic with basic info
+      let topic: Topic;
+
+      if (isEditMode && existingTopic) {
+        await topicService.updateTopic(topicId!, {
+          title,
+          description,
+          status: 'draft',
+          updatedAt: new Date(),
+        });
+        topic = { ...existingTopic, title, description, updatedAt: new Date() };
+      } else {
+        const order = await topicService.getNextOrder(roomId);
+        topic = await topicService.createTopic({
+          roomId,
+          title,
+          description,
+          sourceFiles: [],
+          status: 'draft',
+          order,
+          createdBy: currentRoom.ownerId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      // Extract source text
+      let sourceText = textContent || '';
+      if (uploadedFiles.length > 0) {
+        setGenerationProgress('Extracting text from files...');
+        const extracted = await extractTextFromFiles(uploadedFiles);
+        sourceText += extracted;
+      }
+
+      // Combine FenBot context with custom instructions
+      const combinedInstructions = [customInstructions, fenBotContext].filter(Boolean).join('\n\n');
+
+      setGenerationProgress('Generating AI content with FenBot context...');
+
+      // Generate content using NVIDIA AI with FenBot context
+      const content = await aiTopicEngine.generateTopicContent(
+        title,
+        sourceText,
+        {
+          difficulty,
+          customInstructions: combinedInstructions,
+        }
+      );
+
+      // Save AI-generated content to topic
+      await topicService.setAiContent(topic.id, content);
+
+      // Clear FenBot context after use
+      setFenBotContext('');
 
       navigate(`/classroom/${roomId}/topics/${topic.id}/review`);
     } catch (err: any) {
@@ -452,6 +547,16 @@ export default function AddTopicForm() {
               Save Draft
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setShowFenBotModal(true)}
+              disabled={isGenerating || !title}
+              className="bg-purple-600 hover:bg-purple-700 border-purple-500"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              <Zap className="w-4 h-4 mr-2" />
+              Chat with FenBot
+            </Button>
+            <Button
               onClick={handleGenerate}
               disabled={isGenerating || !title}
               className="bg-indigo-600 hover:bg-indigo-700"
@@ -471,6 +576,16 @@ export default function AddTopicForm() {
           </div>
         </div>
       </div>
+    
+      {/* FenBot Topic Modal */}
+      <FenBotTopicModal
+        isOpen={showFenBotModal}
+        onClose={() => setShowFenBotModal(false)}
+        onGenerate={handleFenBotGenerate}
+        topicTitle={title}
+        sourceText={sourceType === 'type' ? textContent : uploadedFiles.map(f => f.name).join(', ')}
+        difficulty={difficulty}
+      />
     </div>
   );
 }
