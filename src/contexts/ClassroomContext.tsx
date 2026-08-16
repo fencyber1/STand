@@ -24,6 +24,7 @@ interface ClassroomContextType {
   joinRoom: (roomCode: string) => Promise<Room>;
   fetchUserRooms: () => Promise<void>;
   refreshRoom: () => Promise<void>;
+  loadRoom: (roomId: string) => Promise<void>;
   archiveRoom: (roomId: string) => Promise<void>;
   subscribeToCurrentRoom: () => (() => void) | null;
   getUserRoleInRoom: (roomId: string) => Promise<ClassroomUserRole | null>;
@@ -44,6 +45,7 @@ const ClassroomContext = createContext<ClassroomContextType>({
   },
   fetchUserRooms: async () => {},
   refreshRoom: async () => {},
+  loadRoom: async () => {},
   archiveRoom: async () => {},
   subscribeToCurrentRoom: () => null,
   getUserRoleInRoom: async () => null,
@@ -150,6 +152,22 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     }
   }, [currentRoom?.id]);
 
+  const loadRoom = useCallback(
+    async (roomId: string) => {
+      if (!roomId) return;
+
+      try {
+        const room = await classroomService.getRoomById(roomId);
+        if (room) {
+          setCurrentRoom(room);
+        }
+      } catch (e: any) {
+        setError(e.message || 'Failed to load room');
+      }
+    },
+    []
+  );
+
   const archiveRoom = useCallback(
     async (roomId: string) => {
       try {
@@ -222,6 +240,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         joinRoom,
         fetchUserRooms,
         refreshRoom,
+        loadRoom,
         archiveRoom,
         subscribeToCurrentRoom,
         getUserRoleInRoom,

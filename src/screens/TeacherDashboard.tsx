@@ -26,7 +26,7 @@ import { RoomMember } from '../types/classroom';
 export default function TeacherDashboard() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { currentRoom, refreshRoom, subscribeToCurrentRoom } = useClassroom();
+  const { currentRoom, refreshRoom, loadRoom, subscribeToCurrentRoom } = useClassroom();
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [activeTab, setActiveTab] = useState<
@@ -35,7 +35,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     if (roomId) {
-      refreshRoom();
+      loadRoom(roomId);
       fetchMembers();
     }
 
@@ -43,7 +43,7 @@ export default function TeacherDashboard() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [roomId]);
+  }, [roomId, loadRoom]);
 
   const fetchMembers = async () => {
     if (!roomId) return;

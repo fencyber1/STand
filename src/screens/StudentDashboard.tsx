@@ -20,17 +20,17 @@ import {
 export default function StudentDashboard() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { currentRoom, refreshRoom, subscribeToCurrentRoom } = useClassroom();
+  const { currentRoom, refreshRoom, loadRoom, subscribeToCurrentRoom } = useClassroom();
 
   useEffect(() => {
     if (roomId) {
-      refreshRoom();
+      loadRoom(roomId);
     }
     const unsubscribe = subscribeToCurrentRoom();
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [roomId]);
+  }, [roomId, loadRoom]);
 
   if (!currentRoom) {
     return (
