@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   ReactNode,
 } from 'react';
@@ -27,22 +28,23 @@ export function Dialog({
 }) {
   const [mounted, setMounted] = useState(false);
 
-  if (!mounted && !open) {
+  useEffect(() => {
     setMounted(true);
-  }
+    return () => setMounted(false);
+  }, []);
 
-  if (!mounted && !open) {
+  if (!mounted) {
     return null;
   }
 
-  if (!open && !mounted) {
+  if (!open) {
     return null;
   }
 
   return (
     <DialogContext.Provider value={{ open, onOpenChange }}>
+      <DialogOverlay />
       {children}
-      {open && <DialogOverlay />}
     </DialogContext.Provider>
   );
 }
@@ -70,6 +72,7 @@ export function DialogOverlay() {
     <div
       className="fixed inset-0 z-50 bg-black/80"
       onClick={() => onOpenChange(false)}
+      aria-hidden="true"
     />
   );
 }
@@ -82,14 +85,31 @@ export function DialogContent({
   className?: string;
   children: ReactNode;
 } & React.HTMLAttributes<HTMLDivElement>) {
+  const { onOpenChange } = useContext(DialogContext);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onOpenChange(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [onOpenChange]);
+
   return (
     <div
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-slate-800 p-6 shadow-lg rounded-lg',
+        'fixed left-1/2 top-1/2 z-[51] grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-slate-800 p-6 shadow-lg rounded-lg',
         className
       )}
       role="dialog"
       aria-modal="true"
+      onClick={(e) => e.stopPropagation()}
       {...props}
     >
       {children}
