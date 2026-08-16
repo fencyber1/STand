@@ -101,14 +101,18 @@ export default function ClassroomHome() {
         <p className="text-slate-400">Loading your classrooms...</p>
       )}
 
-      <CreateRoomModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-      />
-      <JoinRoomModal
-        open={showJoinModal}
-        onClose={() => setShowJoinModal(false)}
-      />
+      {showCreateModal && (
+        <CreateRoomModal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+        />
+      )}
+      {showJoinModal && (
+        <JoinRoomModal
+          open={showJoinModal}
+          onClose={() => setShowJoinModal(false)}
+        />
+      )}
     </div>
   );
 }
