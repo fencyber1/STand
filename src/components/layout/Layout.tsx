@@ -29,9 +29,10 @@ import {
   ChevronRight,
   Settings,
   Home,
-  BarChart3,
-  Crown,
-} from 'lucide-react';
+   BarChart3,
+   Crown,
+   BookOpen,
+ } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { storage } from '../../services/storage';
@@ -207,6 +208,7 @@ export default function Layout() {
     { to: '/profile', label: t('Profile'), icon: User },
     { to: '/settings', label: t('Settings'), icon: Settings },
     { to: '/import', label: t('Import'), icon: Upload },
+    { to: '/classroom', label: 'Classroom', icon: BookOpen },
   ];
 
   const mobileTabs = [
@@ -214,6 +216,7 @@ export default function Layout() {
     { to: '/practice', label: t('Practice'), icon: GraduationCap },
     { to: '/tournaments', label: t('Tournaments'), icon: Crown },
     { to: '/multiplayer', label: t('Multiplayer'), icon: Users },
+    { to: '/classroom', label: 'Classroom', icon: BookOpen },
     { to: '/profile', label: t('Profile'), icon: User },
   ];
 
@@ -259,6 +262,13 @@ export default function Layout() {
               <FenBotNavIcon size={17} />
             </div>
             <span className="truncate">FenBot</span>
+          </NavLink>
+
+          <NavLink to="/classroom" onClick={closeSidebar} className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-violet-500/20 text-violet-300' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/5">
+              <BookOpen size={17} className="text-white/60" />
+            </div>
+            <span className="truncate">Classroom</span>
           </NavLink>
 
           <div className="pt-2 border-t border-white/5 mt-2">
