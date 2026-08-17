@@ -49,7 +49,7 @@ class TopicService {
         status: 'draft',
       };
 
-      await setDoc(topicRef, {
+      const topicData: Record<string, any> = {
         ...newTopic,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -57,8 +57,9 @@ class TopicService {
           ...f,
           uploadedAt: f.uploadedAt.toISOString(),
         })),
-        aiContent: undefined,
-      });
+      };
+
+      await setDoc(topicRef, topicData);
 
       // Update room topic count
       await this.updateRoomTopicCount(data.roomId);
