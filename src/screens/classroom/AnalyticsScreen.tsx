@@ -65,30 +65,8 @@ export default function AnalyticsScreen() {
     if (!roomId) return;
     setLoading(true);
     try {
-      const members = await classroomService.getRoomMembers(roomId);
-      const students = members.filter((m: any) => m.role === 'student');
-
-      const mockData: AnalyticsData = {
-        totalStudents: students.length,
-        activeStudents: Math.floor(students.length * 0.8),
-        averageScore: Math.floor(Math.random() * 30 + 70),
-        passRate: Math.floor(Math.random() * 20 + 75),
-        completionRate: Math.floor(Math.random() * 25 + 60),
-        attendanceRate: Math.floor(Math.random() * 15 + 80),
-        topicMastery: [
-          { topicName: 'Hazard Identification', averageMastery: 85 },
-          { topicName: 'Risk Assessment', averageMastery: 72 },
-          { topicName: 'PPE Selection', averageMastery: 91 },
-          { topicName: 'Emergency Response', averageMastery: 68 },
-        ],
-        recentAssessments: [
-          { title: 'Midterm Exam', averageScore: 78, passRate: 82 },
-          { title: 'Hazard ID Quiz', averageScore: 88, passRate: 90 },
-          { title: 'PPE Practice', averageScore: 65, passRate: 70 },
-        ],
-      };
-
-      setAnalytics(mockData);
+      const data = await classroomService.getClassAnalytics(roomId);
+      setAnalytics(data);
     } catch (err: any) {
       setError(err.message || 'Failed to load analytics');
     } finally {

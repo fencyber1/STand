@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useContext,
   useState,
@@ -8,14 +8,11 @@ import {
 } from 'react';
 import { useAuth } from './AuthContext';
 import { classroomService } from '../services/classroomService';
-import { Room, ClassroomUserRole } from '../types/classroom';
+import { Room, RoomMember, ClassroomUserRole } from '../types/classroom';
 
-/**
- * Dedicated context for Classroom state management.
- * Works alongside the existing AuthContext without affecting auth flows.
- */
 interface ClassroomContextType {
   currentRoom: Room | null;
+  currentMember: RoomMember | null;
   rooms: Room[];
   loading: boolean;
   error: string | null;
@@ -34,6 +31,7 @@ interface ClassroomContextType {
 
 const ClassroomContext = createContext<ClassroomContextType>({
   currentRoom: null,
+  currentMember: null,
   rooms: [],
   loading: true,
   error: null,
@@ -54,105 +52,87 @@ const ClassroomContext = createContext<ClassroomContextType>({
   clearError: () => {},
 });
 
+async function getUserMemberInRoom(
+  roomId: string,
+  userId: string
+): Promise<{ role: ClassroomUserRole; member: any } | null> {
+  try {
+    const members = await classroomService.getRoomMembers(roomId);
+    const found = members.find((m: any) => m.userId === userId && m.status === 'active');
+    if (found) {
+      return { role: found.role as ClassroomUserRole, member: found };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function ClassroomProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [currentMember, setCurrentMember] = useState<RoomMember | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
 
-  const fetchUserRooms = useCallback(async () => {
+  const fetchUserRoomsWithRoles = useCallback(async () => {
     if (!user?.uid) return;
 
-    setLoading(true);
     try {
       const userRooms = await classroomService.getRoomsByUser(user.uid);
       setRooms(userRooms);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load classrooms');
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.error('Failed to get user rooms with roles:', e);
     }
   }, [user?.uid]);
 
-  const createRoom = useCallback(
-    async (roomData: Partial<Room>): Promise<Room> => {
-      if (!user?.uid) {
-        throw new Error('You must be logged in to create a room');
-      }
+  useEffect(() => {
+    if (user) {
+      fetchUserRoomsWithRoles();
+    }
+  }, [user, fetchUserRoomsWithRoles]);
 
-      setLoading(true);
-      try {
-        const newRoom = await classroomService.createRoom({
-          ...roomData,
-          ownerId: user.uid,
-          ownerName: user.fullName,
-          studentCount: 0,
-          topicsPublished: 0,
-          totalTopics: 0,
-          status: 'active',
-          roomType: roomData.roomType ?? 'physical_digital',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Room);
+  const subscribeToCurrentRoom = useCallback(() => {
+    if (!currentRoom?.id) return null;
 
-        setRooms((prev) => [...prev, newRoom]);
-        setCurrentRoom(newRoom);
-        setError(null);
-        return newRoom;
-      } catch (e: any) {
-        setError(e.message || 'Failed to create room');
-        throw e;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user]
-  );
-
-  const joinRoom = useCallback(
-    async (roomCode: string): Promise<Room> => {
-      if (!user?.uid) {
-        throw new Error('You must be logged in to join a room');
-      }
-
-      setLoading(true);
-      try {
-        const room = await classroomService.joinRoom(user.uid, roomCode);
-        setCurrentRoom(room);
-
-        // Add to rooms list if not already there
-        setRooms((prev) => {
-          if (prev.find((r) => r.id === room.id)) return prev;
-          return [...prev, room];
-        });
-
-        setError(null);
-        return room;
-      } catch (e: any) {
-        setError(e.message || 'Failed to join room');
-        throw e;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user]
-  );
+    return classroomService.subscribeToRoom(currentRoom.id, (room) => {
+      setCurrentRoom(room);
+    });
+  }, [currentRoom?.id]);
 
   const refreshRoom = useCallback(async () => {
-    if (!currentRoom?.id) return;
+    if (!currentRoom?.id || !user?.uid) return;
 
     try {
       const refreshed = await classroomService.getRoomById(currentRoom.id);
       if (refreshed) {
         setCurrentRoom(refreshed);
+        try {
+          const result = await getUserMemberInRoom(currentRoom.id, user.uid);
+          if (result) {
+            setCurrentMember({
+              id: user.uid,
+              roomId: currentRoom.id,
+              userId: user.uid,
+              displayName: user.fullName,
+              email: user.email || '',
+              photoURL: user.photoURL,
+              role: result.role,
+              joinedAt: new Date(),
+              status: 'active',
+            } as RoomMember);
+          }
+        } catch {
+          // Ignore errors getting member info
+        }
       }
     } catch (e: any) {
       setError(e.message || 'Failed to refresh room');
     }
-  }, [currentRoom?.id]);
+  }, [currentRoom?.id, user]);
 
   const loadRoom = useCallback(
     async (roomId: string) => {
@@ -162,12 +142,32 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         const room = await classroomService.getRoomById(roomId);
         if (room) {
           setCurrentRoom(room);
+          if (user?.uid) {
+            try {
+              const result = await getUserMemberInRoom(roomId, user.uid);
+              if (result) {
+                setCurrentMember({
+                  id: user.uid,
+                  roomId,
+                  userId: user.uid,
+                  displayName: user.fullName,
+                  email: user.email || '',
+                  photoURL: user.photoURL,
+                  role: result.role,
+                  joinedAt: new Date(),
+                  status: 'active',
+                } as RoomMember);
+              }
+            } catch {
+              // Ignore errors getting member info
+            }
+          }
         }
       } catch (e: any) {
         setError(e.message || 'Failed to load room');
       }
     },
-    []
+    [user]
   );
 
   const archiveRoom = useCallback(
@@ -181,6 +181,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         );
         if (currentRoom?.id === roomId) {
           setCurrentRoom(null);
+          setCurrentMember(null);
         }
       } catch (e: any) {
         setError(e.message || 'Failed to archive room');
@@ -196,6 +197,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         setRooms((prev) => prev.filter((r) => r.id !== roomId));
         if (currentRoom?.id === roomId) {
           setCurrentRoom(null);
+          setCurrentMember(null);
         }
       } catch (e: any) {
         setError(e.message || 'Failed to delete room');
@@ -205,24 +207,67 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [currentRoom?.id]
   );
 
+  const createRoom = useCallback(
+    async (roomData: Partial<Room>) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const room = await classroomService.createRoom({
+        ...roomData,
+        ownerId: user.uid,
+        createdBy: user.uid,
+        status: 'active',
+      } as any);
+
+      setRooms((prev) => [room, ...prev]);
+      setCurrentRoom(room);
+      setCurrentMember({
+        id: user.uid,
+        roomId: room.id,
+        userId: user.uid,
+        displayName: user.fullName,
+        email: user.email || '',
+        photoURL: user.photoURL,
+        role: 'teacher',
+        joinedAt: new Date(),
+        status: 'active',
+      } as RoomMember);
+
+      return room;
+    },
+    [user]
+  );
+
+  const joinRoom = useCallback(
+    async (roomCode: string) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const room = await classroomService.joinRoom(roomCode, user.uid);
+      setRooms((prev) => [room, ...prev]);
+      setCurrentRoom(room);
+      setCurrentMember({
+        id: user.uid,
+        roomId: room.id,
+        userId: user.uid,
+        displayName: user.fullName,
+        email: user.email || '',
+        photoURL: user.photoURL,
+        role: 'student',
+        joinedAt: new Date(),
+        status: 'active',
+      } as RoomMember);
+
+      return room;
+    },
+    [user]
+  );
+
   const getUserRoleInRoom = useCallback(
-    async (roomId: string): Promise<ClassroomUserRole | null> => {
+    async (roomId: string) => {
       if (!user?.uid) return null;
 
       try {
-        const members = await classroomService.getRoomMembers(roomId);
-        const member = members.find((m) => m.userId === user.uid);
-        if (member) {
-          return member.role as ClassroomUserRole;
-        }
-
-        // Check if user is owner
-        const room = await classroomService.getRoomById(roomId);
-        if (room && room.ownerId === user.uid) {
-          return 'teacher';
-        }
-
-        return null;
+        const result = await getUserMemberInRoom(roomId, user.uid);
+        return result?.role ?? null;
       } catch (e) {
         console.error('Failed to get user role:', e);
         return null;
@@ -231,32 +276,18 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [user?.uid]
   );
 
-  const subscribeToCurrentRoom = useCallback(() => {
-    if (!currentRoom?.id) return null;
-
-    return classroomService.subscribeToRoom(currentRoom.id, (room) => {
-      setCurrentRoom(room);
-    });
-  }, [currentRoom?.id]);
-
-  // Load user rooms on mount
-  useEffect(() => {
-    if (user) {
-      fetchUserRooms();
-    }
-  }, [user, fetchUserRooms]);
-
   return (
     <ClassroomContext.Provider
       value={{
         currentRoom,
+        currentMember,
         rooms,
         loading,
         error,
         setCurrentRoom,
         createRoom,
         joinRoom,
-        fetchUserRooms,
+        fetchUserRooms: fetchUserRoomsWithRoles,
         refreshRoom,
         loadRoom,
         archiveRoom,
