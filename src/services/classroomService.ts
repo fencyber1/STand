@@ -1,6 +1,7 @@
 import { db } from '../services/firebase';
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -157,7 +158,7 @@ class ClassroomService {
       // Rooms where user is a member
       const memberRooms = await getDocs(
         query(
-          collection(db, 'roomMembers'),
+          collectionGroup(db, 'members'),
           where('userId', '==', userId),
           where('status', '==', 'active')
         )
@@ -215,15 +216,11 @@ class ClassroomService {
   ): Promise<void> {
     try {
       // Check if already a member
-      const memberQuery = query(
-        collection(db, 'roomMembers'),
-        where('roomId', '==', roomId),
-        where('userId', '==', userId)
-      );
-      const existing = await getDocs(memberQuery);
+      const memberRef = doc(db, 'classroomRooms', roomId, 'members', userId);
+      const existing = await getDoc(memberRef);
 
-      if (existing.empty) {
-        await addDoc(collection(db, 'roomMembers'), {
+      if (!existing.exists()) {
+        await setDoc(memberRef, {
           roomId,
           userId,
           role,
@@ -254,8 +251,7 @@ class ClassroomService {
   async getRoomMembers(roomId: string): Promise<DocumentData[]> {
     try {
       const q = query(
-        collection(db, 'roomMembers'),
-        where('roomId', '==', roomId),
+        collection(db, 'classroomRooms', roomId, 'members'),
         where('status', '==', 'active')
       );
       const snapshot = await getDocs(q);
@@ -318,7 +314,7 @@ class ClassroomService {
    */
   async removeRoomMember(roomId: string, memberId: string): Promise<void> {
     try {
-      const memberRef = doc(db, 'roomMembers', memberId);
+      const memberRef = doc(db, 'classroomRooms', roomId, 'members', memberId);
       await updateDoc(memberRef, {
         status: 'removed',
         removedAt: new Date().toISOString(),
@@ -413,7 +409,7 @@ class ClassroomService {
     try {
       // Delete room members
       const membersSnapshot = await getDocs(
-        query(collection(db, 'roomMembers'), where('roomId', '==', roomId))
+        collection(db, 'classroomRooms', roomId, 'members')
       );
       const memberDeletes = membersSnapshot.docs.map((doc) => deleteDoc(doc.ref));
       await Promise.all(memberDeletes);

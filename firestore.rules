@@ -102,7 +102,7 @@ service cloud.firestore {
     function is_classroom_room_member(roomId) {
       let memberCheck = get(/databases/$(database)/documents/classroomRooms/$(roomId));
       return memberCheck.data.ownerId == request.auth.uid
-        || exists(/databases/$(database)/documents/roomMembers/$(roomId)_$(request.auth.uid)_room_access);
+        || exists(/databases/$(database)/documents/classroomRooms/$(roomId)/members/$(request.auth.uid));
     }
 
     // Rooms
@@ -115,13 +115,13 @@ service cloud.firestore {
     }
 
     // Room members
-    match /roomMembers/{membershipId} {
+    match /classroomRooms/{roomId}/members/{userId} {
       allow read: if request.auth != null && (
-        resource.data.userId == request.auth.uid
-        || is_classroom_room_owner(resource.data.roomId)
+        request.auth.uid == userId
+        || is_classroom_room_owner(roomId)
       );
       allow create: if request.auth != null;
-      allow update, delete: if is_classroom_room_owner(resource.data.roomId);
+      allow update, delete: if is_classroom_room_owner(roomId);
     }
 
     // Topics
