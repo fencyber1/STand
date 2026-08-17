@@ -214,8 +214,6 @@ export default function Layout() {
   const mobileTabs = [
     { to: '/', label: t('Home'), icon: Home },
     { to: '/practice', label: t('Practice'), icon: GraduationCap },
-    { to: '/tournaments', label: t('Tournaments'), icon: Crown },
-    { to: '/multiplayer', label: t('Multiplayer'), icon: Users },
     { to: '/classroom', label: 'Classroom', icon: BookOpen },
     { to: '/profile', label: t('Profile'), icon: User },
   ];
