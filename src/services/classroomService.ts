@@ -106,10 +106,11 @@ class ClassroomService {
    * Retrieves a room by its unique room code
    */
   async getRoomByCode(code: string): Promise<Room | null> {
+    const normalizedCode = code.trim().toUpperCase();
     try {
       const q = query(
         collection(db, 'classroomRooms'),
-        where('roomCode', '==', code)
+        where('roomCode', '==', normalizedCode)
       );
       const snapshot = await getDocs(q);
 
