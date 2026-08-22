@@ -267,7 +267,8 @@ class ClassroomService {
    * Joins a classroom by room code
    */
   async joinRoom(userId: string, roomCode: string): Promise<Room> {
-    const room = await this.getRoomByCode(roomCode);
+    const normalizedCode = roomCode.trim().toUpperCase();
+    const room = await this.getRoomByCode(normalizedCode);
     if (!room) {
       throw new Error('Room not found with that code');
     }
