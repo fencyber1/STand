@@ -197,15 +197,25 @@ export default function AddTopicForm() {
       setGenerationProgress('Generating AI content (step 2/3): Detailed lesson and explanations...');
       setGenerationProgress('Generating AI content (step 3/3): Practice questions and case studies...');
 
-      // Generate content using NVIDIA AI
-      const content = await aiTopicEngine.generateTopicContent(
-        title,
-        sourceText,
-        {
+      // Generate content using server-side NVIDIA AI proxy
+      const apiUrl = `${import.meta.env.VITE_API_URL || ''}/api/classroom-generate`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topicTitle: title,
+          sourceText,
           difficulty,
           customInstructions,
-        }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to generate content');
+      }
+
+      const content = await response.json();
 
       // Save AI-generated content to topic
       await topicService.setAiContent(topic.id, content);
@@ -277,15 +287,25 @@ export default function AddTopicForm() {
 
       setGenerationProgress('Generating AI content with FenBot context...');
 
-      // Generate content using NVIDIA AI with FenBot context
-      const content = await aiTopicEngine.generateTopicContent(
-        title,
-        sourceText,
-        {
+      // Generate content using server-side NVIDIA AI proxy with FenBot context
+      const apiUrl = `${import.meta.env.VITE_API_URL || ''}/api/classroom-generate`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topicTitle: title,
+          sourceText,
           difficulty,
           customInstructions: combinedInstructions,
-        }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to generate content');
+      }
+
+      const content = await response.json();
 
       // Save AI-generated content to topic
       await topicService.setAiContent(topic.id, content);
