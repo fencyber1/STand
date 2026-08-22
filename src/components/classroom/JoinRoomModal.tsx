@@ -76,7 +76,8 @@ export function JoinRoomModal({ open, onClose }: JoinRoomModalProps) {
     setError('');
 
     try {
-      await joinRoom(foundRoom.roomCode);
+      // Join by room ID (already have it from search) to avoid roomCode lookup issues
+      await joinRoom(foundRoom.id);
       reset();
       onClose();
     } catch (err: any) {

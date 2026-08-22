@@ -332,13 +332,26 @@ class ClassroomService {
   }
 
   /**
-   * Joins a classroom by room code
+   * Joins a classroom by room code (legacy)
    */
   async joinRoom(userId: string, roomCode: string): Promise<Room> {
     const normalizedCode = roomCode.trim().toUpperCase();
     const room = await this.getRoomByCode(normalizedCode);
     if (!room) {
       throw new Error('Room not found with that code');
+    }
+
+    await this.addRoomMember(room.id, userId, 'student');
+    return room;
+  }
+
+  /**
+   * Joins a classroom by room ID (preferred - avoids roomCode lookup)
+   */
+  async joinRoomById(userId: string, roomId: string): Promise<Room> {
+    const room = await this.getRoomById(roomId);
+    if (!room) {
+      throw new Error('Room not found');
     }
 
     await this.addRoomMember(room.id, userId, 'student');

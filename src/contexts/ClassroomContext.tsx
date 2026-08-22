@@ -18,7 +18,7 @@ interface ClassroomContextType {
   error: string | null;
   setCurrentRoom: (room: Room | null) => void;
   createRoom: (roomData: Partial<Room>) => Promise<Room>;
-  joinRoom: (roomCode: string) => Promise<Room>;
+  joinRoom: (roomId: string) => Promise<Room>;
   fetchUserRooms: () => Promise<void>;
   refreshRoom: () => Promise<void>;
   loadRoom: (roomId: string) => Promise<void>;
@@ -238,11 +238,10 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
   );
 
   const joinRoom = useCallback(
-    async (roomCode: string) => {
+    async (roomId: string) => {
       if (!user) throw new Error('User not authenticated');
 
-      const normalizedCode = roomCode.trim().toUpperCase();
-      const room = await classroomService.joinRoom(normalizedCode, user.uid);
+      const room = await classroomService.joinRoomById(roomId, user.uid);
       setRooms((prev) => [room, ...prev]);
       setCurrentRoom(room);
       setCurrentMember({
