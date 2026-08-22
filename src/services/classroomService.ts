@@ -16,7 +16,7 @@ import {
   FirestoreError,
 } from 'firebase/firestore';
 import { Room, RoomType, ClassroomUserRole, Assessment, Submission } from '../types/classroom';
-import { generateRoomCode } from '../utils/roomCode';
+import { generateRoomCode, isValidRoomCode } from '../utils/roomCode';
 import { topicService } from './topicService';
 import { attendanceService } from './attendanceService';
 
@@ -30,7 +30,8 @@ class ClassroomService {
    */
   async createRoom(data: Omit<Room, 'id'>): Promise<Room> {
     try {
-      const roomCode = data.roomCode ?? generateRoomCode();
+      // Always ensure valid room code format (ST-XXX-XXXXX)
+      const roomCode = isValidRoomCode(data.roomCode) ? data.roomCode : generateRoomCode();
       const now = new Date();
 
       const newRoom: Room = {
@@ -66,14 +67,10 @@ class ClassroomService {
       await this.addRoomMember(roomRef.id, data.ownerId, 'teacher');
 
       return { ...newRoom };
-      } catch (error) {
+    } catch (error) {
       const e = error as Error;
       if (e.message.includes('collision')) {
-        // Retry with a new generated code
-        return this.createRoom({
-          ...data,
-          roomCode: generateRoomCode(),
-        });
+        return this.createRoom({ ...data, roomCode: generateRoomCode() });
       }
       throw error;
     }
@@ -128,10 +125,28 @@ class ClassroomService {
         const snapshot = await getDocs(q);
 
         if (!snapshot.empty) {
+          const docSnap = snapshot.docs[0];
+          const data = docSnap.data();
+
+          // Auto-fix: if roomCode in DB is invalid (e.g., document ID), fix it
+          if (!isValidRoomCode(data.roomCode)) {
+            const fixedCode = generateRoomCode();
+            console.log(`[getRoomByCode] Auto-fixing invalid roomCode "${data.roomCode}" -> "${fixedCode}"`);
+            await updateDoc(doc(db, 'classroomRooms', docSnap.id), { roomCode: fixedCode });
+            return {
+              id: docSnap.id,
+              ...(data as Omit<Room, 'id'>),
+              roomCode: fixedCode,
+              createdAt: new Date(data.createdAt),
+              updatedAt: new Date(data.updatedAt),
+              startDate: data.startDate ? new Date(data.startDate) : undefined,
+              endDate: data.endDate ? new Date(data.endDate) : undefined,
+            };
+          }
+
           console.log(`[getRoomByCode] Found room with variant: "${variant}"`);
-          const data = snapshot.docs[0].data();
           return {
-            id: snapshot.docs[0].id,
+            id: docSnap.id,
             ...(data as Omit<Room, 'id'>),
             createdAt: new Date(data.createdAt),
             updatedAt: new Date(data.updatedAt),
@@ -146,8 +161,25 @@ class ClassroomService {
         console.log(`[getRoomByCode] Trying direct doc lookup for: "${normalizedCode}"`);
         const docSnap = await getDoc(doc(db, 'classroomRooms', normalizedCode));
         if (docSnap.exists()) {
-          console.log(`[getRoomByCode] Found room by doc ID`);
           const data = docSnap.data();
+
+          // Auto-fix invalid roomCode
+          if (!isValidRoomCode(data.roomCode)) {
+            const fixedCode = generateRoomCode();
+            console.log(`[getRoomByCode] Auto-fixing invalid roomCode "${data.roomCode}" -> "${fixedCode}"`);
+            await updateDoc(doc(db, 'classroomRooms', docSnap.id), { roomCode: fixedCode });
+            return {
+              id: docSnap.id,
+              ...(data as Omit<Room, 'id'>),
+              roomCode: fixedCode,
+              createdAt: new Date(data.createdAt),
+              updatedAt: new Date(data.updatedAt),
+              startDate: data.startDate ? new Date(data.startDate) : undefined,
+              endDate: data.endDate ? new Date(data.endDate) : undefined,
+            };
+          }
+
+          console.log(`[getRoomByCode] Found room by doc ID`);
           return {
             id: docSnap.id,
             ...(data as Omit<Room, 'id'>),
