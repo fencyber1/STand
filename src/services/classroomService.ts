@@ -107,13 +107,17 @@ class ClassroomService {
    */
   async getRoomByCode(code: string): Promise<Room | null> {
     const normalizedCode = code.trim().toUpperCase();
+    
+    // Check if input looks like a Firebase document ID (32 chars, alphanumeric)
+    const isFirebaseId = /^[A-Z0-9]{20,}$/i.test(normalizedCode);
+
     const variations = [
       normalizedCode,
-      normalizedCode.replace(/\s+/g, ''),           // remove all whitespace
-      normalizedCode.replace(/-/g, ''),              // remove hyphens
-      code.trim(),                                   // original trimmed
-      code.trim().toLowerCase(),                     // lowercase
-    ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+      normalizedCode.replace(/\s+/g, ''),
+      normalizedCode.replace(/-/g, ''),
+      code.trim(),
+      code.trim().toLowerCase(),
+    ].filter((v, i, a) => a.indexOf(v) === i);
 
     try {
       for (const variant of variations) {
@@ -128,6 +132,24 @@ class ClassroomService {
           const data = snapshot.docs[0].data();
           return {
             id: snapshot.docs[0].id,
+            ...(data as Omit<Room, 'id'>),
+            createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt),
+            startDate: data.startDate ? new Date(data.startDate) : undefined,
+            endDate: data.endDate ? new Date(data.endDate) : undefined,
+          };
+        }
+      }
+
+      // Fallback: if input looks like a Firebase doc ID, try direct document lookup
+      if (isFirebaseId) {
+        console.log(`[getRoomByCode] Trying direct doc lookup for: "${normalizedCode}"`);
+        const docSnap = await getDoc(doc(db, 'classroomRooms', normalizedCode));
+        if (docSnap.exists()) {
+          console.log(`[getRoomByCode] Found room by doc ID`);
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
             ...(data as Omit<Room, 'id'>),
             createdAt: new Date(data.createdAt),
             updatedAt: new Date(data.updatedAt),
