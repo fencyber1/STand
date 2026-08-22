@@ -197,7 +197,7 @@ export default function AddTopicForm() {
       setGenerationProgress('Generating AI content (step 2/3): Detailed lesson and explanations...');
       setGenerationProgress('Generating AI content (step 3/3): Practice questions and case studies...');
 
-      // Generate content using server-side NVIDIA AI proxy
+      // Generate content using server-side NVIDIA AI proxy (progressive SSE)
       const apiUrl = `${import.meta.env.VITE_API_URL || ''}/api/classroom-generate`;
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -207,6 +207,7 @@ export default function AddTopicForm() {
           sourceText,
           difficulty,
           customInstructions,
+          progressive: true,
         }),
       });
 
@@ -215,7 +216,45 @@ export default function AddTopicForm() {
         throw new Error(err.error || 'Failed to generate content');
       }
 
-      const content = await response.json();
+      // Parse SSE stream for progressive updates
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let content: any = null;
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.phase === 'core' && data.data) {
+                  // Core content received - update progress
+                  setGenerationProgress(data.message || 'Core content ready');
+                  content = data.data; // Store core content as fallback
+                } else if (data.phase === 'extended' && data.message) {
+                  setGenerationProgress(data.message);
+                } else if (data.phase === 'complete' && data.data) {
+                  content = data.data; // Final merged content
+                } else if (data.error) {
+                  throw new Error(data.error);
+                }
+              } catch (e) {
+                if (e instanceof Error) throw e;
+              }
+            }
+          }
+        }
+      }
+
+      if (!content) {
+        throw new Error('No content received from AI');
+      }
 
       // Save AI-generated content to topic
       await topicService.setAiContent(topic.id, content);
@@ -287,7 +326,7 @@ export default function AddTopicForm() {
 
       setGenerationProgress('Generating AI content with FenBot context...');
 
-      // Generate content using server-side NVIDIA AI proxy with FenBot context
+      // Generate content using server-side NVIDIA AI proxy with FenBot context (progressive SSE)
       const apiUrl = `${import.meta.env.VITE_API_URL || ''}/api/classroom-generate`;
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -297,6 +336,7 @@ export default function AddTopicForm() {
           sourceText,
           difficulty,
           customInstructions: combinedInstructions,
+          progressive: true,
         }),
       });
 
@@ -305,7 +345,44 @@ export default function AddTopicForm() {
         throw new Error(err.error || 'Failed to generate content');
       }
 
-      const content = await response.json();
+      // Parse SSE stream for progressive updates
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let content: any = null;
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.phase === 'core' && data.data) {
+                  setGenerationProgress(data.message || 'Core content ready');
+                  content = data.data;
+                } else if (data.phase === 'extended' && data.message) {
+                  setGenerationProgress(data.message);
+                } else if (data.phase === 'complete' && data.data) {
+                  content = data.data;
+                } else if (data.error) {
+                  throw new Error(data.error);
+                }
+              } catch (e) {
+                if (e instanceof Error) throw e;
+              }
+            }
+          }
+        }
+      }
+
+      if (!content) {
+        throw new Error('No content received from AI');
+      }
 
       // Save AI-generated content to topic
       await topicService.setAiContent(topic.id, content);
