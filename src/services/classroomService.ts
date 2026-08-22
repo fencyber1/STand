@@ -107,24 +107,38 @@ class ClassroomService {
    */
   async getRoomByCode(code: string): Promise<Room | null> {
     const normalizedCode = code.trim().toUpperCase();
+    const variations = [
+      normalizedCode,
+      normalizedCode.replace(/\s+/g, ''),           // remove all whitespace
+      normalizedCode.replace(/-/g, ''),              // remove hyphens
+      code.trim(),                                   // original trimmed
+      code.trim().toLowerCase(),                     // lowercase
+    ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
+
     try {
-      const q = query(
-        collection(db, 'classroomRooms'),
-        where('roomCode', '==', normalizedCode)
-      );
-      const snapshot = await getDocs(q);
+      for (const variant of variations) {
+        const q = query(
+          collection(db, 'classroomRooms'),
+          where('roomCode', '==', variant)
+        );
+        const snapshot = await getDocs(q);
 
-      if (snapshot.empty) return null;
+        if (!snapshot.empty) {
+          console.log(`[getRoomByCode] Found room with variant: "${variant}"`);
+          const data = snapshot.docs[0].data();
+          return {
+            id: snapshot.docs[0].id,
+            ...(data as Omit<Room, 'id'>),
+            createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt),
+            startDate: data.startDate ? new Date(data.startDate) : undefined,
+            endDate: data.endDate ? new Date(data.endDate) : undefined,
+          };
+        }
+      }
 
-      const data = snapshot.docs[0].data();
-      return {
-        id: snapshot.docs[0].id,
-        ...(data as Omit<Room, 'id'>),
-        createdAt: new Date(data.createdAt),
-        updatedAt: new Date(data.updatedAt),
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
-      };
+      console.warn(`[getRoomByCode] No room found for any variant of: "${code}"`);
+      return null;
     } catch (error) {
       console.error('Failed to get room by code:', error);
       throw error;
