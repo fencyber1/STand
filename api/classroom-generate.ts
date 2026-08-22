@@ -137,7 +137,7 @@ export default async function handler(req: any, res: any) {
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-4-340b-instruct',
+        model: 'meta/llama-3.1-8b-instruct',
         messages: [
           { role: 'system', content: 'You are an expert educational content creator. Your output must always be valid JSON matching the requested schema exactly. Never add explanatory text outside the JSON.' },
           { role: 'user', content: prompt }
