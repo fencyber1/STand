@@ -241,6 +241,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     async (roomId: string) => {
       if (!user) throw new Error('User not authenticated');
 
+      console.log('[ClassroomContext] joinRoom called with roomId:', roomId);
       const room = await classroomService.joinRoomById(roomId, user.uid);
       setRooms((prev) => [room, ...prev]);
       setCurrentRoom(room);
