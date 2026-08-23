@@ -20,6 +20,7 @@ import StudentsScreen from '../../screens/classroom/StudentsScreen';
 import AnalyticsScreen from '../../screens/classroom/AnalyticsScreen';
 import ClassroomSettingsScreen from '../../screens/classroom/SettingsScreen';
 import AssessmentsListScreen from '../../screens/classroom/AssessmentsListScreen';
+import DashboardScreen from '../../screens/classroom/DashboardScreen';
 
 /**
  * Routes for the Classroom feature.
@@ -36,6 +37,9 @@ export default function ClassroomRoutes() {
     <Routes>
       {/* Classroom Entry */}
       <Route path="/" element={<ClassroomHome />} />
+
+      {/* Dashboard */}
+      <Route path="/dashboard" element={<DashboardScreen />} />
 
       {/* Student Dashboard */}
       <Route path="/:roomId/learn" element={<StudentDashboard />} />
