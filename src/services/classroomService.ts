@@ -204,8 +204,11 @@ class ClassroomService {
    */
   async updateRoom(roomId: string, updates: Partial<Room>): Promise<void> {
     try {
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined)
+      );
       await updateDoc(doc(db, 'classroomRooms', roomId), {
-        ...updates,
+        ...cleanUpdates,
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
