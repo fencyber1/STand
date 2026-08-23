@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useClassroom } from '../../contexts/ClassroomContext';
 import { Button } from '../ui/button';
@@ -24,6 +25,7 @@ interface JoinRoomModalProps {
 export function JoinRoomModal({ open, onClose }: JoinRoomModalProps) {
   const { user } = useAuth();
   const { joinRoom } = useClassroom();
+  const navigate = useNavigate();
   const [roomCode, setRoomCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -77,9 +79,10 @@ export function JoinRoomModal({ open, onClose }: JoinRoomModalProps) {
 
     try {
       // Join by room ID (already have it from search) to avoid roomCode lookup issues
-      await joinRoom(foundRoom.id);
+      const room = await joinRoom(foundRoom.id);
       reset();
       onClose();
+      navigate(`/classroom/${room.id}/learn`);
     } catch (err: any) {
       setError(err.message || 'Failed to join room');
     } finally {
