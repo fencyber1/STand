@@ -352,7 +352,9 @@ class ClassroomService {
    * Joins a classroom by room ID (preferred - avoids roomCode lookup)
    */
   async joinRoomById(userId: string, roomId: string): Promise<Room> {
+    console.log('[joinRoomById] Attempting to join room:', roomId);
     const room = await this.getRoomById(roomId);
+    console.log('[joinRoomById] getRoomById result:', room ? 'found' : 'NOT FOUND');
     if (!room) {
       throw new Error('Room not found');
     }

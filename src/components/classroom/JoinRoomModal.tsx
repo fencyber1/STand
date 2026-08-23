@@ -74,6 +74,9 @@ export function JoinRoomModal({ open, onClose }: JoinRoomModalProps) {
   const handleJoin = async () => {
     if (!foundRoom || !user?.uid) return;
 
+    console.log('[JoinRoomModal] Found room from search:', foundRoom);
+    console.log('[JoinRoomModal] Joining with room ID:', foundRoom.id);
+
     setIsLoading(true);
     setError('');
 
@@ -84,6 +87,7 @@ export function JoinRoomModal({ open, onClose }: JoinRoomModalProps) {
       onClose();
       navigate(`/classroom/${room.id}/learn`);
     } catch (err: any) {
+      console.error('[JoinRoomModal] Join error:', err);
       setError(err.message || 'Failed to join room');
     } finally {
       setIsLoading(false);
