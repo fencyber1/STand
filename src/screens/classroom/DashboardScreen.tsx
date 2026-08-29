@@ -30,6 +30,7 @@ export default function DashboardScreen() {
   // Sidebar state
   const [sidebarType, setSidebarType] = useState<'overlay' | 'fixed'>('overlay');
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const updateSidebarType = () => {
@@ -40,13 +41,10 @@ export default function DashboardScreen() {
     return () => window.removeEventListener('resize', updateSidebarType);
   }, []);
 
+  // Sync sidebar type to viewport size on every route change (handles join/navigation)
   useEffect(() => {
-    const handlePopState = () => {
-      setSidebarType('overlay');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    setSidebarType(window.innerWidth < 640 ? 'overlay' : 'fixed');
+  }, [location.pathname]);
 
   // Header stats data
   const statsData = [
