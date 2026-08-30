@@ -55,6 +55,7 @@ const server = http.createServer(async (req, res) => {
   const maxTokens = Math.min(Number(parsed.max_tokens) || 4096, 8192);
   const temperature = Math.min(Math.max(Number(parsed.temperature) || 0.7, 0), 2);
   const model = 'meta/llama-3.1-8b-instruct';
+  const wantsStream = parsed.stream === true;
 
   try {
     const response = await fetch(NVIDIA_API, {
@@ -68,16 +69,36 @@ const server = http.createServer(async (req, res) => {
         messages: parsed.messages,
         temperature,
         max_tokens: maxTokens,
-        stream: false,
+        stream: wantsStream,
       }),
     });
+
+    if (wantsStream && response.body) {
+      res.writeHead(response.status, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(decoder.decode(value, { stream: true }));
+        }
+      } catch {
+        // Stream interrupted
+      }
+      return res.end();
+    }
 
     const text = await response.text();
     res.writeHead(response.status, { 'Content-Type': 'application/json' });
     return res.end(text);
-  } catch (err: any) {
+  } catch (err) {
     res.writeHead(500);
-    return res.end(JSON.stringify({ error: err.message || 'Proxy error' }));
+    return res.end(JSON.stringify({ error: (err instanceof Error ? err.message : 'Proxy error') || 'Proxy error' }));
   }
 });
 
