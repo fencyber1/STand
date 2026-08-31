@@ -18,8 +18,9 @@ function loadEnv() {
 
 loadEnv();
 
-const API_KEY = process.env.NVIDIA_API_KEY || '';
-const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL = process.env.GROQ_MODEL || 'groq/compound-mini';
 
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -38,7 +39,7 @@ const server = http.createServer(async (req, res) => {
 
   if (!API_KEY) {
     res.writeHead(500);
-    return res.end(JSON.stringify({ error: 'NVIDIA_API_KEY not set. Create .env file with NVIDIA_API_KEY=your_key' }));
+    return res.end(JSON.stringify({ error: 'GROQ_API_KEY not set. Create .env file with GROQ_API_KEY=your_key' }));
   }
 
   let body = '';
@@ -54,18 +55,17 @@ const server = http.createServer(async (req, res) => {
 
   const maxTokens = Math.min(Number(parsed.max_tokens) || 4096, 8192);
   const temperature = Math.min(Math.max(Number(parsed.temperature) || 0.7, 0), 2);
-  const model = 'meta/llama-3.1-8b-instruct';
   const wantsStream = parsed.stream === true;
 
   try {
-    const response = await fetch(NVIDIA_API, {
+    const response = await fetch(GROQ_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model,
+        model: MODEL,
         messages: parsed.messages,
         temperature,
         max_tokens: maxTokens,
@@ -102,12 +102,12 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 4200;
 server.listen(PORT, () => {
   console.log(`API proxy server running on http://localhost:${PORT}`);
   if (!API_KEY) {
-    console.warn('⚠️  NVIDIA_API_KEY not set. Create .env file with your key.');
+    console.warn('⚠️  GROQ_API_KEY not set. Create .env file with your key.');
   } else {
-    console.log('✅ NVIDIA_API_KEY loaded');
+    console.log('✅ GROQ_API_KEY loaded, model=' + MODEL);
   }
 });

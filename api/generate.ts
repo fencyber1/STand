@@ -1,9 +1,10 @@
-const API_KEY = process.env.NVIDIA_API_KEY || '';
-const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL = process.env.GROQ_MODEL || 'groq/compound-mini';
 
 export default async function handler(req: any, res: any) {
   const origin = req.headers.origin || '';
-  const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+  const allowedOrigins = ['http://localhost:5173', 'http://localhost:4200'];
   const isAllowed = allowedOrigins.includes(origin) || origin.includes('.vercel.app');
   res.setHeader('Access-Control-Allow-Origin', isAllowed ? origin : '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -11,13 +12,11 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!API_KEY) return res.status(500).json({ error: 'NVIDIA_API_KEY not set in Vercel env vars.' });
+  if (!API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not set in Vercel env vars.' });
 
   // Validate and constrain inputs
   const maxTokens = Math.min(Number(req.body.max_tokens) || 4096, 8192);
   const temperature = Math.min(Math.max(Number(req.body.temperature) || 0.7, 0), 2);
-  const allowedModels = ['meta/llama-3.1-8b-instruct'];
-  const model = allowedModels.includes(req.body.model) ? req.body.model : 'meta/llama-3.1-8b-instruct';
 
   const wantsStream = req.body.stream === true;
 
@@ -25,14 +24,14 @@ export default async function handler(req: any, res: any) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 35000);
 
-    const response = await fetch(NVIDIA_API, {
+    const response = await fetch(GROQ_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model,
+        model: MODEL,
         messages: req.body.messages,
         temperature,
         max_tokens: maxTokens,
@@ -70,7 +69,7 @@ export default async function handler(req: any, res: any) {
     return res.status(response.status).send(text);
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      return res.status(504).json({ error: 'NVIDIA API timed out after 35s' });
+      return res.status(504).json({ error: 'GROQ API timed out after 35s' });
     }
     return res.status(500).json({ error: err.message || 'Proxy error' });
   }
