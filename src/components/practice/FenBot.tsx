@@ -604,7 +604,7 @@ export default function FenBot() {
         if (!data) return;
         try {
           const json = JSON.parse(data);
-          const delta = json.choices?.[0]?.delta?.content;
+          const delta = json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.delta?.reasoning;
           if (delta) rawBuffer += delta;
         } catch {}
       };
