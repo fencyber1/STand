@@ -1,6 +1,7 @@
 // Logs the demo user in via the app's /login form (CDP, zero-dep).
-// Usage: STAND_EMAIL=.. STAND_PASS=.. node login.mjs <debugPort>
+// Usage: STAND_EMAIL=.. STAND_PASS=.. node login.mjs <debugPort> [baseUrl]
 const port = process.argv[2];
+const base = (process.argv[3] || 'http://localhost:8080').replace(/\/$/, '');
 if (!port || !process.env.STAND_EMAIL || !process.env.STAND_PASS) {
   console.error('usage: STAND_EMAIL=.. STAND_PASS=.. node login.mjs <port>');
   process.exit(1);
@@ -35,7 +36,7 @@ async function main() {
 
   await send('Page.enable');
   await send('Runtime.enable');
-  await send('Page.navigate', { url: 'http://localhost:8080/login' });
+  await send('Page.navigate', { url: base + '/login' });
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
     await sleep(1000);

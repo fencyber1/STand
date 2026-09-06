@@ -7,7 +7,7 @@ import { Card } from '../components/ui/card';
 import { CreateRoomModal } from '../components/classroom/CreateRoomModal';
 import { JoinRoomModal } from '../components/classroom/JoinRoomModal';
 import Logo from '../components/landing/Logo';
-import { LayoutDashboard, Users, BookOpen, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, BarChart3, Home } from 'lucide-react';
 
 /**
  * Entry point for STAND Classroom.
@@ -24,7 +24,17 @@ export default function ClassroomHome() {
   const recentRooms = rooms.filter((r) => r.status === 'active');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-12">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-12">
+      {/* Home — back to the main dashboard */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate('/')}
+        className="absolute top-4 left-4 text-slate-300 hover:text-white"
+      >
+        <Home className="w-4 h-4 mr-2" />
+        Home
+      </Button>
       {/* Logo */}
       <div className="mb-12">
         <Logo size={120} />

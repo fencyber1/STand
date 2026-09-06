@@ -54,8 +54,20 @@ async function main() {
   if (!ready) throw new Error('ready check timed out: ' + check);
   await sleep(2500); // settle animations/lazy chunks
   try {
-    await evaluate(`(() => { const b = document.querySelector('.tour-btn-skip'); if (b) { b.click(); return true; } return false; })()`);
+    const skipped = await evaluate(`(() => { const b = document.querySelector('.tour-btn-skip'); if (b) { b.click(); return true; } return false; })()`);
     await sleep(1200);
+    if (skipped) {
+      // Tour completion navigates home — go back to the target and re-wait
+      await send('Page.navigate', { url });
+      const deadline2 = Date.now() + 60000;
+      while (Date.now() < deadline2) {
+        await sleep(1000);
+        try {
+          if (await evaluate(check)) break;
+        } catch {}
+      }
+      await sleep(2500);
+    }
   } catch {}
   const shot = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync(out, Buffer.from(shot.data, 'base64'));
