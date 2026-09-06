@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STand — User Guide for Students &amp; Teachers</title>
+<style>
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  :root { --bg: #0e1627; --card: #18203e; --violet: #8b5cf6; --indigo: #6366f1; --text: #e5e9f2; --muted: #9aa3b8; }
+  body { margin: 0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .page { width: 210mm; min-height: 296mm; margin: 0 auto; padding: 18mm 16mm 16mm; position: relative; overflow: hidden; }
+  @media print {
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    body { background: var(--bg); }
+    .page { width: auto; min-height: auto; margin: 0; padding: 0 0 6mm; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    .no-break { page-break-inside: avoid; }
+  }
+  @media screen { .page { box-shadow: 0 0 0 1px #2a3352; margin: 12px auto; } }
+  .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 260mm; }
+  .cover img.logo { width: 110px; height: 110px; border-radius: 26px; }
+  .cover h1 { font-size: 52px; margin: 18px 0 4px; letter-spacing: -1px; }
+  .cover h1 .grad { background: linear-gradient(135deg, #22d3ee, #8b5cf6, #c084fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .cover .tag { font-size: 19px; color: var(--muted); margin: 0 0 26px; }
+  .cover .pill { display: inline-block; border: 1px solid #3b4670; border-radius: 999px; padding: 8px 22px; margin: 4px; font-size: 14px; color: #cfd6ea; }
+  .cover .meta { margin-top: 34px; font-size: 13px; color: var(--muted); }
+  h2 { font-size: 26px; margin: 0 0 4px; padding-top: 4mm; }
+  h2 .num { display: inline-block; min-width: 38px; height: 38px; line-height: 38px; text-align: center; border-radius: 12px; background: linear-gradient(135deg, var(--indigo), var(--violet)); font-size: 19px; margin-right: 10px; vertical-align: middle; }
+  h3 { font-size: 17px; margin: 16px 0 6px; color: #cdd5ec; }
+  p, li { font-size: 14.5px; color: #d6dcee; }
+  .sub { color: var(--muted); margin-top: 0; font-size: 14px; }
+  figure { margin: 12px 0; border: 1px solid #2a3352; border-radius: 12px; overflow: hidden; background: #0b1226; }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { font-size: 12.5px; color: var(--muted); padding: 8px 12px; border-top: 1px solid #2a3352; }
+  .cols { display: flex; gap: 14px; }
+  .cols > div { flex: 1; }
+  .card { background: var(--card); border: 1px solid #2a3352; border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
+  .card b { color: #fff; }
+  ul.tight li { margin-bottom: 4px; }
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps li { counter-increment: s; margin: 8px 0; padding-left: 38px; position: relative; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 50%; background: var(--violet); color: #fff; font-size: 13px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 10px 0; }
+  th, td { border: 1px solid #2a3352; padding: 8px 10px; text-align: left; }
+  th { background: #1c2547; color: #fff; }
+  .foot { margin-top: 14px; font-size: 12px; color: var(--muted); border-top: 1px solid #2a3352; padding-top: 8px; }
+  a { color: #a78bfa; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="page">
+  <div class="cover">
+    <img class="logo" src="img/logo.webp" alt="STand logo" />
+    <h1><span class="grad">STand</span> User Guide</h1>
+    <p class="tag">AI-powered exam practice platform — for students &amp; teachers</p>
+    <div>
+      <span class="pill">Practice with AI questions</span>
+      <span class="pill">FenBot AI tutor</span>
+      <span class="pill">Classrooms</span>
+      <span class="pill">Multiplayer quizzes</span>
+    </div>
+    <p class="meta">September 2026 &nbsp;•&nbsp; Open <b>http://localhost:8080</b> in any modern browser<br/>Sign in, practice, and track progress — no installation needed.</p>
+  </div>
+</div>
+
+<!-- 1 CONTENTS + ACCESS -->
+<div class="page">
+  <h2><span class="num">1</span>Welcome to STand</h2>
+  <p class="sub">What this guide covers and how to open the app.</p>
+  <p><b>STand</b> helps you prepare for exams with AI-generated questions, an AI tutor called <b>FenBot</b>, real exam simulations, teacher-led <b>classrooms</b>, and <b>multiplayer quiz battles</b> with friends. Everything runs in the browser and your progress is saved to your account.</p>
+  <div class="card no-break"><b>In this guide:</b> 2 Getting started · 3 Practice solo · 4 FenBot tutor · 5 Study smarter · 6 Classroom for teachers · 7 Classroom for students · 8 Play &amp; social · 9 Rankings &amp; XP · 10 Behind the scenes &amp; privacy · 11 FAQ &amp; help</div>
+  <h3>Opening STand</h3>
+  <ol class="steps">
+    <li>Open Chrome or Edge and go to the STand address (for example <b>http://localhost:8080</b>).</li>
+    <li>You will see the welcome screen below. Choose <b>Sign In</b> or <b>Sign Up</b>.</li>
+    <li>Sign up with email + password, or continue with Google.</li>
+  </ol>
+  <figure class="no-break"><img src="img/01-landing.png" alt="STand welcome screen" /><figcaption>Welcome screen — Sign In or Sign Up to begin.</figcaption></figure>
+  <figure class="no-break"><img src="img/02-login.png" alt="STand sign in screen" /><figcaption>Sign-in screen — use email or Continue with Google.</figcaption></figure>
+</div>
+
+<!-- 2 GETTING STARTED -->
+<div class="page">
+  <h2><span class="num">2</span>Getting started</h2>
+  <p class="sub">Your dashboard, navigation, and first steps.</p>
+  <p>After signing in you land on the <b>Dashboard</b>. It greets you, shows your <b>daily goal</b>, <b>current streak</b>, the <b>daily challenge</b>, and <b>Quick Actions</b> to jump anywhere. Use the left sidebar: <b>Dashboard · FenBot · Classroom · Practice · Document Quiz · Exam Sim · Review · Progress · Study · Social</b>.</p>
+  <figure class="no-break"><img src="img/03-dashboard.png" alt="STand dashboard" /><figcaption>Dashboard — daily goal, streak, daily challenge and quick actions.</figcaption></figure>
+  <div class="cols">
+    <div class="card no-break"><b>Students — first 5 minutes</b><br/>1. Open <b>Practice</b> and generate 15 questions on any topic.<br/>2. Ask <b>FenBot</b> to explain one answer.<br/>3. Check <b>Progress</b> to see your score.</div>
+    <div class="card no-break"><b>Teachers — first 5 minutes</b><br/>1. Open <b>Classroom → Create Room</b>.<br/>2. Share the class code with students.<br/>3. Add a topic and publish it.</div>
+  </div>
+</div>
+
+<!-- 3 PRACTICE SOLO -->
+<div class="page">
+  <h2><span class="num">3</span>Practice solo</h2>
+  <p class="sub">AI questions on any topic, exam simulation, and quizzes from your own documents.</p>
+  <h3>Generate a practice set</h3>
+  <ol class="steps">
+    <li>Go to <b>Practice</b> and type a topic (e.g. “Photosynthesis”).</li>
+    <li>Pick course sector, education level, question type (<b>MCQ, Theory, Fill-in-the-blank, True/False, Matching</b>) and number of questions.</li>
+    <li>Press <b>Next</b> — STand generates the questions with answers and explanations.</li>
+  </ol>
+  <figure class="no-break"><img src="img/04-practice.png" alt="Practice setup screen" /><figcaption>Practice setup — topic, sector, level, question type and count.</figcaption></figure>
+  <div class="card no-break"><b>More ways to practice:</b> <b>Document Quiz</b> turns your PDF/DOCX notes into a quiz · <b>Exam Sim</b> recreates timed exam conditions · <b>Bookmarks</b> saves tricky questions · <b>History</b> replays past sessions · <b>Search</b> finds anything you practiced before · <b>Import</b> brings in your own question lists.</div>
+</div>
+
+<!-- 4 FENBOT -->
+<div class="page">
+  <h2><span class="num">4</span>Meet FenBot, your AI tutor</h2>
+  <p class="sub">Ask anything — get fast answers or deep, step-by-step teaching.</p>
+  <p>Open <b>FenBot</b> from the sidebar. Type a question — or tap the <b>microphone</b> and speak. FenBot streams the answer live, can <b>read it aloud</b>, and remembers each conversation so you can return later.</p>
+  <figure class="no-break"><img src="img/05-fenbot.png" alt="FenBot welcome screen" /><figcaption>FenBot — Teach mode, voice input, and suggested starters.</figcaption></figure>
+  <table class="no-break">
+    <tr><th>Mode</th><th>Use it when…</th></tr>
+    <tr><td><b>Teach</b></td><td>You want a full lesson: explanation, examples, checks.</td></tr>
+    <tr><td><b>Fast (Short / Medium / Detailed)</b></td><td>You want a quick answer before an exam.</td></tr>
+  </table>
+  <p><b>Tips:</b> ask follow-ups (“give me an example”, “quiz me on this”), regenerate an answer with ⟳, copy useful replies, and switch your language — FenBot answers entirely in it.</p>
+</div>
+
+<!-- 5 STUDY SMARTER -->
+<div class="page">
+  <h2><span class="num">5</span>Study smarter</h2>
+  <p class="sub">Plans, progress charts, weak areas and achievements keep you consistent.</p>
+  <figure class="no-break"><img src="img/07-study-plans.png" alt="Study plans screen" /><figcaption>Study Plans — or generate one with AI via “Plan with AI”.</figcaption></figure>
+  <div class="cols">
+    <div class="card no-break"><b>Study Plans</b><br/>Set goals and target dates manually, or press <b>Plan with AI</b> and describe your exam — STand drafts the schedule and streak targets.</div>
+    <div class="card no-break"><b>Progress &amp; Weak Areas</b><br/>Charts show scores over time per subject; <b>Weak Areas</b> lists topics to revisit, and <b>Compare</b> pits two sessions side by side.</div>
+  </div>
+  <figure class="no-break"><img src="img/08-progress.png" alt="Progress screen" /><figcaption>Progress — scores, trends and mastery per subject.</figcaption></figure>
+  <p><b>Achievements</b> reward streaks, perfect scores and multiplayer wins — collect badges as you learn.</p>
+</div>
+
+<!-- 6 CLASSROOM TEACHERS -->
+<div class="page">
+  <h2><span class="num">6</span>Classroom for teachers</h2>
+  <p class="sub">Create a room, publish AI-assisted topics, assess and track the class.</p>
+  <figure class="no-break"><img src="img/06-classroom.png" alt="Classroom home" /><figcaption>Classroom home — Create Room (teachers), Join Room (students), Dashboard (overview).</figcaption></figure>
+  <ol class="steps">
+    <li><b>Create Room</b> — name it, set course, level and term. You get a <b>class code</b> to share.</li>
+    <li><b>Add topics</b> — upload notes (PDF/DOCX) or write an outline; AI drafts objectives, lessons, examples, knowledge checks and practice questions for your review.</li>
+    <li><b>Assess</b> — build assessments (same, randomized or pool modes), schedule and release them.</li>
+    <li><b>Track</b> — attendance, announcements, per-student mastery levels, class analytics and AI insights on the dashboard.</li>
+  </ol>
+  <p>Rooms support physical, fully-online and hybrid setups, with teacher / assistant / student roles.</p>
+</div>
+
+<!-- 7 CLASSROOM STUDENTS -->
+<div class="page">
+  <h2><span class="num">7</span>Classroom for students</h2>
+  <p class="sub">Join with a code, learn topic by topic, take assessments.</p>
+  <ol class="steps">
+    <li>Open <b>Classroom → Join Room</b> and enter the class code from your teacher.</li>
+    <li>Open <b>Learn → Topics</b> and read each lesson: objectives, key terms, simple + advanced explanations, examples and knowledge checks.</li>
+    <li>Take <b>Assessments</b> before the deadline; view results and feedback when released.</li>
+    <li>Watch <b>Progress</b> (mastery: struggling → developing → proficient → mastering), <b>Attendance</b> and <b>Announcements</b>.</li>
+  </ol>
+  <div class="card no-break"><b>Good habits:</b> finish every knowledge check, retry weak topics flagged in red, and ask FenBot to re-explain anything marked “developing”.</div>
+</div>
+
+<!-- 8 PLAY & SOCIAL -->
+<div class="page">
+  <h2><span class="num">8</span>Play &amp; learn together</h2>
+  <p class="sub">Real-time quiz battles, tournaments, study groups and chat.</p>
+  <figure class="no-break"><img src="img/10-multiplayer.png" alt="Multiplayer arena" /><figcaption>Multiplayer Arena — 1v1, Team, Tournament, Blitz, Marathon, Survival.</figcaption></figure>
+  <div class="cols">
+    <div class="card no-break"><b>Game modes</b><br/>1v1 Battle · Team Battle · Tournament brackets · Blitz (10 in 60s) · Marathon (100 questions) · Survival (one mistake ends it).</div>
+    <div class="card no-break"><b>Social</b><br/>Friends &amp; requests · Feed posts · 1-to-1 and group chat with media · Status stories · Study Groups for group revision.</div>
+  </div>
+  <p>Share a room code to invite friends; live chat and reactions run during matches.</p>
+</div>
+
+<!-- 9 RANKINGS -->
+<div class="page">
+  <h2><span class="num">9</span>Rankings, XP &amp; levels</h2>
+  <p class="sub">Every correct answer earns XP and climbs the leaderboard.</p>
+  <figure class="no-break"><img src="img/09-rankings.png" alt="Global rankings" /><figcaption>Global Rankings — rank, level, streaks, statistics and the XP table.</figcaption></figure>
+  <table class="no-break">
+    <tr><th>Action</th><th>Reward</th></tr>
+    <tr><td>Correct answer</td><td>+10 XP</td></tr>
+    <tr><td>Perfect answer</td><td>+20 XP</td></tr>
+    <tr><td>Daily challenge</td><td>+100 XP</td></tr>
+    <tr><td>Multiplayer win</td><td>+200 XP</td></tr>
+    <tr><td>7-day streak</td><td>+300 XP</td></tr>
+  </table>
+  <p>Tiers run <b>Bronze → Silver → Gold → Platinum → Diamond → Mythic</b>; leaderboards split overall, weekly, streak, country, school, friends and subject.</p>
+</div>
+
+<!-- 10 BEHIND THE SCENES -->
+<div class="page">
+  <h2><span class="num">10</span>Behind the scenes &amp; privacy</h2>
+  <p class="sub">Plain-language notes on how STand works and where your data lives.</p>
+  <div class="card no-break"><b>How the AI works:</b> your questions go to a small proxy server included with STand, which forwards them to the AI provider. Your secret keys stay on the server — never in the browser.</div>
+  <div class="card no-break"><b>Where data lives:</b> accounts and sign-in use Firebase Authentication; classrooms, chats, posts and progress use Cloud Firestore; uploads use Cloud Storage. Your own browser also keeps a local copy so pages load fast.</div>
+  <div class="card no-break"><b>Teachers:</b> you control your rooms (members, roles, archived/draft states). <b>Students:</b> only joined rooms can see your classroom activity; profile, privacy and notification settings are under <b>Settings → Privacy</b>.</div>
+  <p class="foot">Technical stack for the curious: Vite + React + TypeScript + Tailwind CSS + Recharts + Firebase + Groq AI. Local dev runs the AI proxy on port 4200 and the web app on port 8080.</p>
+</div>
+
+<!-- 11 FAQ -->
+<div class="page">
+  <h2><span class="num">11</span>FAQ &amp; help</h2>
+  <p class="sub">Quick fixes for the most common issues.</p>
+  <div class="card no-break"><b>“Sorry, I encountered an error” in FenBot</b><br/>The AI proxy or key may be down. Make sure the backend server is running and the AI key is valid, then try again. Avoid spamming Regenerate while a reply is still streaming.</div>
+  <div class="card no-break"><b>Blank page or endless “Loading…”</b><br/>Wait a few seconds on first load (the app compiles), then hard-refresh (Ctrl+Shift+R). Use Chrome or Edge.</div>
+  <div class="card no-break"><b>Can’t join a classroom?</b><br/>Codes are uppercase — check for O/0 mix-ups, confirm you’re signed in, and ask the teacher that the room is active (not archived).</div>
+  <div class="card no-break"><b>For the person running STand:</b> start the AI proxy (<b>node server.js</b>, port 4200) and the web app (<b>npm run dev</b>, port 8080). Production needs the AI key set as an environment variable, then redeploy.</div>
+  <p class="foot">STand User Guide · September 2026 · Screenshots captured from the live app. Happy studying!</p>
+</div>
+
+</body>
+</html>
