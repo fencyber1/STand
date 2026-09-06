@@ -140,7 +140,12 @@ export default function AddTopicForm() {
     return combinedText;
   };
 
-  const handleGenerate = async () => {
+  /**
+   * Shared topic-generation flow. `extraInstructions` is appended to the
+   * custom instructions (used for FenBot context); `clearFenBot` mirrors the
+   * previous behaviour of clearing the FenBot context after a FenBot run.
+   */
+  const runGeneration = async (extraInstructions: string, clearFenBot: boolean) => {
     if (!title) {
       setError('Topic title is required');
       return;
@@ -193,11 +198,12 @@ export default function AddTopicForm() {
         sourceText += extracted;
       }
 
-      setGenerationProgress('Generating AI content (step 1/3): Introduction and objectives...');
-      setGenerationProgress('Generating AI content (step 2/3): Detailed lesson and explanations...');
-      setGenerationProgress('Generating AI content (step 3/3): Practice questions and case studies...');
+      const combinedInstructions = [customInstructions, extraInstructions].filter(Boolean).join('\n\n');
+      setGenerationProgress(
+        clearFenBot ? 'Generating AI content with FenBot context...' : 'Generating AI content...'
+      );
 
-      // Generate content using server-side NVIDIA AI proxy (progressive SSE)
+      // Generate content using the server-side AI proxy (progressive SSE)
       const apiUrl = `${import.meta.env.VITE_API_URL || ''}/api/classroom-generate`;
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -206,14 +212,20 @@ export default function AddTopicForm() {
           topicTitle: title,
           sourceText,
           difficulty,
-          customInstructions,
+          customInstructions: combinedInstructions,
           progressive: true,
         }),
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to generate content');
+        let message = 'Failed to generate content';
+        try {
+          const err = await response.json();
+          message = err.error || message;
+        } catch {
+          // Non-JSON error body (e.g. proxy HTML) — keep default message
+        }
+        throw new Error(message);
       }
 
       // Parse SSE stream for progressive updates
@@ -259,6 +271,11 @@ export default function AddTopicForm() {
       // Save AI-generated content to topic
       await topicService.setAiContent(topic.id, content);
 
+      if (clearFenBot) {
+        // Clear FenBot context after use
+        setFenBotContext('');
+      }
+
       navigate(`/classroom/${roomId}/topics/${topic.id}/review`);
     } catch (err: any) {
       setError(err.message || 'Failed to generate topic content');
@@ -268,136 +285,9 @@ export default function AddTopicForm() {
     }
   };
 
-  const handleGenerateWithFenBot = async () => {
-    if (!title) {
-      setError('Topic title is required');
-      return;
-    }
+  const handleGenerate = () => runGeneration('', false);
 
-    if (sourceType === 'upload' && uploadedFiles.length === 0 && !textContent) {
-      setError('Please provide source material (type or upload)');
-      return;
-    }
-
-    if (!roomId || !currentRoom) {
-      return;
-    }
-
-    setIsGenerating(true);
-    setError('');
-
-    try {
-      // First, create or update the topic with basic info
-      let topic: Topic;
-
-      if (isEditMode && existingTopic) {
-        await topicService.updateTopic(topicId!, {
-          title,
-          description,
-          status: 'draft',
-          updatedAt: new Date(),
-        });
-        topic = { ...existingTopic, title, description, updatedAt: new Date() };
-      } else {
-        const order = await topicService.getNextOrder(roomId);
-        topic = await topicService.createTopic({
-          roomId,
-          title,
-          description,
-          sourceFiles: [],
-          status: 'draft',
-          order,
-          createdBy: currentRoom.ownerId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
-
-      // Extract source text
-      let sourceText = textContent || '';
-      if (uploadedFiles.length > 0) {
-        setGenerationProgress('Extracting text from files...');
-        const extracted = await extractTextFromFiles(uploadedFiles);
-        sourceText += extracted;
-      }
-
-      // Combine FenBot context with custom instructions
-      const combinedInstructions = [customInstructions, fenBotContext].filter(Boolean).join('\n\n');
-
-      setGenerationProgress('Generating AI content with FenBot context...');
-
-      // Generate content using server-side NVIDIA AI proxy with FenBot context (progressive SSE)
-      const apiUrl = `${import.meta.env.VITE_API_URL || ''}/api/classroom-generate`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topicTitle: title,
-          sourceText,
-          difficulty,
-          customInstructions: combinedInstructions,
-          progressive: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to generate content');
-      }
-
-      // Parse SSE stream for progressive updates
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let content: any = null;
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.phase === 'core' && data.data) {
-                  setGenerationProgress(data.message || 'Core content ready');
-                  content = data.data;
-                } else if (data.phase === 'extended' && data.message) {
-                  setGenerationProgress(data.message);
-                } else if (data.phase === 'complete' && data.data) {
-                  content = data.data;
-                } else if (data.error) {
-                  throw new Error(data.error);
-                }
-              } catch (e) {
-                if (e instanceof Error) throw e;
-              }
-            }
-          }
-        }
-      }
-
-      if (!content) {
-        throw new Error('No content received from AI');
-      }
-
-      // Save AI-generated content to topic
-      await topicService.setAiContent(topic.id, content);
-
-      // Clear FenBot context after use
-      setFenBotContext('');
-
-      navigate(`/classroom/${roomId}/topics/${topic.id}/review`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate topic content');
-    } finally {
-      setIsGenerating(false);
-      setGenerationProgress(null);
-    }
-  };
+  const handleGenerateWithFenBot = () => runGeneration(fenBotContext, true);
 
   const handleSaveDraft = async () => {
     if (!title || !roomId) return;

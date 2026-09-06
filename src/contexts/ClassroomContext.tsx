@@ -57,10 +57,15 @@ async function getUserMemberInRoom(
   userId: string
 ): Promise<{ role: ClassroomUserRole; member: any } | null> {
   try {
-    const members = await classroomService.getRoomMembers(roomId);
-    const found = members.find((m: any) => m.userId === userId && m.status === 'active');
-    if (found) {
-      return { role: found.role as ClassroomUserRole, member: found };
+    // Direct document read (doc id == userId) instead of scanning all members
+    const { db } = await import('../services/firebase');
+    const { doc, getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(doc(db, 'classroomRooms', roomId, 'members', userId));
+    if (snap.exists()) {
+      const data = snap.data() as any;
+      if (data.status === 'active') {
+        return { role: data.role as ClassroomUserRole, member: { id: snap.id, ...data } };
+      }
     }
     return null;
   } catch {
@@ -81,11 +86,14 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
   const fetchUserRoomsWithRoles = useCallback(async () => {
     if (!user?.uid) return;
 
+    setLoading(true);
     try {
       const userRooms = await classroomService.getRoomsByUser(user.uid);
       setRooms(userRooms);
     } catch (e) {
       console.error('Failed to get user rooms with roles:', e);
+    } finally {
+      setLoading(false);
     }
   }, [user?.uid]);
 
@@ -245,6 +253,8 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       const room = await classroomService.joinRoomById(user.uid, roomId);
       setRooms((prev) => [room, ...prev]);
       setCurrentRoom(room);
+      // Owners rejoining their own room keep the teacher role
+      const existing = await getUserMemberInRoom(room.id, user.uid);
       setCurrentMember({
         id: user.uid,
         roomId: room.id,
@@ -252,7 +262,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         displayName: user.fullName,
         email: user.email || '',
         photoURL: user.photoURL,
-        role: 'student',
+        role: existing?.role ?? (room.ownerId === user.uid ? 'teacher' : 'student'),
         joinedAt: new Date(),
         status: 'active',
       } as RoomMember);

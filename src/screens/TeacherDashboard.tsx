@@ -15,6 +15,8 @@ import {
   Calendar,
   TrendingUp,
   AlertCircle,
+  CalendarCheck,
+  Megaphone,
 } from 'lucide-react';
 import { RoomMember } from '../types/classroom';
 
@@ -266,6 +268,22 @@ export default function TeacherDashboard() {
             >
               <BarChart3 className="w-4 h-4" />
               Analytics
+            </NavLink>
+
+            <NavLink
+              to={`/classroom/${roomId}/attendance`}
+              className={({ isActive }) => `w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${isActive ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700/50'}`}
+            >
+              <CalendarCheck className="w-4 h-4" />
+              Attendance
+            </NavLink>
+
+            <NavLink
+              to={`/classroom/${roomId}/announcements`}
+              className={({ isActive }) => `w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${isActive ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700/50'}`}
+            >
+              <Megaphone className="w-4 h-4" />
+              Announcements
             </NavLink>
 
             <NavLink

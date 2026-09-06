@@ -20,6 +20,7 @@ import StudentsScreen from '../../screens/classroom/StudentsScreen';
 import AnalyticsScreen from '../../screens/classroom/AnalyticsScreen';
 import ClassroomSettingsScreen from '../../screens/classroom/SettingsScreen';
 import AssessmentsListScreen from '../../screens/classroom/AssessmentsListScreen';
+import AssessmentEditor from '../../screens/classroom/AssessmentEditor';
 import DashboardScreen from '../../screens/classroom/DashboardScreen';
 
 /**
@@ -62,6 +63,7 @@ export default function ClassroomRoutes() {
         <Route path="topics/:topicId" element={<TopicReader />} />
         <Route path="assessments" element={<AssessmentsListScreen />} />
         <Route path="assessments/:assessmentId" element={<AssessmentsListScreen />} />
+        <Route path="assessments/:assessmentId/edit" element={<AssessmentEditor />} />
         <Route path="students" element={<StudentsScreen />} />
         <Route path="analytics" element={<AnalyticsScreen />} />
         <Route path="settings" element={<ClassroomSettingsScreen />} />

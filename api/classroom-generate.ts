@@ -1,7 +1,7 @@
-const API_KEY = process.env.NVIDIA_API_KEY || '';
-const NVIDIA_API = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
 
-const MODEL = 'meta/llama-3.1-8b-instruct';
+const MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 const TIMEOUT_MS = 45000;
 
 function safeParseJSON(text: string): any {
@@ -23,7 +23,7 @@ async function callAIStream(prompt: string, systemPrompt: string, maxTokens: num
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const response = await fetch(NVIDIA_API, {
+    const response = await fetch(GROQ_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ async function callAIStream(prompt: string, systemPrompt: string, maxTokens: num
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`NVIDIA API error: ${errText}`);
+      throw new Error(`GROQ API error: ${errText}`);
     }
 
     const reader = response.body?.getReader();
@@ -69,7 +69,7 @@ async function callAIStream(prompt: string, systemPrompt: string, maxTokens: num
           if (data === '[DONE]') continue;
           try {
             const json = JSON.parse(data);
-            const delta = json.choices?.[0]?.delta?.content;
+            const delta = json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.delta?.reasoning;
             if (delta) {
               fullContent += delta;
               onChunk?.(delta);
@@ -83,7 +83,7 @@ async function callAIStream(prompt: string, systemPrompt: string, maxTokens: num
   } catch (err: any) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      throw new Error('NVIDIA API timed out after 45s');
+      throw new Error('GROQ API timed out after 45s');
     }
     throw err;
   }
@@ -213,7 +213,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!API_KEY) return res.status(500).json({ error: 'NVIDIA_API_KEY not set in Vercel env vars.' });
+  if (!API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not set in Vercel env vars.' });
 
   const { topicTitle, sourceText, difficulty, targetAudience, customInstructions, progressive } = req.body;
   if (!topicTitle) return res.status(400).json({ error: 'topicTitle is required' });
@@ -257,7 +257,7 @@ export default async function handler(req: any, res: any) {
       const coreParsed = safeParseJSON(coreContent);
       if (!coreParsed) return sendError('Failed to parse core content');
       
-      const coreWithDefaults = applyDefaults({ ...coreParsed, ...DEFAULTS });
+      const coreWithDefaults = applyDefaults({ ...DEFAULTS, ...coreParsed });
       send({ phase: 'core', progress: 40, data: coreWithDefaults, message: 'Core content ready' });
 
       // Phase 2: Extended sections (generate in parallel batches)
@@ -305,7 +305,7 @@ export default async function handler(req: any, res: any) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000);
 
-    const response = await fetch(NVIDIA_API, {
+    const response = await fetch(GROQ_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -329,12 +329,12 @@ export default async function handler(req: any, res: any) {
 
     if (!response.ok) {
       const errText = await response.text();
-      return res.status(response.status).json({ error: `NVIDIA API error: ${errText}` });
+      return res.status(response.status).json({ error: `GROQ API error: ${errText}` });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return res.status(500).json({ error: 'No content returned from NVIDIA API' });
+    if (!content) return res.status(500).json({ error: 'No content returned from GROQ API' });
 
     const parsed = safeParseJSON(content);
     if (!parsed) return res.status(500).json({ error: 'Failed to parse AI response as JSON' });
@@ -343,7 +343,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json(finalResult);
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      return res.status(504).json({ error: 'NVIDIA API timed out after 90s' });
+      return res.status(504).json({ error: 'GROQ API timed out after 90s' });
     }
     return res.status(500).json({ error: err.message || 'Proxy error' });
   }

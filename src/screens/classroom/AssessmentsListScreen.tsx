@@ -47,10 +47,14 @@ export default function AssessmentsListScreen() {
   }, [roomId, loadRoom]);
 
   useEffect(() => {
-    if (currentRoom?.id) {
-      fetchAssessments();
-    }
-  }, [currentRoom, roomId]);
+    if (!roomId) return;
+    // Real-time assessment list (fires immediately with current data)
+    const unsub = classroomService.subscribeToAssessments(roomId, (data) => {
+      setAssessments(data as Assessment[]);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [roomId]);
 
   const fetchAssessments = async () => {
     if (!roomId) return;
@@ -89,11 +93,12 @@ export default function AssessmentsListScreen() {
         updatedAt: new Date(),
       };
 
-      await classroomService.createAssessment(newAssessment);
+      const created = await classroomService.createAssessment(newAssessment);
       setShowCreateModal(false);
       setNewAssessmentTitle('');
       setNewAssessmentDesc('');
-      fetchAssessments();
+      // Jump straight into the editor so questions can be added right away
+      navigate(`/classroom/${roomId}/assessments/${created.id}/edit`);
     } catch (err: any) {
       setError(err.message || 'Failed to create assessment');
     } finally {

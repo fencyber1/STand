@@ -54,20 +54,27 @@ export default function DashboardScreen() {
     { label: 'AI Insights', value: '3 this week', icon: Zap },
   ];
 
+  // Resolve the first available room so global links land on real pages.
+  // Falls back to /classroom (room picker) when the user has no rooms yet.
+  const primaryRoomId = currentRoom?.id ?? rooms?.[0]?.id;
+  const roomPath = (suffix: string) =>
+    primaryRoomId ? `/classroom/${primaryRoomId}/${suffix}` : '/classroom';
+  const goRoom = (suffix: string) => () => navigate(roomPath(suffix));
+
   // Quick actions data
   const quickActions = [
-    { title: 'Create Assessment', icon: LayoutDashboard, onClick: () => navigate('/classroom/assessments/add') },
-    { title: 'Upload Materials', icon: Smartphone, onClick: () => navigate('/classroom/materials') },
-    { title: 'Send Announcement', icon: Bell, onClick: () => navigate('/classroom/announcements') },
-    { title: 'View Progress', icon: UsersIcon, onClick: () => navigate('/classroom/students') },
+    { title: 'Create Assessment', icon: LayoutDashboard, onClick: goRoom('assessments') },
+    { title: 'Upload Materials', icon: Smartphone, onClick: goRoom('topics/add') },
+    { title: 'Send Announcement', icon: Bell, onClick: goRoom('announcements') },
+    { title: 'View Progress', icon: UsersIcon, onClick: goRoom('analytics') },
   ];
 
   // Navigation items for sidebar
   const navItems = [
-    { title: 'Stats', icon: LayoutDashboard, href: '/classroom' },
-    { title: 'Students', icon: UsersIcon, href: '/classroom/students' },
-    { title: 'AI Insights', icon: Zap, href: '/classroom/insights' },
-    { title: 'Progress', icon: TrendingUp, href: '/classroom/progress' },
+    { title: 'Stats', icon: LayoutDashboard, href: '/classroom/dashboard' },
+    { title: 'Students', icon: UsersIcon, href: roomPath('students') },
+    { title: 'AI Insights', icon: Zap, href: roomPath('analytics') },
+    { title: 'Progress', icon: TrendingUp, href: roomPath('students') },
   ];
 
   return (

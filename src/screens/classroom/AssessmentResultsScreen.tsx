@@ -76,16 +76,17 @@ export default function AssessmentResultsScreen() {
 
   const getQuestionResult = (question: Question, answer: any) => {
     if (question.type === 'multiple_choice' || question.type === 'true_false') {
-      const isCorrect = answer === question.correctAnswer;
-      return { isCorrect, correctAnswer: question.correctAnswer };
+      const isCorrect = answer !== undefined && answer !== null && answer !== '' && answer === question.correctAnswer;
+      return { isCorrect, correctAnswer: question.correctAnswer, needsReview: false };
     }
     if (question.type === 'short_answer') {
-      const studentAns = (answer || '').toLowerCase().trim();
-      const correctAns = (question.correctAnswer || '').toLowerCase().trim();
-      const isCorrect = studentAns === correctAns;
-      return { isCorrect, correctAnswer: question.correctAnswer };
+      const studentAns = String(answer ?? '').toLowerCase().trim();
+      const correctAns = String(question.correctAnswer ?? '').toLowerCase().trim();
+      const isCorrect = studentAns !== '' && studentAns === correctAns;
+      return { isCorrect, correctAnswer: question.correctAnswer, needsReview: false };
     }
-    return { isCorrect: false, correctAnswer: question.correctAnswer };
+    // Essay / case-study answers need manual teacher review — never auto-fail them
+    return { isCorrect: false, correctAnswer: question.correctAnswer, needsReview: true };
   };
 
   const formatAnswer = (question: Question, answer: any): string => {
@@ -103,14 +104,14 @@ export default function AssessmentResultsScreen() {
     return String(answer);
   };
 
-  const renderQuestionReview = (question: Question, idx: number, answer: any, isCorrect: boolean, isExpanded: boolean) => {
+  const renderQuestionReview = (question: Question, idx: number, answer: any, isCorrect: boolean, isExpanded: boolean, needsReview = false) => {
     const isAnswered = answer !== undefined && answer !== null && answer !== '';
 
     return (
       <Card
         key={question.id}
         className={`bg-slate-800 border-slate-700 ${
-          isAnswered ? (isCorrect ? 'border-green-500/30' : 'border-red-500/30') : 'border-slate-700'
+          isAnswered ? (isCorrect ? 'border-green-500/30' : needsReview ? 'border-yellow-500/30' : 'border-red-500/30') : 'border-slate-700'
         }`}
       >
         <div className="p-4">
@@ -133,9 +134,9 @@ export default function AssessmentResultsScreen() {
             </div>
             <div className="flex items-center gap-2">
               {isAnswered && (
-                <Badge variant={isCorrect ? 'default' : 'destructive'}>
+                <Badge variant={isCorrect ? 'default' : needsReview ? 'secondary' : 'destructive'}>
                   {isCorrect ? <CheckCircle className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                  {isCorrect ? 'Correct' : 'Incorrect'}
+                  {isCorrect ? 'Correct' : needsReview ? 'Awaiting review' : 'Incorrect'}
                 </Badge>
               )}
               {isAnswered && !isCorrect && question.explanation && (
@@ -164,7 +165,7 @@ export default function AssessmentResultsScreen() {
                 <p className="text-white">{formatAnswer(question, answer)}</p>
               </div>
 
-              {(!isCorrect || expandedQuestions.has(question.id)) && question.correctAnswer && (
+              {(!isCorrect || expandedQuestions.has(question.id)) && question.correctAnswer !== undefined && question.correctAnswer !== null && question.correctAnswer !== '' && (
                 <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-green-400">Correct Answer:</span>
@@ -229,10 +230,17 @@ export default function AssessmentResultsScreen() {
   const totalQuestions = assessment.questions?.length || 0;
   const correctCount = assessment.questions?.reduce((acc, q) => {
     const answer = submission.answers?.[q.id];
-    if (!answer) return acc;
+    if (answer === undefined || answer === null || answer === '') return acc;
     const { isCorrect } = getQuestionResult(q, answer);
     return isCorrect ? acc + 1 : acc;
   }, 0) || 0;
+  const needsReviewCount = assessment.questions?.reduce((acc, q) => {
+    const answer = submission.answers?.[q.id];
+    if (answer === undefined || answer === null || answer === '') return acc;
+    const { needsReview } = getQuestionResult(q, answer);
+    return needsReview ? acc + 1 : acc;
+  }, 0) || 0;
+  const incorrectCount = Math.max(totalQuestions - correctCount - needsReviewCount, 0);
 
   const percentage = submission.percentage ?? (totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0);
   const passed = percentage >= (assessment.passingScore || 50);
@@ -292,8 +300,8 @@ export default function AssessmentResultsScreen() {
               <div className="w-16 h-16 rounded-2xl bg-yellow-600/20 flex items-center justify-center mx-auto mb-3">
                 <XCircle className="w-8 h-8 text-yellow-400" />
               </div>
-              <p className="text-3xl font-bold text-white">{totalQuestions - correctCount}</p>
-              <p className="text-sm text-slate-400">Incorrect</p>
+              <p className="text-3xl font-bold text-white">{incorrectCount}</p>
+              <p className="text-sm text-slate-400">Incorrect{needsReviewCount > 0 ? ` (+${needsReviewCount} awaiting review)` : ''}</p>
             </Card>
 
             <Card className="bg-slate-800 border-slate-700 p-6 text-center">
@@ -344,10 +352,10 @@ export default function AssessmentResultsScreen() {
             {assessment.questions?.map((question, idx) => {
               const answer = submission.answers?.[question.id];
               const isAnswered = answer !== undefined && answer !== null && answer !== '';
-              const { isCorrect } = getQuestionResult(question, answer);
+              const { isCorrect, needsReview } = getQuestionResult(question, answer);
               const isExpanded = expandedQuestions.has(question.id);
 
-              return renderQuestionReview(question, idx, answer, isCorrect, isExpanded);
+              return renderQuestionReview(question, idx, answer, isCorrect, isExpanded, needsReview);
             })}
           </div>
         </section>

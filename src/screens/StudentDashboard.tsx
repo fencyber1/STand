@@ -111,24 +111,23 @@ export default function StudentDashboard() {
     };
   });
 
-  const assignments = [
-    {
-      id: '1',
-      title: 'Hazard Identification Quiz',
-      dueDate: new Date(Date.now() + 86400000 * 3),
-      type: 'quiz',
-      completed: false,
-    },
-    {
-      id: '2',
-      title: 'Risk Assessment Case Study',
-      dueDate: new Date(Date.now() + 86400000 * 7),
-      type: 'assignment',
-      completed: false,
-    },
-  ];
+  // Real assignments derived from live/scheduled assessments
+  const assignments = assessments.slice(0, 5).map((a) => ({
+    id: a.id,
+    title: a.title,
+    dueDate: a.endsAt ? new Date(a.endsAt) : a.startsAt ? new Date(a.startsAt) : null,
+    type: 'assessment' as const,
+    completed: false,
+  }));
 
-  const weakAreas = ['PPE Standards', 'Risk Matrix'];
+  // Weak areas derived from started-but-low-progress topics
+  const weakAreas = topics
+    .filter((t) => {
+      const p = getProgress(t.id);
+      return p.progress > 0 && p.progress < 50 && !p.completed;
+    })
+    .slice(0, 5)
+    .map((t) => t.title);
 
   if (!currentRoom) {
     return (
@@ -374,17 +373,21 @@ export default function StudentDashboard() {
               <Card className="bg-slate-800 border-slate-700">
                 <div className="p-4">
                   <h3 className="font-medium text-white mb-3">Assignments</h3>
+                  {assignments.length === 0 ? (
+                    <p className="text-sm text-slate-400">No upcoming assessments. Enjoy the break!</p>
+                  ) : (
                   <div className="space-y-3">
                     {assignments.map((assignment) => (
                       <div
                         key={assignment.id}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/classroom/${roomId}/learn/assessments/${assignment.id}`)}
                       >
                         <FileText className="w-5 h-5 text-blue-400" />
                         <div className="flex-1">
                           <p className="text-white font-medium">{assignment.title}</p>
                           <p className="text-sm text-slate-400">
-                            Due {new Date(assignment.dueDate).toLocaleDateString()}
+                            {assignment.dueDate ? `Due ${assignment.dueDate.toLocaleDateString()}` : 'No due date set'}
                           </p>
                         </div>
                         <Badge
@@ -395,6 +398,7 @@ export default function StudentDashboard() {
                       </div>
                     ))}
                   </div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -408,9 +412,18 @@ export default function StudentDashboard() {
                     <h3 className="font-medium text-white">AI Recommendations</h3>
                   </div>
                   <ul className="space-y-2 text-sm text-slate-300">
-                    <li>• Review PPE selection guidelines</li>
-                    <li>• Practice risk matrix calculations</li>
-                    <li>• Take the Hazard Identification quiz</li>
+                    {weakAreas.slice(0, 2).map((area) => (
+                      <li key={area}>• Revisit “{area}” and retake its knowledge checks</li>
+                    ))}
+                    {inProgressCount > 0 && (
+                      <li>• Continue your {inProgressCount} in-progress {inProgressCount === 1 ? 'topic' : 'topics'}</li>
+                    )}
+                    {assessments.length > 0 && (
+                      <li>• Prepare for “{assessments[0].title}”</li>
+                    )}
+                    {weakAreas.length === 0 && inProgressCount === 0 && assessments.length === 0 && (
+                      <li>• Start your first topic to get personalized tips</li>
+                    )}
                   </ul>
                 </div>
               </Card>
@@ -421,6 +434,9 @@ export default function StudentDashboard() {
                     <TrendingUp className="w-5 h-5 text-red-400" />
                     <h3 className="font-medium text-white">Weak Areas</h3>
                   </div>
+                  {weakAreas.length === 0 ? (
+                    <p className="text-sm text-slate-400">No weak areas right now. Keep it up!</p>
+                  ) : (
                   <ul className="space-y-2 text-sm text-slate-300">
                     {weakAreas.map((area) => (
                       <li key={area} className="flex items-center justify-between">
@@ -429,6 +445,7 @@ export default function StudentDashboard() {
                       </li>
                     ))}
                   </ul>
+                  )}
                 </div>
               </Card>
 

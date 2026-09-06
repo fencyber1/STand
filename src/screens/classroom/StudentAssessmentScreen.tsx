@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useClassroom } from '../../contexts/ClassroomContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { classroomService } from '../../services/classroomService';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -20,7 +21,14 @@ import { Assessment, Question, Submission } from '../../types/classroom';
 export default function StudentAssessmentScreen() {
   const { roomId, assessmentId } = useParams<{ roomId: string; assessmentId: string }>();
   const navigate = useNavigate();
-  const { currentRoom, loadRoom, subscribeToCurrentRoom } = useClassroom();
+  const { currentRoom, currentMember, loadRoom, subscribeToCurrentRoom } = useClassroom();
+  const { user } = useAuth();
+  // Teachers (owner or teacher/assistant role) get a read-only preview so
+  // previewing never pollutes student submissions or analytics.
+  const isTeacher = currentRoom?.ownerId === user?.uid
+    || currentMember?.role === 'teacher'
+    || currentMember?.role === 'assistant_teacher'
+    || currentMember?.role === 'admin';
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,13 +79,13 @@ export default function StudentAssessmentScreen() {
       const user = getAuth().currentUser;
       if (!user) return;
 
-      const submissionData = await classroomService.getStudentSubmission(roomId, assessmentId, user.uid);
+      // Create the in-progress attempt if none exists so the timer guard
+      // and answers always have a persisted record.
+      const submissionData = await classroomService.startAssessmentAttempt(roomId, assessmentId, user.uid);
       if (submissionData) {
         setSubmission(submissionData);
         if (submissionData.answers) {
           setAnswers(submissionData.answers);
-        }
-        if (submissionData.status === 'submitted' || submissionData.status === 'graded' || submissionData.status === 'released') {
         }
       }
     } catch (err) {
@@ -89,6 +97,9 @@ export default function StudentAssessmentScreen() {
     if (!assessment || timeRemaining <= 0) return;
 
     const interval = setInterval(() => {
+      // Pause the countdown while the tab is hidden so background
+      // throttling can't auto-submit the student while they're away.
+      if (document.hidden) return;
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           handleAutoSubmit();
@@ -128,8 +139,20 @@ export default function StudentAssessmentScreen() {
   const goToPrevious = () => goToQuestion(currentQuestionIndex - 1);
   const goToNext = () => goToQuestion(currentQuestionIndex + 1);
 
+  const gradeObjective = (question: Question, answer: any): boolean => {
+    if (answer === undefined || answer === null || answer === '') return false;
+    if (question.type === 'multiple_choice' || question.type === 'true_false') {
+      return answer === question.correctAnswer;
+    }
+    if (question.type === 'short_answer') {
+      return String(answer).toLowerCase().trim() === String(question.correctAnswer ?? '').toLowerCase().trim();
+    }
+    return false;
+  };
+
   const submitAssessment = async () => {
     if (!roomId || !assessmentId || !assessment) return;
+    if (isTeacher) return; // teachers preview only — never submit
 
     setSubmitting(true);
     setError('');
@@ -139,15 +162,26 @@ export default function StudentAssessmentScreen() {
       const user = getAuth().currentUser;
       if (!user) throw new Error('Not authenticated');
 
+      // Auto-grade objective questions so results + analytics are real.
+      // Essay / case-study answers are left for teacher review.
+      const gradeable = (assessment.questions || []).filter((q) =>
+        q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'short_answer'
+      );
+      const correctCount = gradeable.filter((q) => gradeObjective(q, answers[q.id])).length;
+      const percentage = gradeable.length > 0 ? Math.round((correctCount / gradeable.length) * 100) : 0;
+
       const newSubmission: Omit<Submission, 'id'> = {
         assessmentId,
         studentId: user.uid,
         roomId,
-        startedAt: new Date(),
+        startedAt: submission?.startedAt ? new Date(submission.startedAt) : new Date(),
         submittedAt: new Date(),
         answers,
+        currentScore: correctCount,
+        finalScore: Math.round((percentage / 100) * (assessment.totalMarks || 0)),
+        percentage,
         status: 'submitted',
-        aiGraded: false,
+        aiGraded: true,
         teacherReviewed: false,
       };
 
@@ -239,6 +273,20 @@ export default function StudentAssessmentScreen() {
     );
   }
 
+  if (totalQuestions === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center text-slate-400 max-w-md px-6">
+          <p className="text-xl font-medium text-white mb-2">No questions yet</p>
+          <p>{isTeacher ? 'Add questions via Assessments → Edit to make this live for students.' : 'Your teacher has not added questions to this assessment yet. Check back later.'}</p>
+          <Button onClick={() => navigate(isTeacher ? `/classroom/${roomId}/assessments` : `/classroom/${roomId}/learn`)} className="mt-4">
+            Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       <div className="border-b border-slate-700 px-6 py-4 flex-shrink-0">
@@ -263,6 +311,12 @@ export default function StudentAssessmentScreen() {
           </div>
         </div>
       </div>
+
+      {isTeacher && (
+        <div className="mx-6 mt-4 p-3 rounded-lg bg-blue-900/30 border border-blue-700 text-blue-200 text-sm flex-shrink-0">
+          Teacher preview — answering and submitting are disabled so student results stay clean.
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-64 border-r border-slate-700 overflow-y-auto bg-slate-900/50">
@@ -339,6 +393,7 @@ export default function StudentAssessmentScreen() {
                             value={optIdx}
                             checked={answers[currentQuestion.id] === optIdx}
                             onChange={() => handleAnswerChange(currentQuestion.id, optIdx)}
+                            disabled={isTeacher}
                             className="w-5 h-5 text-indigo-500"
                           />
                           <span className="w-8 h-8 rounded-full border-2 border-slate-600 flex items-center justify-center text-sm font-medium text-slate-300">
@@ -364,6 +419,7 @@ export default function StudentAssessmentScreen() {
                             value={optIdx}
                             checked={answers[currentQuestion.id] === optIdx}
                             onChange={() => handleAnswerChange(currentQuestion.id, optIdx)}
+                            disabled={isTeacher}
                             className="w-5 h-5 text-indigo-500"
                           />
                           <span className="w-10 h-10 rounded-full border-2 border-slate-600 flex items-center justify-center text-sm font-medium text-slate-300">
@@ -381,7 +437,8 @@ export default function StudentAssessmentScreen() {
                       onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                       placeholder="Type your answer here..."
                       rows={4}
-                      className="w-full bg-slate-900 border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      disabled={isTeacher}
+                      className="w-full bg-slate-900 border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
                     />
                   )}
 
@@ -391,7 +448,8 @@ export default function StudentAssessmentScreen() {
                       onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                       placeholder="Write your essay response here..."
                       rows={8}
-                      className="w-full bg-slate-900 border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      disabled={isTeacher}
+                      className="w-full bg-slate-900 border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
                     />
                   )}
 
@@ -405,7 +463,8 @@ export default function StudentAssessmentScreen() {
                         onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                         placeholder="Analyze the case and provide your response..."
                         rows={6}
-                        className="w-full bg-slate-900 border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        disabled={isTeacher}
+                      className="w-full bg-slate-900 border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
                       />
                     </div>
                   )}
@@ -419,9 +478,15 @@ export default function StudentAssessmentScreen() {
                 <div className="flex items-center gap-4 text-sm text-slate-400">
                   <span>{currentQuestionIndex + 1} / {totalQuestions}</span>
                 </div>
-                <Button variant={currentQuestionIndex === totalQuestions - 1 ? 'default' : 'outline'} onClick={currentQuestionIndex === totalQuestions - 1 ? () => setShowSubmitConfirm(true) : goToNext} className={currentQuestionIndex === totalQuestions - 1 ? 'bg-indigo-600 hover:bg-indigo-700' : ''}>
-                  {currentQuestionIndex === totalQuestions - 1 ? <>Submit <Send className="w-4 h-4 ml-2" /></> : <>Next <ChevronRight className="w-4 h-4 ml-2" /></>}
-                </Button>
+                {isTeacher && currentQuestionIndex === totalQuestions - 1 ? (
+                  <Button variant="outline" onClick={() => navigate(`/classroom/${roomId}/assessments`)}>
+                    Back to Assessments
+                  </Button>
+                ) : (
+                  <Button variant={currentQuestionIndex === totalQuestions - 1 ? 'default' : 'outline'} onClick={currentQuestionIndex === totalQuestions - 1 ? () => setShowSubmitConfirm(true) : goToNext} className={currentQuestionIndex === totalQuestions - 1 ? 'bg-indigo-600 hover:bg-indigo-700' : ''}>
+                    {currentQuestionIndex === totalQuestions - 1 ? <>Submit <Send className="w-4 h-4 ml-2" /></> : <>Next <ChevronRight className="w-4 h-4 ml-2" /></>}
+                  </Button>
+                )}
               </div>
             </div>
           )}

@@ -220,7 +220,8 @@ export interface Question {
   text: string;
   type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'case_study';
   options?: string[];
-  correctAnswer: string;
+  // Option index (number) for multiple_choice / true_false, expected text for short_answer
+  correctAnswer: string | number;
   explanation?: string;
   difficulty: 'easy' | 'medium' | 'hard';
   marks: number;

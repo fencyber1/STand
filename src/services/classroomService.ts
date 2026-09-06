@@ -453,6 +453,36 @@ class ClassroomService {
   }
 
   /**
+   * Subscribes to real-time assessment updates for a room
+   */
+  subscribeToAssessments(roomId: string, callback: (assessments: Assessment[]) => void): () => void {
+    const q = query(
+      collection(db, 'assessments'),
+      where('roomId', '==', roomId)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        callback(snapshot.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Assessment, 'id'>),
+          scheduledAt: new Date((d.data() as any).scheduledAt),
+          createdAt: new Date((d.data() as any).createdAt),
+          updatedAt: new Date((d.data() as any).updatedAt),
+          startsAt: (d.data() as any).startsAt ? new Date((d.data() as any).startsAt) : undefined,
+          endsAt: (d.data() as any).endsAt ? new Date((d.data() as any).endsAt) : undefined,
+        })));
+      },
+      (error: FirestoreError) => {
+        console.error('Assessment listener error:', error);
+      }
+    );
+
+    return unsubscribe;
+  }
+
+  /**
    * Creates a new assessment
    */
   async createAssessment(data: Omit<Assessment, 'id'>): Promise<Assessment> {
@@ -476,6 +506,69 @@ class ClassroomService {
       console.error('Failed to create assessment:', error);
       throw error;
     }
+  }
+
+  /**
+   * Updates an assessment (settings and/or questions)
+   */
+  async updateAssessment(assessmentId: string, updates: Partial<Assessment>): Promise<void> {
+    try {
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined)
+      );
+      await updateDoc(doc(db, 'assessments', assessmentId), {
+        ...cleanUpdates,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Failed to update assessment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Starts (or resumes) a student's in-progress attempt so answers and the
+   * timer have a persisted record even before final submit.
+   */
+  async startAssessmentAttempt(roomId: string, assessmentId: string, studentId: string): Promise<Submission> {
+    const existing = await this.getStudentSubmission(roomId, assessmentId, studentId);
+    if (existing) return existing;
+
+    // Room owners previewing their own assessment get a transient attempt
+    // that is never persisted (keeps submissions/analytics student-only).
+    const room = await this.getRoomById(roomId);
+    if (room && room.ownerId === studentId) {
+      return {
+        id: `preview-${assessmentId}`,
+        assessmentId,
+        studentId,
+        roomId,
+        startedAt: new Date(),
+        answers: {},
+        status: 'in-progress',
+        aiGraded: false,
+        teacherReviewed: false,
+      };
+    }
+
+    const submissionRef = doc(collection(db, 'submissions'));
+    const now = new Date();
+    const attempt: Submission = {
+      id: submissionRef.id,
+      assessmentId,
+      studentId,
+      roomId,
+      startedAt: now,
+      answers: {},
+      status: 'in-progress',
+      aiGraded: false,
+      teacherReviewed: false,
+    };
+    await setDoc(submissionRef, {
+      ...attempt,
+      startedAt: now.toISOString(),
+    });
+    return attempt;
   }
 
   /**
@@ -515,6 +608,20 @@ class ClassroomService {
       );
       const topicDeletes = topicsSnapshot.docs.map((doc) => deleteDoc(doc.ref));
       await Promise.all(topicDeletes);
+
+      // Delete related per-room data (each guarded so one failure can't
+      // leave the room half-deleted)
+      const relatedCollections = ['submissions', 'topicProgress', 'attendance', 'announcements'];
+      for (const coll of relatedCollections) {
+        try {
+          const snap = await getDocs(
+            query(collection(db, coll), where('roomId', '==', roomId))
+          );
+          await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+        } catch (e) {
+          console.error(`Failed to delete ${coll} for room ${roomId}:`, e);
+        }
+      }
 
       // Delete the room itself
       await deleteDoc(doc(db, 'classroomRooms', roomId));

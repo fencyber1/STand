@@ -33,11 +33,19 @@ export default function TopicListScreen() {
   useEffect(() => {
     if (roomId) {
       refreshRoom();
-      fetchTopics();
     }
+
+    // Real-time topic list (fires immediately with current data)
+    const unsubTopics = roomId
+      ? topicService.subscribeToTopics(roomId, (data) => {
+          setTopics(data);
+          setLoading(false);
+        })
+      : null;
 
     const unsubscribe = subscribeToCurrentRoom();
     return () => {
+      if (unsubTopics) unsubTopics();
       if (unsubscribe) unsubscribe();
     };
   }, [roomId]);

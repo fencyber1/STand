@@ -20,7 +20,6 @@ import {
   SelectContent,
   SelectItem,
 } from '../ui/select';
-import { generateRoomCode } from '../../utils/roomCode';
 import { Loader2, Upload, Copy, Check } from 'lucide-react';
 import { Room, RoomType } from '../../types/classroom';
 
@@ -161,9 +160,6 @@ export function CreateRoomModal({ open, onClose }: CreateRoomModalProps) {
     setIsLoading(true);
     setError('');
 
-    const roomCode = generateRoomCode();
-    setQrCodeUrl(generateSimpleQRCode(roomCode));
-
     try {
       const newRoom: Partial<Room> = {
         name: roomName,
@@ -185,11 +181,13 @@ export function CreateRoomModal({ open, onClose }: CreateRoomModalProps) {
         status: 'active',
         createdAt: new Date(),
         updatedAt: new Date(),
-        roomCode,
       };
 
-      await createRoom(newRoom);
-      setGeneratedCode(roomCode);
+      // Use the room returned by the service so the displayed code is
+      // always the one actually stored (collision retries generate a new code).
+      const created = await createRoom(newRoom);
+      setGeneratedCode(created.roomCode);
+      setQrCodeUrl(generateSimpleQRCode(created.roomCode));
       setStep('success');
     } catch (err: any) {
       setError(err.message || 'Failed to create room');
