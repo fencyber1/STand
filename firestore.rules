@@ -104,7 +104,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid;
-      allow update: if is_classroom_room_owner(roomId);
+      // Owners can update anything; any signed-in user may only bump the
+      // student counter (join/leave flow) — all other fields are protected.
+      allow update: if is_classroom_room_owner(roomId)
+        || (request.auth != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentCount', 'updatedAt']));
       allow delete: if is_classroom_room_owner(roomId);
     }
 

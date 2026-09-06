@@ -128,20 +128,26 @@ class ClassroomService {
           const docSnap = snapshot.docs[0];
           const data = docSnap.data();
 
-          // Auto-fix: if roomCode in DB is invalid (e.g., document ID), fix it
+          // Auto-fix: if roomCode in DB is invalid (e.g., document ID), fix it.
+          // Best-effort only: students searching don't have owner write
+          // permission, so never let the fix break the lookup itself.
           if (!isValidRoomCode(data.roomCode)) {
             const fixedCode = generateRoomCode();
             console.log(`[getRoomByCode] Auto-fixing invalid roomCode "${data.roomCode}" -> "${fixedCode}"`);
-            await updateDoc(doc(db, 'classroomRooms', docSnap.id), { roomCode: fixedCode });
-            return {
-              id: docSnap.id,
-              ...(data as Omit<Room, 'id'>),
-              roomCode: fixedCode,
-              createdAt: new Date(data.createdAt),
-              updatedAt: new Date(data.updatedAt),
-              startDate: data.startDate ? new Date(data.startDate) : undefined,
-              endDate: data.endDate ? new Date(data.endDate) : undefined,
-            };
+            try {
+              await updateDoc(doc(db, 'classroomRooms', docSnap.id), { roomCode: fixedCode });
+              return {
+                id: docSnap.id,
+                ...(data as Omit<Room, 'id'>),
+                roomCode: fixedCode,
+                createdAt: new Date(data.createdAt),
+                updatedAt: new Date(data.updatedAt),
+                startDate: data.startDate ? new Date(data.startDate) : undefined,
+                endDate: data.endDate ? new Date(data.endDate) : undefined,
+              };
+            } catch (e) {
+              console.warn('[getRoomByCode] Auto-fix skipped (no write permission), using stored code');
+            }
           }
 
           console.log(`[getRoomByCode] Found room with variant: "${variant}"`);
@@ -163,20 +169,24 @@ class ClassroomService {
         if (docSnap.exists()) {
           const data = docSnap.data();
 
-          // Auto-fix invalid roomCode
+          // Auto-fix invalid roomCode (best-effort; see note above)
           if (!isValidRoomCode(data.roomCode)) {
             const fixedCode = generateRoomCode();
             console.log(`[getRoomByCode] Auto-fixing invalid roomCode "${data.roomCode}" -> "${fixedCode}"`);
-            await updateDoc(doc(db, 'classroomRooms', docSnap.id), { roomCode: fixedCode });
-            return {
-              id: docSnap.id,
-              ...(data as Omit<Room, 'id'>),
-              roomCode: fixedCode,
-              createdAt: new Date(data.createdAt),
-              updatedAt: new Date(data.updatedAt),
-              startDate: data.startDate ? new Date(data.startDate) : undefined,
-              endDate: data.endDate ? new Date(data.endDate) : undefined,
-            };
+            try {
+              await updateDoc(doc(db, 'classroomRooms', docSnap.id), { roomCode: fixedCode });
+              return {
+                id: docSnap.id,
+                ...(data as Omit<Room, 'id'>),
+                roomCode: fixedCode,
+                createdAt: new Date(data.createdAt),
+                updatedAt: new Date(data.updatedAt),
+                startDate: data.startDate ? new Date(data.startDate) : undefined,
+                endDate: data.endDate ? new Date(data.endDate) : undefined,
+              };
+            } catch (e) {
+              console.warn('[getRoomByCode] Auto-fix skipped (no write permission), using stored code');
+            }
           }
 
           console.log(`[getRoomByCode] Found room by doc ID`);
@@ -302,13 +312,18 @@ class ClassroomService {
         });
       }
 
-      // Update student count if adding a student
+      // Update student count if adding a student.
+      // Cosmetic counter only — never let it fail the join itself.
       if (role === 'student') {
-        const room = await this.getRoomById(roomId);
-        if (room) {
-          await this.updateRoom(roomId, {
-            studentCount: (room.studentCount ?? 0) + 1,
-          });
+        try {
+          const room = await this.getRoomById(roomId);
+          if (room) {
+            await this.updateRoom(roomId, {
+              studentCount: (room.studentCount ?? 0) + 1,
+            });
+          }
+        } catch (e) {
+          console.warn('Student count bump skipped:', e);
         }
       }
     } catch (error) {
