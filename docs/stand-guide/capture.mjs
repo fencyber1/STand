@@ -1,9 +1,9 @@
 // Zero-dependency CDP screenshot helper (Node 20+ global WebSocket).
-// Usage: node capture.mjs <debugPort> <url> <outPng> [readyJs] [timeoutMs]
+// Usage: node capture.mjs <debugPort> <url> <outPng> [readyJs] [timeoutMs] [width] [height]
 // Exits 0 on success, 1 on failure/timeout.
 import { writeFileSync } from 'fs';
 
-const [port, url, out, readyJs = '', timeoutMs = '60000'] = process.argv.slice(2);
+const [port, url, out, readyJs = '', timeoutMs = '60000', vw = '', vh = ''] = process.argv.slice(2);
 if (!port || !url || !out) {
   console.error('usage: node capture.mjs <port> <url> <out> [readyJs] [timeoutMs]');
   process.exit(1);
@@ -41,6 +41,11 @@ async function main() {
 
   await send('Page.enable');
   await send('Runtime.enable');
+  if (vw && vh) {
+    await send('Emulation.setDeviceMetricsOverride', {
+      width: Number(vw), height: Number(vh), deviceScaleFactor: 2, mobile: true,
+    });
+  }
   await send('Page.navigate', { url });
   const deadline = Date.now() + Number(timeoutMs);
   let ready = false;
