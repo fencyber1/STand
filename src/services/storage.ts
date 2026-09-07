@@ -128,6 +128,37 @@ export const storage = {
     writeJson('stand_history', data);
   },
 
+  // ── Classroom room list cache (explicit uid — works logged-out too) ──
+  getCachedRooms(uid?: string | null): Array<Record<string, any>> {
+    const id = uid ?? _userId;
+    if (!id) return [];
+    try {
+      const raw = localStorage.getItem(`stand_classrooms_${id}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  setCachedRooms(uid: string, data: Array<Record<string, any>>): void {
+    try {
+      localStorage.setItem(`stand_classrooms_${uid}`, JSON.stringify(data));
+      localStorage.setItem('stand_last_classroom_uid', uid);
+    } catch (e: any) {
+      if (e?.name === 'QuotaExceededError') {
+        console.warn('localStorage quota exceeded. Classroom cache not saved.');
+      }
+    }
+  },
+
+  getLastClassroomUid(): string | null {
+    try {
+      return localStorage.getItem('stand_last_classroom_uid');
+    } catch {
+      return null;
+    }
+  },
+
   getStudyPlans(): any[] {
     return readJson('stand_study_plans', []);
   },

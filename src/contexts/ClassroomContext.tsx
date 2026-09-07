@@ -8,7 +8,21 @@
 } from 'react';
 import { useAuth } from './AuthContext';
 import { classroomService } from '../services/classroomService';
+import { storage } from '../services/storage';
 import { Room, RoomMember, ClassroomUserRole } from '../types/classroom';
+
+function reviveRooms(cached: Array<Record<string, any>>): Room[] {
+  return (cached || []).map(
+    (r) =>
+      ({
+        ...r,
+        createdAt: r.createdAt ? new Date(r.createdAt) : new Date(),
+        updatedAt: r.updatedAt ? new Date(r.updatedAt) : new Date(),
+        startDate: r.startDate ? new Date(r.startDate) : undefined,
+        endDate: r.endDate ? new Date(r.endDate) : undefined,
+      } as unknown as Room)
+  );
+}
 
 interface ClassroomContextType {
   currentRoom: Room | null;
@@ -77,7 +91,15 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [currentMember, setCurrentMember] = useState<RoomMember | null>(null);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  // Start from the last-known per-user cache so the list survives
+  // refresh and logout; it refreshes in the background after login.
+  const [rooms, setRooms] = useState<Room[]>(() => {
+    try {
+      return reviveRooms(storage.getCachedRooms(storage.getLastClassroomUid()));
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,12 +108,22 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
   const fetchUserRoomsWithRoles = useCallback(async () => {
     if (!user?.uid) return;
 
+    // Swap to this user's own cache first (avoids flashing another
+    // user's rooms on shared devices), then refresh from the server.
+    // Failures keep the cached list instead of wiping it.
+    try {
+      setRooms(reviveRooms(storage.getCachedRooms(user.uid)));
+    } catch {
+      // Ignore cache read errors
+    }
     setLoading(true);
     try {
       const userRooms = await classroomService.getRoomsByUser(user.uid);
       setRooms(userRooms);
+      storage.setCachedRooms(user.uid, userRooms);
     } catch (e) {
       console.error('Failed to get user rooms with roles:', e);
+      setError('Could not refresh classrooms. Showing saved list.');
     } finally {
       setLoading(false);
     }
@@ -182,11 +214,14 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     async (roomId: string) => {
       try {
         await classroomService.archiveRoom(roomId);
-        setRooms((prev) =>
-          prev.map((r) =>
+        setRooms((prev) => {
+          const next: Room[] = prev.map((r) =>
             r.id === roomId ? { ...r, status: 'archived' } : r
-          )
-        );
+          );
+          const uid = storage.getLastClassroomUid();
+          if (uid) storage.setCachedRooms(uid, next);
+          return next;
+        });
         if (currentRoom?.id === roomId) {
           setCurrentRoom(null);
           setCurrentMember(null);
@@ -202,7 +237,12 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     async (roomId: string) => {
       try {
         await classroomService.deleteRoom(roomId);
-        setRooms((prev) => prev.filter((r) => r.id !== roomId));
+        setRooms((prev) => {
+          const next = prev.filter((r) => r.id !== roomId);
+          const uid = storage.getLastClassroomUid();
+          if (uid) storage.setCachedRooms(uid, next);
+          return next;
+        });
         if (currentRoom?.id === roomId) {
           setCurrentRoom(null);
           setCurrentMember(null);
@@ -226,7 +266,11 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         status: 'active',
       } as any);
 
-      setRooms((prev) => [room, ...prev]);
+      setRooms((prev) => {
+        const next = [room, ...prev.filter((r) => r.id !== room.id)];
+        storage.setCachedRooms(user.uid, next);
+        return next;
+      });
       setCurrentRoom(room);
       setCurrentMember({
         id: user.uid,
@@ -251,7 +295,11 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
 
       console.log('[ClassroomContext] joinRoom called with roomId:', roomId);
       const room = await classroomService.joinRoomById(user.uid, roomId);
-      setRooms((prev) => [room, ...prev]);
+      setRooms((prev) => {
+        const next = [room, ...prev.filter((r) => r.id !== room.id)];
+        storage.setCachedRooms(user.uid, next);
+        return next;
+      });
       setCurrentRoom(room);
       // Owners rejoining their own room keep the teacher role
       const existing = await getUserMemberInRoom(room.id, user.uid);

@@ -231,25 +231,38 @@ class ClassroomService {
    * Gets all rooms accessible to a user
    */
   async getRoomsByUser(userId: string): Promise<Room[]> {
-    try {
-      // Rooms where user is owner
-      const ownedRooms = await getDocs(
+    // Run both queries independently so one failure (index building,
+    // offline blip) can't wipe out the other's results.
+    const [ownedResult, memberResult] = await Promise.allSettled([
+      getDocs(
         query(collection(db, 'classroomRooms'), where('ownerId', '==', userId))
-      );
-
-      // Rooms where user is a member
-      const memberRooms = await getDocs(
+      ),
+      getDocs(
         query(
           collectionGroup(db, 'members'),
           where('userId', '==', userId),
           where('status', '==', 'active')
         )
-      );
+      ),
+    ]);
 
-      const roomIds = new Set<string>();
-      const rooms: Room[] = [];
+    if (ownedResult.status === 'rejected') {
+      console.error('Failed to get owned rooms:', ownedResult.reason);
+    }
+    if (memberResult.status === 'rejected') {
+      console.error('Failed to get member rooms:', memberResult.reason);
+    }
+    if (ownedResult.status === 'rejected' && memberResult.status === 'rejected') {
+      throw ownedResult.reason instanceof Error
+        ? ownedResult.reason
+        : new Error('Failed to get user rooms');
+    }
 
-      ownedRooms.forEach((snap) => {
+    const roomIds = new Set<string>();
+    const rooms: Room[] = [];
+
+    if (ownedResult.status === 'fulfilled') {
+      ownedResult.value.forEach((snap) => {
         const data = snap.data();
         roomIds.add(snap.id);
         rooms.push({
@@ -261,30 +274,34 @@ class ClassroomService {
           endDate: data.endDate ? new Date(data.endDate) : undefined,
         });
       });
+    }
 
-      for (const memberSnap of memberRooms.docs) {
+    if (memberResult.status === 'fulfilled') {
+      for (const memberSnap of memberResult.value.docs) {
         const memberData = memberSnap.data();
         if (roomIds.has(memberData.roomId)) continue;
 
-        const roomSnap = await getDoc(doc(db, 'classroomRooms', memberData.roomId));
-        if (roomSnap.exists()) {
-          const data = roomSnap.data();
-          rooms.push({
-            id: roomSnap.id,
-            ...(data as Omit<Room, 'id'>),
-            createdAt: new Date(data.createdAt),
-            updatedAt: new Date(data.updatedAt),
-            startDate: data.startDate ? new Date(data.startDate) : undefined,
-            endDate: data.endDate ? new Date(data.endDate) : undefined,
-          });
+        try {
+          const roomSnap = await getDoc(doc(db, 'classroomRooms', memberData.roomId));
+          if (roomSnap.exists()) {
+            const data = roomSnap.data();
+            roomIds.add(roomSnap.id);
+            rooms.push({
+              id: roomSnap.id,
+              ...(data as Omit<Room, 'id'>),
+              createdAt: new Date(data.createdAt),
+              updatedAt: new Date(data.updatedAt),
+              startDate: data.startDate ? new Date(data.startDate) : undefined,
+              endDate: data.endDate ? new Date(data.endDate) : undefined,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to resolve member room:', e);
         }
       }
-
-      return rooms;
-    } catch (error) {
-      console.error('Failed to get user rooms:', error);
-      throw error;
     }
+
+    return rooms;
   }
 
   /**

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import ClassroomHome from '../../screens/ClassroomHome';
 import TeacherDashboard, { TeacherDashboardContent } from '../../screens/TeacherDashboard';
@@ -29,8 +29,12 @@ import DashboardScreen from '../../screens/classroom/DashboardScreen';
  */
 export default function ClassroomRoutes() {
   const { isLoggedIn } = useAuth();
+  const { pathname } = useLocation();
 
-  if (!isLoggedIn) {
+  // The classroom home (saved room list) stays visible logged-out;
+  // every room-specific route still requires login.
+  const onHome = pathname === '/classroom' || pathname === '/classroom/';
+  if (!isLoggedIn && !onHome) {
     return <Navigate to="/login" replace />;
   }
 

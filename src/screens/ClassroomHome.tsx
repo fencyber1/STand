@@ -17,8 +17,8 @@ import { LayoutDashboard, Users, BookOpen, BarChart3, Home } from 'lucide-react'
 export default function ClassroomHome() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const { user } = useAuth();
-  const { rooms, loading } = useClassroom();
+  const { user, isLoggedIn } = useAuth();
+  const { rooms, loading, error, fetchUserRooms } = useClassroom();
   const navigate = useNavigate();
 
   const recentRooms = rooms.filter((r) => r.status === 'active');
@@ -93,6 +93,25 @@ export default function ClassroomHome() {
           </div>
         </Card>
       </div>
+
+      {/* Saved-list state: cached rooms survive refresh/logout */}
+      {!isLoggedIn && recentRooms.length > 0 && (
+        <div className="w-full max-w-4xl mb-4 p-3 rounded-lg bg-slate-800/80 border border-slate-700 flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-300">Showing your saved classrooms. Log in to refresh the list.</p>
+          <Button size="sm" onClick={() => navigate('/login')} className="bg-indigo-600 hover:bg-indigo-700 shrink-0">
+            Log in
+          </Button>
+        </div>
+      )}
+
+      {error && recentRooms.length > 0 && (
+        <div className="w-full max-w-4xl mb-4 p-3 rounded-lg bg-yellow-900/30 border border-yellow-800 flex items-center justify-between gap-3">
+          <p className="text-sm text-yellow-200">Could not refresh — showing saved list.</p>
+          <Button size="sm" variant="outline" onClick={() => fetchUserRooms()} className="shrink-0">
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* Recently Accessed Rooms */}
       {recentRooms.length > 0 && (
