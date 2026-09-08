@@ -503,9 +503,7 @@ export default function FenBot() {
     setLoading(true);
     setStreamingContent('');
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-    fullReplyRef.current = '';
+    // Per-attempt AbortControllers are created inside runAttempt below.
 
     updateAndSave((prev) =>
       prev.map((c) => {
@@ -532,22 +530,11 @@ export default function FenBot() {
         ...allMessages.map((m) => ({ role: m.role, content: m.content })),
       ];
 
-      const response = await fetch(getApiUrl(), {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ model: 'meta/llama-3.1-8b-instruct', messages: apiMessages, temperature: 0.7, max_tokens: 4096, stream: true }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        let errMsg = 'API error';
-        try { errMsg = JSON.parse(errText).error || errMsg; } catch {}
-        throw new Error(errMsg);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No stream');
+      // Fast answers cap tokens so the first chunk arrives sooner;
+      // detailed fast answers keep the full budget.
+      const maxTokens = mode === 'fast'
+        ? (fastLength === 'short' ? 800 : fastLength === 'medium' ? 1500 : 4096)
+        : 4096;
 
       const decoder = new TextDecoder();
 
@@ -558,6 +545,8 @@ export default function FenBot() {
       let rawBuffer = '';
       let streamFinished = false;
       let ttsBuffer = '';
+      let abortedByUser = false;
+      let pendingBuffer = '';
 
       const flushToState = () => {
         if (rawBuffer.length > fullReplyRef.current.length) {
@@ -609,36 +598,94 @@ export default function FenBot() {
         } catch {}
       };
 
-      let lastChunkTime = Date.now();
-      let pendingBuffer = '';
+      // A cold/queued model can take a while for the first chunk: allow up
+      // to 60s for it, then tolerate a few 10s mid-stream stalls.
+      const FIRST_CHUNK_TIMEOUT_MS = 60000;
+      const STALL_TIMEOUT_MS = 10000;
+      const MAX_STALLS = 3;
 
-      try {
-        while (true) {
-          const readPromise = reader.read();
-          const timeoutPromise = new Promise<{ done: true; value: undefined }>((resolve) => {
-            const id = setTimeout(() => resolve({ done: true, value: undefined }), 10000);
-            readPromise.then(() => clearTimeout(id)).catch(() => clearTimeout(id));
-          });
-          const result = await Promise.race([readPromise, timeoutPromise]);
-          if (result.done) break;
-          lastChunkTime = Date.now();
-
-          pendingBuffer += decoder.decode(result.value, { stream: true });
-          const lines = pendingBuffer.split('\n');
-          pendingBuffer = lines.pop() || '';
-
-          for (const line of lines) {
-            processLine(line);
-          }
-        }
-      } catch (streamErr) {
-        // Stream interrupted
-      }
-
-      // Process any remaining buffer
-      if (pendingBuffer.trim()) {
-        processLine(pendingBuffer);
+      const runAttempt = async (): Promise<boolean> => {
+        const controller = new AbortController();
+        abortRef.current = controller;
+        rawBuffer = '';
+        fullReplyRef.current = '';
+        streamFinished = false;
+        ttsBuffer = '';
         pendingBuffer = '';
+        try {
+          const response = await fetch(getApiUrl(), {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ model: 'meta/llama-3.1-8b-instruct', messages: apiMessages, temperature: 0.7, max_tokens: maxTokens, stream: true }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            let errMsg = 'API error';
+            try { errMsg = JSON.parse(errText).error || errMsg; } catch {}
+            throw new Error(errMsg);
+          }
+
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error('No stream');
+
+          let gotFirstChunk = false;
+          let stalls = 0;
+          try {
+            while (true) {
+              const waitMs = gotFirstChunk ? STALL_TIMEOUT_MS : FIRST_CHUNK_TIMEOUT_MS;
+              const readPromise = reader.read();
+              const timeoutPromise = new Promise<{ done: true; value: undefined; stalled: true }>((resolve) => {
+                const id = setTimeout(() => resolve({ done: true, value: undefined, stalled: true }), waitMs);
+                readPromise.then(() => clearTimeout(id)).catch(() => clearTimeout(id));
+              });
+              const result = await Promise.race([readPromise, timeoutPromise]);
+              if (result.done) {
+                if (!(result as { stalled?: boolean }).stalled) break; // clean end of stream
+                if (!gotFirstChunk) break; // waited 60s, nothing arrived
+                stalls += 1;
+                if (stalls >= MAX_STALLS) break; // stalled too long mid-stream
+                continue;
+              }
+              gotFirstChunk = true;
+              stalls = 0;
+
+              pendingBuffer += decoder.decode(result.value, { stream: true });
+              const lines = pendingBuffer.split('\n');
+              pendingBuffer = lines.pop() || '';
+
+              for (const line of lines) {
+                processLine(line);
+              }
+            }
+          } catch (streamErr) {
+            // Stream interrupted
+            if (controller.signal.aborted) {
+              abortedByUser = true;
+              return false;
+            }
+          }
+
+          // Process any remaining buffer
+          if (pendingBuffer.trim()) {
+            processLine(pendingBuffer);
+            pendingBuffer = '';
+          }
+          return rawBuffer.length > 0;
+        } catch (err) {
+          if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
+            abortedByUser = true;
+            return false;
+          }
+          throw err;
+        }
+      };
+
+      // Try twice: a cold/queued model often answers on the second attempt.
+      await runAttempt();
+      if (rawBuffer.length === 0 && !abortedByUser) {
+        await runAttempt();
       }
 
       streamFinished = true;
@@ -676,6 +723,15 @@ export default function FenBot() {
           prev.map((c) => {
             if (c.id !== convoId) return c;
             return { ...c, messages: [...c.messages, { role: 'assistant', content: saved, createdAt: Date.now() }], updatedAt: Date.now() };
+          })
+        );
+      } else if (!abortedByUser) {
+        // Nothing streamed on any attempt — say so visibly instead of
+        // leaving the user staring at a vanished reply.
+        updateAndSave((prev) =>
+          prev.map((c) => {
+            if (c.id !== convoId) return c;
+            return { ...c, messages: [...c.messages, { role: 'assistant', content: 'The response timed out before anything arrived. Please try again or tap Regenerate.', createdAt: Date.now() }], updatedAt: Date.now() };
           })
         );
       }
