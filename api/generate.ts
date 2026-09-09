@@ -1,6 +1,16 @@
-const API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = process.env.GROQ_MODEL || 'groq/compound-mini';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+
+// AI provider switch: AI_PROVIDER=gemini (default) or groq.
+const PROVIDER = (process.env.AI_PROVIDER || 'gemini').toLowerCase();
+const API_KEY = PROVIDER === 'groq'
+  ? (process.env.GROQ_API_KEY || '')
+  : (process.env.GEMINI_API_KEY || '');
+const API_URL = PROVIDER === 'groq' ? GROQ_API : GEMINI_API;
+const MODEL = PROVIDER === 'groq'
+  ? (process.env.GROQ_MODEL || 'qwen/qwen3.8-27b')
+  : (process.env.GEMINI_MODEL || 'gemini-3.6-flash');
+const KEY_NAME = PROVIDER === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY';
 
 export default async function handler(req: any, res: any) {
   const origin = req.headers.origin || '';
@@ -12,7 +22,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not set in Vercel env vars.' });
+  if (!API_KEY) return res.status(500).json({ error: `${KEY_NAME} not set in Vercel env vars.` });
 
   // Validate and constrain inputs
   const maxTokens = Math.min(Number(req.body.max_tokens) || 4096, 8192);
@@ -24,7 +34,7 @@ export default async function handler(req: any, res: any) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 35000);
 
-    const response = await fetch(GROQ_API, {
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +79,7 @@ export default async function handler(req: any, res: any) {
     return res.status(response.status).send(text);
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      return res.status(504).json({ error: 'GROQ API timed out after 35s' });
+      return res.status(504).json({ error: 'AI API timed out after 35s' });
     }
     return res.status(500).json({ error: err.message || 'Proxy error' });
   }

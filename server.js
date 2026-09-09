@@ -18,9 +18,24 @@ function loadEnv() {
 
 loadEnv();
 
-const API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+
+// AI provider switch: AI_PROVIDER=gemini (default) or groq. Both use an
+// OpenAI-compatible chat-completions API with Bearer auth.
+const PROVIDER = (process.env.AI_PROVIDER || 'gemini').toLowerCase();
+const API_KEY = PROVIDER === 'groq'
+  ? (process.env.GROQ_API_KEY || '')
+  : (process.env.GEMINI_API_KEY || '');
+const API_URL = PROVIDER === 'groq' ? GROQ_API : GEMINI_API;
+const MODEL = PROVIDER === 'groq'
+  ? (process.env.GROQ_MODEL || 'qwen/qwen3.8-27b')
+  : (process.env.GEMINI_MODEL || 'gemini-3.6-flash');
+// Long structured topic generation uses the lite model (reliable under load)
+const MODEL_CLASSROOM = PROVIDER === 'groq'
+  ? (process.env.GROQ_MODEL_CLASSROOM || process.env.GROQ_MODEL || 'qwen/qwen3.8-27b')
+  : (process.env.GEMINI_MODEL_CLASSROOM || process.env.GEMINI_MODEL || 'gemini-flash-lite-latest');
+const KEY_NAME = PROVIDER === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY';
 
 function safeParseJSON(text) {
   let cleanText = String(text || '').trim();
@@ -37,14 +52,14 @@ function safeParseJSON(text) {
 }
 
 async function callGroqJSON(systemPrompt, userPrompt, maxTokens) {
-  const response = await fetch(GROQ_API, {
+  const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: MODEL_CLASSROOM,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -57,7 +72,7 @@ async function callGroqJSON(systemPrompt, userPrompt, maxTokens) {
   });
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`GROQ API error: ${errText.slice(0, 300)}`);
+    throw new Error(`AI API error: ${errText.slice(0, 300)}`);
   }
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content
@@ -173,7 +188,7 @@ async function handleGenerate(req, res, parsed) {
   const temperature = Math.min(Math.max(Number(parsed.temperature) || 0.7, 0), 2);
   const wantsStream = parsed.stream === true;
 
-  const response = await fetch(GROQ_API, {
+  const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -288,7 +303,7 @@ const server = http.createServer(async (req, res) => {
 
   if (!API_KEY) {
     res.writeHead(500);
-    return res.end(JSON.stringify({ error: 'GROQ_API_KEY not set. Create .env file with GROQ_API_KEY=your_key' }));
+    return res.end(JSON.stringify({ error: `${KEY_NAME} not set. Create .env file with ${KEY_NAME}=your_key` }));
   }
 
   let body = '';
@@ -315,8 +330,8 @@ const PORT = Number(process.env.PORT) || 4200;
 server.listen(PORT, () => {
   console.log(`API proxy server running on http://localhost:${PORT}`);
   if (!API_KEY) {
-    console.warn('⚠️  GROQ_API_KEY not set. Create .env file with your key.');
+    console.warn(`⚠️  ${KEY_NAME} not set. Create .env file with your key.`);
   } else {
-    console.log('✅ GROQ_API_KEY loaded, model=' + MODEL);
+    console.log(`✅ ${KEY_NAME} loaded, provider=${PROVIDER}, model=` + MODEL);
   }
 });
