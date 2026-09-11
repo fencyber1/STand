@@ -1,10 +1,67 @@
-import { nvidiaAIService } from './nvidiaAIService';
 import { TopicContent } from '../types/classroom';
 
 /**
- * AI Topic Engine - generates complete topic content using NVIDIA API.
- * Grounded in teacher-provided material.
+ * AI Topic Engine - generates complete topic content via the server-side
+ * AI proxy (/api/generate). Grounded in teacher-provided material.
+ * No API keys live in the client.
  */
+async function proxyChat(
+  prompt: string,
+  options?: {
+    temperature?: number;
+    maxTokens?: number;
+    systemPrompt?: string;
+    topP?: number;
+  }
+): Promise<string> {
+  const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
+  if (options?.systemPrompt) {
+    messages.push({ role: 'system', content: options.systemPrompt });
+  }
+  messages.push({ role: 'user', content: prompt });
+
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages,
+      temperature: options?.temperature ?? 0.4,
+      max_tokens: options?.maxTokens ?? 4096,
+      stream: false,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    let errMsg = 'AI generation failed';
+    try {
+      errMsg = JSON.parse(errText).error || errMsg;
+    } catch {
+      // Non-JSON error body — keep default message
+    }
+    throw new Error(errMsg);
+  }
+
+  const data = await response.json();
+  const content =
+    data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.message?.reasoning;
+  if (!content) throw new Error('No content returned from AI API');
+  return String(content).trim();
+}
+
+function safeParseJSON(text: string): any {
+  let cleanText = text.trim();
+  if (cleanText.startsWith('```json')) {
+    cleanText = cleanText.replace(/^```json\n/, '').replace(/\n```$/, '');
+  } else if (cleanText.startsWith('```')) {
+    cleanText = cleanText.replace(/^```\n/, '').replace(/\n```$/, '');
+  }
+  try {
+    return JSON.parse(cleanText);
+  } catch {
+    return null;
+  }
+}
 class AITopicEngine {
   /**
    * Generates comprehensive topic content from teacher-provided material.
@@ -104,14 +161,14 @@ Generate a detailed JSON response with the following structure. Include ALL fiel
 
 Return ONLY valid JSON. Do not add any explanatory text.`;
 
-    const result = await nvidiaAIService.generateChat(prompt, {
+    const result = await proxyChat(prompt, {
       systemPrompt: `You are an expert educational content creator. Your output must always be valid JSON matching the requested schema exactly. Never add explanatory text outside the JSON.`,
       temperature: 0.4,
       maxTokens: 8192,
       topP: 0.9,
     });
 
-    const parsed = nvidiaAIService.safeParseJSON(result);
+    const parsed = safeParseJSON(result);
 
     if (!parsed) {
       throw new Error('Failed to parse AI topic generation response');
@@ -161,14 +218,14 @@ ${customPrompt ? `CUSTOM INSTRUCTIONS: ${customPrompt}` : ''}
 Regenerate just this section. Return only the content for this section (or JSON if it's a complex object).
 DO NOT include markdown fences or explanatory text.`;
 
-    const result = await nvidiaAIService.generateChat(prompt, {
+    const result = await proxyChat(prompt, {
       systemPrompt: `You are an educational AI assistant. Return only the content without explanation or markdown.`,
       temperature: 0.5,
       maxTokens: 4096,
     });
 
     // Try to parse as JSON; if not, return as string
-    const parsed = nvidiaAIService.safeParseJSON(result);
+    const parsed = safeParseJSON(result);
     return parsed ?? result;
   }
 
@@ -196,13 +253,13 @@ For each question, provide:
 Return as valid JSON array. Include variety in difficulty levels.
 DO NOT include markdown fences.`;
 
-    const result = await nvidiaAIService.generateChat(prompt, {
+    const result = await proxyChat(prompt, {
       systemPrompt: `You are a quiz generator. Return only valid JSON array.`,
       temperature: 0.3,
       maxTokens: 8192,
     });
 
-    const parsed = nvidiaAIService.safeParseJSON(result);
+    const parsed = safeParseJSON(result);
     if (!parsed) {
       throw new Error('Failed to parse quiz generation response');
     }
@@ -237,13 +294,13 @@ Each question should include:
 
 Return as valid JSON array. No markdown.`;
 
-    const result = await nvidiaAIService.generateChat(prompt, {
+    const result = await proxyChat(prompt, {
       systemPrompt: `You are an educational practice question generator.`,
       temperature: 0.4,
       maxTokens: 8192,
     });
 
-    const parsed = nvidiaAIService.safeParseJSON(result);
+    const parsed = safeParseJSON(result);
     if (!parsed) {
       throw new Error('Failed to parse practice questions response');
     }

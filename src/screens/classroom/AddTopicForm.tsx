@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useClassroom } from '../../contexts/ClassroomContext';
 import { classroomService } from '../../services/classroomService';
 import { topicService } from '../../services/topicService';
-import { aiTopicEngine } from '../../services/aiTopicService';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
