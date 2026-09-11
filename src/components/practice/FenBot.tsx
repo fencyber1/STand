@@ -132,12 +132,12 @@ function loadSettings(): FenBotSettings {
     if (raw) {
       const parsed = JSON.parse(raw);
       const validSpeeds = SPEED_PRESETS.map((p) => p.value);
-      if (!validSpeeds.includes(parsed.speed)) parsed.speed = 30;
+      if (!validSpeeds.includes(parsed.speed)) parsed.speed = 0;
       if (typeof parsed.tts !== 'boolean') parsed.tts = true;
       return parsed;
     }
   } catch {}
-  return { speed: 30, fontSize: 14, fontFamily: 'inherit', tts: true };
+  return { speed: 0, fontSize: 14, fontFamily: 'inherit', tts: true };
 }
 
 function saveSettings(s: FenBotSettings) {
@@ -517,7 +517,8 @@ export default function FenBot() {
     try {
       const currentConversations = conversationsRef.current;
       const convo = currentConversations.find((c) => c.id === convoId) || { messages: [] };
-      const allMessages = [...convo.messages, userMsg];
+      // Cap history so long chats don't slow every request (userMsg + last 19)
+      const allMessages = [...convo.messages, userMsg].slice(-20);
       const langInstruction = language && language !== 'en'
         ? `\n\nCRITICAL LANGUAGE RULE: The user's language is "${language}". You MUST respond ENTIRELY in ${language}. Do NOT use English at all in your response. All explanations, examples, and text must be written in ${language}.`
         : '';
@@ -525,6 +526,9 @@ export default function FenBot() {
         ? (fastLength === 'short' ? FAST_SHORT : fastLength === 'medium' ? FAST_MEDIUM : FAST_DETAILED)
         : '';
       const systemMsg = mode === 'fast' ? modePrompt + langInstruction : SYSTEM_PROMPT + langInstruction;
+      // Fast mode uses the lite model for speed; teach mode keeps the flagship.
+      // (The proxy allowlists these and falls back to its default otherwise.)
+      const chatModel = mode === 'fast' ? 'gemini-flash-lite-latest' : 'gemini-3.6-flash';
       const apiMessages = [
         { role: 'system', content: systemMsg },
         ...allMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -616,7 +620,7 @@ export default function FenBot() {
           const response = await fetch(getApiUrl(), {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ model: 'meta/llama-3.1-8b-instruct', messages: apiMessages, temperature: 0.7, max_tokens: maxTokens, stream: true }),
+            body: JSON.stringify({ model: chatModel, messages: apiMessages, temperature: 0.7, max_tokens: maxTokens, stream: true }),
             signal: controller.signal,
           });
 

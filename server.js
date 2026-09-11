@@ -36,6 +36,14 @@ const MODEL_CLASSROOM = PROVIDER === 'groq'
   ? (process.env.GROQ_MODEL_CLASSROOM || process.env.GROQ_MODEL || 'qwen/qwen3.8-27b')
   : (process.env.GEMINI_MODEL_CLASSROOM || process.env.GEMINI_MODEL || 'gemini-flash-lite-latest');
 const KEY_NAME = PROVIDER === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY';
+// Client may request a chat model per mode; only these are honored.
+const ALLOWED_MODELS = new Set([
+  'gemini-3.6-flash',
+  'gemini-flash-lite-latest',
+  'gemini-flash-latest',
+  'qwen/qwen3.8-27b',
+  'groq/compound-mini',
+]);
 
 function safeParseJSON(text) {
   let cleanText = String(text || '').trim();
@@ -187,6 +195,9 @@ async function handleGenerate(req, res, parsed) {
   const maxTokens = Math.min(Number(parsed.max_tokens) || 4096, 8192);
   const temperature = Math.min(Math.max(Number(parsed.temperature) || 0.7, 0), 2);
   const wantsStream = parsed.stream === true;
+  const model = (typeof parsed.model === 'string' && ALLOWED_MODELS.has(parsed.model))
+    ? parsed.model
+    : MODEL;
 
   const response = await fetch(API_URL, {
     method: 'POST',
@@ -195,7 +206,7 @@ async function handleGenerate(req, res, parsed) {
       'Authorization': `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages: parsed.messages,
       temperature,
       max_tokens: maxTokens,

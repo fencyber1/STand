@@ -11,6 +11,14 @@ const MODEL = PROVIDER === 'groq'
   ? (process.env.GROQ_MODEL || 'qwen/qwen3.8-27b')
   : (process.env.GEMINI_MODEL || 'gemini-3.6-flash');
 const KEY_NAME = PROVIDER === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY';
+// Client may request a chat model per mode; only these are honored.
+const ALLOWED_MODELS = new Set([
+  'gemini-3.6-flash',
+  'gemini-flash-lite-latest',
+  'gemini-flash-latest',
+  'qwen/qwen3.8-27b',
+  'groq/compound-mini',
+]);
 
 export default async function handler(req: any, res: any) {
   const origin = req.headers.origin || '';
@@ -27,6 +35,9 @@ export default async function handler(req: any, res: any) {
   // Validate and constrain inputs
   const maxTokens = Math.min(Number(req.body.max_tokens) || 4096, 8192);
   const temperature = Math.min(Math.max(Number(req.body.temperature) || 0.7, 0), 2);
+  const model = (typeof req.body.model === 'string' && ALLOWED_MODELS.has(req.body.model))
+    ? req.body.model
+    : MODEL;
 
   const wantsStream = req.body.stream === true;
 
@@ -41,7 +52,7 @@ export default async function handler(req: any, res: any) {
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         messages: req.body.messages,
         temperature,
         max_tokens: maxTokens,
