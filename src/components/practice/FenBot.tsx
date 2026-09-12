@@ -526,9 +526,9 @@ export default function FenBot() {
         ? (fastLength === 'short' ? FAST_SHORT : fastLength === 'medium' ? FAST_MEDIUM : FAST_DETAILED)
         : '';
       const systemMsg = mode === 'fast' ? modePrompt + langInstruction : SYSTEM_PROMPT + langInstruction;
-      // Fast mode uses the lite model for speed; teach mode keeps the flagship.
-      // (The proxy allowlists these and falls back to its default otherwise.)
-      const chatModel = mode === 'fast' ? 'gemini-flash-lite-latest' : 'gemini-3.6-flash';
+      // All modes use the lite model for fast responses.
+      // (The proxy allowlists this and falls back to its default otherwise.)
+      const chatModel = 'gemini-flash-lite-latest';
       const apiMessages = [
         { role: 'system', content: systemMsg },
         ...allMessages.map((m) => ({ role: m.role, content: m.content })),
