@@ -879,9 +879,12 @@ export default function FenBot() {
         <div className="flex-1 overflow-y-auto px-2 scrollbar-hide">
           {conversations.map((c) => (
             <div key={c.id} className="relative">
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => { if (renamingId !== c.id) { setActiveId(c.id); setSidebarOpen(false); } }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all group flex items-center justify-between ${
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (renamingId !== c.id) { setActiveId(c.id); setSidebarOpen(false); } } }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all group flex items-center justify-between cursor-pointer ${
                   activeId === c.id
                     ? 'bg-white/10 text-white'
                     : 'text-white/50 hover:bg-white/5 hover:text-white/70'
@@ -901,24 +904,30 @@ export default function FenBot() {
                   <span className="truncate">{c.title}</span>
                 )}
                 {renamingId !== c.id && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className={`flex items-center gap-0.5 transition-all ${
+                    activeId === c.id
+                      ? 'opacity-100'
+                      : 'opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
+                  }`}>
                     <button
                       onClick={(e) => { e.stopPropagation(); startRename(c.id, c.title); }}
                       className="p-1 rounded hover:bg-white/10"
                       title="Rename"
+                      aria-label={`Rename ${c.title}`}
                     >
                       <Pencil className="w-3 h-3 text-white/40 hover:text-white/70" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }}
-                      className="p-1 rounded hover:bg-red-500/20"
+                      className="p-1 rounded hover:text-white hover:bg-red-500/20"
                       title="Delete"
+                      aria-label={`Delete ${c.title}`}
                     >
                       <Trash2 className="w-3 h-3 text-white/40 hover:text-red-400" />
                     </button>
                   </div>
                 )}
-              </button>
+              </div>
             </div>
           ))}
           {conversations.length === 0 && (
