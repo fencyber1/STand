@@ -8,12 +8,12 @@ export default function LandingScreen() {
     <>
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 py-8 transition-colors overflow-y-auto">
         <div className="text-center">
-          <div className="mb-6 text-primary-600 dark:text-primary-400">
-            <Logo size={280} />
-          </div>
-
+          <h1 className="text-5xl font-bold text-gray-800 dark:text-gray-100 mb-2">STand</h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-md mx-auto">
             {t('AI-Powered Exam Practice Platform')}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-10 max-w-md mx-auto">
+            STand is an AI-powered exam practice platform for students at all levels. Practice smarter with AI-generated questions, timers, and progress tracking.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
