@@ -18,7 +18,7 @@ async function getWikipediaImage(query: string): Promise<string | null> {
   }
 }
 
-async function generateImageWithFlux(query: string): Promise<string | null> {
+async function generateImageWithFlux(query: string): Promise<{ url: string | null; error: string | null }> {
   try {
     const res = await fetch('/api/flux', {
       method: 'POST',
@@ -33,14 +33,17 @@ async function generateImageWithFlux(query: string): Promise<string | null> {
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      return { url: null, error: data?.error || `FLUX failed (HTTP ${res.status})` };
+    }
     const data = await res.json();
     if (data.artifacts && data.artifacts[0]?.base64) {
-      return `data:image/png;base64,${data.artifacts[0].base64}`;
+      return { url: `data:image/png;base64,${data.artifacts[0].base64}`, error: null };
     }
-    return null;
+    return { url: null, error: 'No image returned from FLUX' };
   } catch {
-    return null;
+    return { url: null, error: 'FLUX service unavailable' };
   }
 }
 
@@ -48,6 +51,7 @@ export default function QuestionImage({ query }: Props) {
   const [src, setSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [fluxError, setFluxError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,11 +66,12 @@ export default function QuestionImage({ query }: Props) {
         setLoading(false);
       } else {
         // Wikipedia failed, fallback to FLUX
-        generateImageWithFlux(query).then((fluxUrl) => {
+        generateImageWithFlux(query).then(({ url, error }) => {
           if (cancelled) return;
-          if (fluxUrl) {
-            setSrc(fluxUrl);
+          if (url) {
+            setSrc(url);
           } else {
+            setFluxError(error);
             setFailed(true);
           }
           setLoading(false);
@@ -77,7 +82,16 @@ export default function QuestionImage({ query }: Props) {
     return () => { cancelled = true; };
   }, [query]);
 
-  if (failed) return null;
+  if (failed) {
+    return (
+      <div className="mb-5 flex justify-center">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-700 dark:text-yellow-400">
+          <ImageIcon size={14} />
+          <span>Image unavailable — using text-only questions</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-5 flex justify-center">

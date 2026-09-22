@@ -40,6 +40,17 @@ export default async function handler(req: any, res: any) {
     });
 
     const text = await response.text();
+    if (!response.ok) {
+      let errMsg = `FLUX generation failed (HTTP ${response.status})`;
+      try {
+        const parsed = JSON.parse(text);
+        errMsg = parsed.error?.message || parsed.message || errMsg;
+      } catch {}
+      if (response.status === 410 || response.status === 401) {
+        return res.status(410).json({ error: 'FLUX API key expired. Image generation is temporarily unavailable.' });
+      }
+      return res.status(response.status).json({ error: errMsg });
+    }
     return res.status(response.status).send(text);
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'FLUX proxy error' });
