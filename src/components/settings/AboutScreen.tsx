@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
   ArrowLeft, GraduationCap, Brain, BookOpen, Shield, Users, MessageSquare,
@@ -39,6 +40,24 @@ const STATS = [
 export default function AboutScreen() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+
+  useEffect(() => {
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "STand",
+      "url": "https://www.learnatstand.world",
+      "description": "STand is an all-in-one AI-powered exam preparation platform designed to help students master any subject through intelligent practice, real-time collaboration, and personalized learning.",
+      "logo": "https://www.learnatstand.world/stand-logo.webp",
+      "applicationCategory": "Education",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(schema);
+    document.head.appendChild(script);
+    return () => { document.head.removeChild(script); };
+  }, []);
 
   return (
     <div className="max-w-2xl mx-auto px-4 space-y-8 pb-12">

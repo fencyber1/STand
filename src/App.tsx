@@ -43,6 +43,7 @@ const StatusComposer = lazy(() => import('./components/social/StatusComposer'));
 const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen'));
 const PrivacySettingsScreen = lazy(() => import('./components/settings/PrivacySettingsScreen'));
 const AboutScreen = lazy(() => import('./components/settings/AboutScreen'));
+const FaqScreen = lazy(() => import('./components/practice/FaqScreen'));
 const FenBot = lazy(() => import('./components/practice/FenBot'));
 const ClassroomRoutes = lazy(() => import('./components/classroom/ClassroomRoutes'));
 
@@ -159,6 +160,8 @@ export default function App() {
           <Route path="/classroom/*" element={<ClassroomRoutes />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/register" element={<RegisterScreen />} />
+          <Route path="/about" element={<AboutScreen />} />
+          <Route path="/faq" element={<FaqScreen />} />
           <Route path="/chat" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
           <Route path="/chat/:chatId" element={<ProtectedFullScreen><ChatScreen /></ProtectedFullScreen>} />
           <Route path="/groups-chat" element={<ProtectedFullScreen><GroupChatScreen /></ProtectedFullScreen>} />

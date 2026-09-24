@@ -34,6 +34,12 @@ export default function LandingScreen() {
           <p className="mt-12 text-xs text-gray-400 dark:text-gray-500">
             {t('Practice smarter with AI-generated questions, timers, and progress tracking')}
           </p>
+          <nav className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs">
+            <Link to="/practice" className="text-primary-600 dark:text-primary-400 hover:underline">Practice</Link>
+            <Link to="/about" className="text-primary-600 dark:text-primary-400 hover:underline">About</Link>
+            <Link to="/faq" className="text-primary-600 dark:text-primary-400 hover:underline">FAQ</Link>
+            <Link to="/exam-setup" className="text-primary-600 dark:text-primary-400 hover:underline">Exam Prep</Link>
+          </nav>
         </div>
       </div>
       <Outlet />
