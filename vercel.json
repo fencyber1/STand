@@ -6,17 +6,5 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!assets/|manifest.json|sw.js|icon-.*\\.png|firebase-messaging-sw.js).*)", "destination": "/index.html" }
-  ],
-  "prerender": {
-    "routes": ["/", "/about", "/faq", "/practice", "/quiz", "/exam-setup", "/exam", "/results", "/bookmarks", "/progress", "/history"]
-  },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" }
-      ]
-    }
   ]
 }
